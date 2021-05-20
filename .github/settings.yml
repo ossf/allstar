@@ -1,0 +1,38 @@
+repository:
+  # See https://developer.github.com/v3/repos/#edit for all available settings.
+
+  # The name of the repository. Changing this will rename the repository
+  name: project-template
+
+  # A short description of the repository that will show up on GitHub
+  description: OpenSSF Project Template
+
+  # A URL with more information about the repository
+  homepage: https://openssf.org
+
+  # Collaborators: give specific users access to this repository.
+  # see /governance/roles.md for details on write access policy
+  # note that the permissions below may provide wider access than needed for
+  # a specific role, and we trust these individuals to act according to their
+  # role. If there are questions, please contact one of the chairs.
+collaborators:
+  # Chairs and Admin Help
+  - username: 
+    permission: admin
+
+    # Contributors
+    # all permissions except admin
+
+  - username: 
+    permission: push
+
+labels:
+  - name: helpwanted
+    color: ffff54
+  - name: good first issue
+    color: ff8c00
+  - name: meeting
+    color: 00ff00
+
+# additional colors in this palette:
+# 7f0000 , 1e90ff, ffdab9, ff69b4
