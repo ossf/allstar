@@ -36,7 +36,7 @@ func Ensure(ctx context.Context, c *github.Client, owner, repo, policy, text str
 			PerPage: 100,
 		},
 	}
-	// check pagination
+	// TODO: check pagination
 	is, _, err := c.Issues.ListByRepo(ctx, owner, repo, opt)
 	if err != nil {
 		return err
@@ -46,6 +46,7 @@ func Ensure(ctx context.Context, c *github.Client, owner, repo, policy, text str
 	for _, i := range is {
 		if i.GetTitle() == t {
 			issue = i
+			break
 		}
 	}
 	if issue == nil {
@@ -92,7 +93,7 @@ func Close(ctx context.Context, c *github.Client, owner, repo, policy string) er
 			PerPage: 100,
 		},
 	}
-	// check pagination
+	// TODO: check pagination
 	is, _, err := c.Issues.ListByRepo(ctx, owner, repo, opt)
 	if err != nil {
 		return err
@@ -102,9 +103,10 @@ func Close(ctx context.Context, c *github.Client, owner, repo, policy string) er
 	for _, i := range is {
 		if i.GetTitle() == t {
 			issue = i
+			break
 		}
 	}
-	// above is duplicate
+	// TODO: above is duplicate, pull into separate function
 	if issue.GetState() == "open" {
 		body := "In compliance, closing."
 		comment := &github.IssueComment{
