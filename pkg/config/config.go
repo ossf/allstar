@@ -57,7 +57,11 @@ func GetRepoDir() string {
 }
 
 func FetchConfig(ctx context.Context, c *github.Client, owner, repo, path string, out interface{}) error {
-	cf, _, _, err := c.Repositories.GetContents(ctx, owner, repo, path, nil)
+	return fetchConfig(ctx, c.Repositories, owner, repo, path, out)
+}
+
+func fetchConfig(ctx context.Context, r repositories, owner, repo, path string, out interface{}) error {
+	cf, _, _, err := r.GetContents(ctx, owner, repo, path, nil)
 	if err != nil {
 		return err
 	}
@@ -70,6 +74,12 @@ func FetchConfig(ctx context.Context, c *github.Client, owner, repo, path string
 		return err
 	}
 	return nil
+}
+
+type repositories interface {
+	GetContents(context.Context, string, string, string,
+		*github.RepositoryContentGetOptions) (*github.RepositoryContent,
+		[]*github.RepositoryContent, *github.Response, error)
 }
 
 func IsEnabled(o OrgOptConfig, r RepoOptConfig, repo string) bool {
@@ -95,11 +105,15 @@ func IsEnabled(o OrgOptConfig, r RepoOptConfig, repo string) bool {
 }
 
 func IsBotEnabled(ctx context.Context, c *github.Client, owner, repo string) bool {
+	return isBotEnabled(ctx, c.Repositories, owner, repo)
+}
+
+func isBotEnabled(ctx context.Context, r repositories, owner, repo string) bool {
 	// drop errors, if cfg file is not there, go with defaults
 	oc := &OrgConfig{}
-	FetchConfig(ctx, c, owner, config_OrgConfigRepo, config_ConfigFile, oc)
+	fetchConfig(ctx, r, owner, config_OrgConfigRepo, config_ConfigFile, oc)
 	rc := &RepoConfig{}
-	FetchConfig(ctx, c, owner, repo, path.Join(config_RepoConfigDir, config_ConfigFile), rc)
+	fetchConfig(ctx, r, owner, repo, path.Join(config_RepoConfigDir, config_ConfigFile), rc)
 
 	enabled := IsEnabled(oc.OptConfig, rc.OptConfig, repo)
 	log.Printf("Repo enabled? %v / %v : %v", owner, repo, enabled)
