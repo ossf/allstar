@@ -68,6 +68,12 @@ type Details struct {
 	BlockForce   bool
 }
 
+var configFetchConfig func(context.Context, *github.Client, string, string, string, interface{}) error
+
+func init() {
+	configFetchConfig = config.FetchConfig
+}
+
 type Branch bool
 
 func NewBranch() policydef.Policy {
@@ -79,7 +85,22 @@ func (b Branch) Name() string {
 	return "Branch protection"
 }
 
-func (b Branch) Check(ctx context.Context, c *github.Client, owner, repo string) (*policydef.Result, error) {
+type repositories interface {
+	Get(context.Context, string, string) (*github.Repository,
+		*github.Response, error)
+	ListBranches(context.Context, string, string, *github.BranchListOptions) (
+		[]*github.Branch, *github.Response, error)
+	GetBranchProtection(context.Context, string, string, string) (
+		*github.Protection, *github.Response, error)
+}
+
+func (b Branch) Check(ctx context.Context, c *github.Client, owner,
+	repo string) (*policydef.Result, error) {
+	return check(ctx, c.Repositories, c, owner, repo)
+}
+
+func check(ctx context.Context, rep repositories, c *github.Client, owner,
+	repo string) (*policydef.Result, error) {
 	oc, rc := getConfig(ctx, c, owner, repo)
 	enabled := config.IsEnabled(oc.OptConfig, rc.OptConfig, repo)
 	log.Printf("Repo branch protection enabled? %v / %v : %v", owner, repo, enabled)
@@ -92,12 +113,12 @@ func (b Branch) Check(ctx context.Context, c *github.Client, owner, repo string)
 	}
 	mc := mergeConfig(oc, rc, repo)
 
-	r, _, err := c.Repositories.Get(ctx, owner, repo)
+	r, _, err := rep.Get(ctx, owner, repo)
 	if err != nil {
 		return nil, err
 	}
 
-	bs, _, err := c.Repositories.ListBranches(ctx, owner, repo, nil)
+	bs, _, err := rep.ListBranches(ctx, owner, repo, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +145,7 @@ func (b Branch) Check(ctx context.Context, c *github.Client, owner, repo string)
 	text := ""
 	details := make(map[string]Details, 0)
 	for _, b := range allBranches {
-		p, rsp, err := c.Repositories.GetBranchProtection(ctx, owner, repo, b)
+		p, rsp, err := rep.GetBranchProtection(ctx, owner, repo, b)
 		if err != nil {
 			if rsp != nil && rsp.StatusCode == http.StatusNotFound {
 				// Branch not protected
@@ -142,25 +163,30 @@ func (b Branch) Check(ctx context.Context, c *github.Client, owner, repo string)
 			d.PRReviews = true
 			d.DismissStale = rev.DismissStaleReviews
 			if mc.DismissStale && !rev.DismissStaleReviews {
-				text = text + fmt.Sprintf("Dismiss stale reviews not configured for branch %v\n", b)
+				text = text +
+					fmt.Sprintf("Dismiss stale reviews not configured for branch %v\n", b)
 				pass = false
 			}
 			d.NumReviews = rev.RequiredApprovingReviewCount
 			if rev.RequiredApprovingReviewCount < mc.ApprovalCount {
 				pass = false
-				text = text + fmt.Sprintf("PR Approvals below threshold %v : %v for branch %v\n", rev.RequiredApprovingReviewCount, mc.ApprovalCount, b)
+				text = text +
+					fmt.Sprintf("PR Approvals below threshold %v : %v for branch %v\n",
+						rev.RequiredApprovingReviewCount, mc.ApprovalCount, b)
 			}
 		} else {
 			if mc.RequireApproval {
 				pass = false
-				text = text + fmt.Sprintf("PR Approvals not configured for branch %v\n", b)
+				text = text +
+					fmt.Sprintf("PR Approvals not configured for branch %v\n", b)
 			}
 		}
 		afp := p.GetAllowForcePushes()
 		d.BlockForce = true
 		if afp != nil {
 			if mc.BlockForce && afp.Enabled {
-				text = text + fmt.Sprintf("Block force push not configured for branch %v\n", b)
+				text = text +
+					fmt.Sprintf("Block force push not configured for branch %v\n", b)
 				pass = false
 				d.BlockForce = false
 			}
@@ -199,9 +225,9 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 		DismissStale:    true,
 		BlockForce:      true,
 	}
-	config.FetchConfig(ctx, c, owner, config.GetOrgRepo(), config_ConfigFile, oc)
+	configFetchConfig(ctx, c, owner, config.GetOrgRepo(), config_ConfigFile, oc)
 	rc := &RepoConfig{}
-	config.FetchConfig(ctx, c, owner, repo, path.Join(config.GetRepoDir(), config_ConfigFile), rc)
+	configFetchConfig(ctx, c, owner, repo, path.Join(config.GetRepoDir(), config_ConfigFile), rc)
 	return oc, rc
 }
 
