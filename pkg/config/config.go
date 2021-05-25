@@ -28,34 +28,59 @@ const config_OrgConfigRepo = ".allstar"
 const config_RepoConfigDir = ".allstar"
 const config_ConfigFile = "allstar.yaml"
 
+// OrgConfig is the org-level config definition for Allstar
 type OrgConfig struct {
+	// OptConfig contains the opt in/out configuration.
 	OptConfig OrgOptConfig `yaml:"optConfig"`
 }
 
+// OrgOptConfig is used in Allstar and policy-secific org-level config to
+// define the opt in/out configuration.
 type OrgOptConfig struct {
-	OptOutStrategy      bool     `yaml:"optOutStrategy"`      // Set to true to change from opt-in to opt-out
-	OptInRepos          []string `yaml:"optInRepos"`          // List of repos to opt-in when in opt-in strategy
-	OptOutRepos         []string `yaml:"optOutRepos"`         // List of repos to opt-out when in opt-out strategy
-	DisableRepoOverride bool     `yaml:"disableRepoOverride"` // Set to true to disallow repos from opt-in/out in their config
+	// OptOutStrategy : set to true to change from opt-in to opt-out.
+	OptOutStrategy bool `yaml:"optOutStrategy"`
+
+	// OptInRepos is the list of repos to opt-in when in opt-in strategy.
+	OptInRepos []string `yaml:"optInRepos"`
+
+	// OptOutRepos is the list of repos to opt-out when in opt-out strategy.
+	OptOutRepos []string `yaml:"optOutRepos"`
+
+	// DisableRepoOverride : set to true to disallow repos from opt-in/out in
+	// their config.
+	DisableRepoOverride bool `yaml:"disableRepoOverride"`
 }
 
+// RepoConfig is the repo-level config definition for Allstar
 type RepoConfig struct {
+	// OptConfig contains the opt in/out configuration.
 	OptConfig RepoOptConfig `yaml:"optConfig"`
 }
 
+// RepoOptConfig is used in Allstar and policy-specific repo-level config to
+// opt in/out of enforcement.
 type RepoOptConfig struct {
-	OptIn  bool `yaml:"optIn"`  // Opt-in this repo when in opt-in strategy
-	OptOut bool `yaml:"optOut"` // Opt-out this repo when in opt-out strategy
+	// OptIn : set to true to opt-in this repo when in opt-in strategy
+	OptIn bool `yaml:"optIn"`
+
+	// OptOut: set to true to opt-out this repo when in opt-out strategy
+	OptOut bool `yaml:"optOut"`
 }
 
+// GetOrgRepo returns the configured name of the org-level repo which should
+// contain org-level config files.
 func GetOrgRepo() string {
 	return config_OrgConfigRepo
 }
 
+// GetRepoDir returns the configured expected name of the configuration
+// directory in each individual repo which should contain repo-level config
+// files.
 func GetRepoDir() string {
 	return config_RepoConfigDir
 }
 
+// FetchConfig grabs a yaml config file from github and writes it to out.
 func FetchConfig(ctx context.Context, c *github.Client, owner, repo, path string, out interface{}) error {
 	return fetchConfig(ctx, c.Repositories, owner, repo, path, out)
 }
@@ -82,6 +107,8 @@ type repositories interface {
 		[]*github.RepositoryContent, *github.Response, error)
 }
 
+// IsEnabled determines if a repo is enabled by interpreting the provided
+// org-level and repo-level OptConfigs.
 func IsEnabled(o OrgOptConfig, r RepoOptConfig, repo string) bool {
 	var enabled bool
 	if o.OptOutStrategy {
@@ -104,6 +131,7 @@ func IsEnabled(o OrgOptConfig, r RepoOptConfig, repo string) bool {
 	return enabled
 }
 
+// IsBotEnabled determines if allstar is enabled overall on the provided repo.
 func IsBotEnabled(ctx context.Context, c *github.Client, owner, repo string) bool {
 	return isBotEnabled(ctx, c.Repositories, owner, repo)
 }

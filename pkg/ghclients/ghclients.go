@@ -37,11 +37,14 @@ func init() {
 	ghinstallationNewKeyFromFile = ghinstallation.NewKeyFromFile
 }
 
+// GHClients stores clients per-installation for re-use througout a process.
 type GHClients struct {
 	clients map[int64]*github.Client
 	tr      http.RoundTripper
 }
 
+// NewGHClients returns a new GHClients. The provided RoundTripper will be
+// stored and used when creating new clients.
 func NewGHClients(t http.RoundTripper) *GHClients {
 	return &GHClients{
 		clients: make(map[int64]*github.Client),
@@ -49,8 +52,9 @@ func NewGHClients(t http.RoundTripper) *GHClients {
 	}
 }
 
-// Func Get gets the client for installation id i, If i is 0 get the client for
-// the app.
+// Get gets the client for installation id i, If i is 0 it gets the client for
+// the app-level api. If a stored client is not available, it creates a new
+// client with auth and caching built in.
 func (g *GHClients) Get(i int64) (*github.Client, error) {
 	if c, ok := g.clients[i]; ok {
 		return c, nil

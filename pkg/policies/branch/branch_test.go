@@ -87,8 +87,8 @@ func TestCheck(t *testing.T) {
 			Exp: policydef.Result{
 				Pass:       false,
 				NotifyText: "Block force push not configured for branch main\n",
-				Details: map[string]Details{
-					"main": Details{
+				Details: map[string]details{
+					"main": details{
 						PRReviews:    true,
 						NumReviews:   5,
 						DismissStale: true,
@@ -124,14 +124,14 @@ func TestCheck(t *testing.T) {
 			Exp: policydef.Result{
 				Pass:       false,
 				NotifyText: "PR Approvals not configured for branch release\n",
-				Details: map[string]Details{
-					"main": Details{
+				Details: map[string]details{
+					"main": details{
 						PRReviews:    true,
 						NumReviews:   2,
 						DismissStale: true,
 						BlockForce:   true,
 					},
-					"release": Details{
+					"release": details{
 						PRReviews:    false,
 						NumReviews:   0,
 						DismissStale: false,
@@ -167,8 +167,8 @@ func TestCheck(t *testing.T) {
 			Exp: policydef.Result{
 				Pass:       true,
 				NotifyText: "",
-				Details: map[string]Details{
-					"main": Details{
+				Details: map[string]details{
+					"main": details{
 						PRReviews:    true,
 						NumReviews:   1,
 						DismissStale: false,
@@ -194,8 +194,8 @@ func TestCheck(t *testing.T) {
 			Exp: policydef.Result{
 				Pass:       false,
 				NotifyText: "No protection found for branch main\n",
-				Details: map[string]Details{
-					"main": Details{
+				Details: map[string]details{
+					"main": details{
 						PRReviews:    false,
 						NumReviews:   0,
 						DismissStale: false,

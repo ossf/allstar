@@ -12,6 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package policydef defines the interface that policies must implement to be
+// included in Allstar.
+//
+// Policies should define and retrieve their own config in the same way that
+// Allstar does. There should be an org-level config and repo-level
+// config. Each config should include the OptConfig defined in
+// github.com/ossf/allstar/pkg/config to determine if the policy is enabled or
+// disabled. The config package also provided helper functions to retreive
+// config from the repo.
 package policydef
 
 import (
@@ -20,15 +29,40 @@ import (
 	"github.com/google/go-github/v35/github"
 )
 
+// Result is returned from a policy check.
 type Result struct {
-	Pass       bool
+	// Pass is whether the policy passes or not.
+	Pass bool
+
+	// NotifyText is the human readable message to provide to the user if the
+	// configured action is a notify action (issue, email, rpc). It should inform
+	// the user of the problem and how to fix it.
 	NotifyText string
-	Details    interface{}
+
+	// Details are logged on failure. it should be serailizable to json and allow
+	// useful log querying.
+	Details interface{}
 }
 
+// Policy is the interface that policies must implement to be included in
+// Allstar.
 type Policy interface {
+
+	// Name must return the human readable name of the policy.
 	Name() string
+
+	// Check checks whether the provided repo is in compliance with the policy or
+	// not. It must use the provided context and github client. See Result for
+	// more details on the return value.
 	Check(ctx context.Context, c *github.Client, owner, repo string) (*Result, error)
+
+	// Fix should modify the provided repo to be in compliance with the
+	// policy. The provided github client must be used to either edit repo
+	// settings or modify files. Fix is optional and the policy may simply
+	// return.
 	Fix(ctx context.Context, c *github.Client, owner, repo string) error
+
+	// GetAction must return the configured action from the policy's config. No
+	// validation is needed by the policy, it will be done centrally.
 	GetAction(ctx context.Context, c *github.Client, owner, repo string) string
 }

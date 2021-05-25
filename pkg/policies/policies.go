@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package policies is used to iterate through the available policies in
+// Allstar.
 package policies
 
 import (
@@ -19,6 +21,7 @@ import (
 	"github.com/ossf/allstar/pkg/policydef"
 )
 
+// GetPolicies returns a slice of all policies in Allstar.
 func GetPolicies() []policydef.Policy {
 	return []policydef.Policy{
 		branch.NewBranch(),
