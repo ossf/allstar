@@ -27,6 +27,16 @@ import (
 const config_AppID = 1
 const config_KeyFile = "key.pem"
 
+var ghinstallationNewAppsTransportKeyFromFile func(http.RoundTripper, int64,
+	string) (*ghinstallation.AppsTransport, error)
+var ghinstallationNewKeyFromFile func(http.RoundTripper, int64, int64, string) (
+	*ghinstallation.Transport, error)
+
+func init() {
+	ghinstallationNewAppsTransportKeyFromFile = ghinstallation.NewAppsTransportKeyFromFile
+	ghinstallationNewKeyFromFile = ghinstallation.NewKeyFromFile
+}
+
 type GHClients struct {
 	clients map[int64]*github.Client
 	tr      http.RoundTripper
@@ -48,9 +58,9 @@ func (g *GHClients) Get(i int64) (*github.Client, error) {
 	var tr http.RoundTripper
 	var err error
 	if i == 0 {
-		tr, err = ghinstallation.NewAppsTransportKeyFromFile(g.tr, config_AppID, config_KeyFile)
+		tr, err = ghinstallationNewAppsTransportKeyFromFile(g.tr, config_AppID, config_KeyFile)
 	} else {
-		tr, err = ghinstallation.NewKeyFromFile(g.tr, config_AppID, i, config_KeyFile)
+		tr, err = ghinstallationNewKeyFromFile(g.tr, config_AppID, i, config_KeyFile)
 	}
 	if err != nil {
 		return nil, err

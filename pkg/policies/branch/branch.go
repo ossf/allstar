@@ -211,7 +211,7 @@ func (b Branch) GetAction(ctx context.Context, c *github.Client, owner, repo str
 	oc := &OrgConfig{ // Fill out non-zero defaults
 		Action: "log",
 	}
-	config.FetchConfig(ctx, c, owner, config.GetOrgRepo(), config_ConfigFile, oc)
+	configFetchConfig(ctx, c, owner, config.GetOrgRepo(), config_ConfigFile, oc)
 	return oc.Action
 }
 
