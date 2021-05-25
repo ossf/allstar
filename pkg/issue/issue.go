@@ -39,11 +39,7 @@ type issues interface {
 		*github.IssueComment, *github.Response, error)
 }
 
-func Ensure(ctx context.Context, c *github.Client, owner, repo, policy, text string) error {
-	return ensure(ctx, c.Issues, owner, repo, policy, text)
-}
-
-func ensure(ctx context.Context, issues issues, owner, repo, policy, text string) error {
+func getPolicyIssue(ctx context.Context, issues issues, owner, repo, policy string) (*github.Issue, error) {
 	opt := &github.IssueListByRepoOptions{
 		State:  "all",
 		Labels: []string{config_Label},
@@ -54,7 +50,7 @@ func ensure(ctx context.Context, issues issues, owner, repo, policy, text string
 	// TODO: check pagination
 	is, _, err := issues.ListByRepo(ctx, owner, repo, opt)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var issue *github.Issue
 	t := fmt.Sprintf(title, policy)
@@ -64,8 +60,21 @@ func ensure(ctx context.Context, issues issues, owner, repo, policy, text string
 			break
 		}
 	}
+	return issue, nil
+}
+
+func Ensure(ctx context.Context, c *github.Client, owner, repo, policy, text string) error {
+	return ensure(ctx, c.Issues, owner, repo, policy, text)
+}
+
+func ensure(ctx context.Context, issues issues, owner, repo, policy, text string) error {
+	issue, err := getPolicyIssue(ctx, issues, owner, repo, policy)
+	if err != nil {
+		return err
+	}
 	if issue == nil {
 		body := fmt.Sprintf("Security Policy %v is out of compliance, status:\n", policy) + text
+		t := fmt.Sprintf(title, policy)
 		new := &github.IssueRequest{
 			Title:  &t,
 			Body:   &body,
@@ -105,27 +114,10 @@ func Close(ctx context.Context, c *github.Client, owner, repo, policy string) er
 }
 
 func closeIssue(ctx context.Context, issues issues, owner, repo, policy string) error {
-	opt := &github.IssueListByRepoOptions{
-		State:  "all",
-		Labels: []string{config_Label},
-		ListOptions: github.ListOptions{
-			PerPage: 100,
-		},
-	}
-	// TODO: check pagination
-	is, _, err := issues.ListByRepo(ctx, owner, repo, opt)
+	issue, err := getPolicyIssue(ctx, issues, owner, repo, policy)
 	if err != nil {
 		return err
 	}
-	var issue *github.Issue
-	t := fmt.Sprintf(title, policy)
-	for _, i := range is {
-		if i.GetTitle() == t {
-			issue = i
-			break
-		}
-	}
-	// TODO: above is duplicate, pull into separate function
 	if issue.GetState() == "open" {
 		body := "In compliance, closing."
 		comment := &github.IssueComment{
