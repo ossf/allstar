@@ -24,9 +24,20 @@ import (
 	"github.com/ossf/allstar/pkg/ghclients"
 	"github.com/ossf/allstar/pkg/issue"
 	"github.com/ossf/allstar/pkg/policies"
+	"github.com/ossf/allstar/pkg/policydef"
 
 	"github.com/google/go-github/v35/github"
 )
+
+var policiesGetPolicies func() []policydef.Policy
+var issueEnsure func(ctx context.Context, c *github.Client, owner, repo, policy, text string) error
+var issueClose func(ctx context.Context, c *github.Client, owner, repo, policy string) error
+
+func init() {
+	policiesGetPolicies = policies.GetPolicies
+	issueEnsure = issue.Ensure
+	issueClose = issue.Close
+}
 
 func EnforceAll(ctx context.Context, ghc *ghclients.GHClients) error {
 	ac, err := ghc.Get(0)
@@ -73,7 +84,7 @@ func EnforceJob(ctx context.Context, ghc *ghclients.GHClients, d time.Duration) 
 }
 
 func RunPolicies(ctx context.Context, c *github.Client, owner, repo string) error {
-	ps := policies.GetPolicies()
+	ps := policiesGetPolicies()
 	for _, p := range ps {
 		r, err := p.Check(ctx, c, owner, repo)
 		if err != nil {
@@ -87,7 +98,7 @@ func RunPolicies(ctx context.Context, c *github.Client, owner, repo string) erro
 			switch a {
 			case "log":
 			case "issue":
-				err := issue.Ensure(ctx, c, owner, repo, p.Name(), r.NotifyText)
+				err := issueEnsure(ctx, c, owner, repo, p.Name(), r.NotifyText)
 				if err != nil {
 					return err
 				}
@@ -103,7 +114,7 @@ func RunPolicies(ctx context.Context, c *github.Client, owner, repo string) erro
 			}
 		}
 		if r.Pass && a == "issue" {
-			err := issue.Close(ctx, c, owner, repo, p.Name())
+			err := issueClose(ctx, c, owner, repo, p.Name())
 			if err != nil {
 				return err
 			}
