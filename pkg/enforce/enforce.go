@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//package enforce enforces policies
+// Package enforce is a central engine to Allstar that contains various
+// enforcement logic.
 package enforce
 
 import (
@@ -39,6 +40,12 @@ func init() {
 	issueClose = issue.Close
 }
 
+// EnforceAll iterates through all available installations and repos Allstar
+// has access to and runs policies on those repos. It is meant to be a
+// reconcilation job to check repos which a webhook event may have been lost.
+//
+// TBD: determine if this should remain exported, or if it will only be called
+// from EnforceJob.
 func EnforceAll(ctx context.Context, ghc *ghclients.GHClients) error {
 	ac, err := ghc.Get(0)
 	if err != nil {
@@ -69,6 +76,8 @@ func EnforceAll(ctx context.Context, ghc *ghclients.GHClients) error {
 	return nil
 }
 
+// EnforceJob is a reconcilation job that enforces policies on all repos every
+// d duration. It runs forever until the context is done.
 func EnforceJob(ctx context.Context, ghc *ghclients.GHClients, d time.Duration) error {
 	for {
 		err := EnforceAll(ctx, ghc)
@@ -83,6 +92,9 @@ func EnforceJob(ctx context.Context, ghc *ghclients.GHClients, d time.Duration) 
 	}
 }
 
+// RunPolicies enforces policies on the provided repo. It is meant to be called
+// from either jobs, webhooks, or delayed checks. TODO: implement concurrency
+// check to only run a single instance per repo at a time.
 func RunPolicies(ctx context.Context, c *github.Client, owner, repo string) error {
 	ps := policiesGetPolicies()
 	for _, p := range ps {

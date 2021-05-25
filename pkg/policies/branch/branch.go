@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package branch implement branch protection security policies
+// Package branch implements the Branch Protection security policy.
 package branch
 
 import (
@@ -30,28 +30,61 @@ import (
 
 const config_ConfigFile = "branch_protection.yaml"
 
+// OrgConfig is the org-level config definition for Branch Protection.
 type OrgConfig struct {
-	OptConfig       config.OrgOptConfig `yaml:"optConfig"`       // Standard opt in/out config, RepoOverride applies to all config
-	Action          string              `yaml:"action"`          // Which action to take, default log, other: issue, block
-	EnforceDefault  bool                `yaml:"enforceDefault"`  // Enforce policy on default branch, default true
-	EnforceBranches map[string][]string `yaml:"enforceBranches"` // Other branches to enforce policy on, key is repo name
-	RequireApproval bool                `yaml:"requireApproval"` // Enforce approval required
-	ApprovalCount   int                 `yaml:"approvalCount"`   // Number of approvals expected
-	DismissStale    bool                `yaml:"dismissStale"`    // Enforce dismiss stale
-	BlockForce      bool                `yaml:"blockForce"`      // Enforce blocking force push
+	// OptConfig is the standard org-level opt in/out config, RepoOverride applies to all
+	// BP config.
+	OptConfig config.OrgOptConfig `yaml:"optConfig"`
+	// Action defines which action to take, default log, other: issue, block...
+	Action string `yaml:"action"`
+
+	// EnforceDefault : set to true to enforce policy on default branch, default true.
+	EnforceDefault bool `yaml:"enforceDefault"`
+
+	// EnforceBranches is a map of repos and branches. These are other
+	// non-default branches to enforce policy on, such as branches which releases
+	// are made from.
+	EnforceBranches map[string][]string `yaml:"enforceBranches"`
+
+	// RequireApproval : set to true to enforce approval on PRs, default true.
+	RequireApproval bool `yaml:"requireApproval"`
+
+	// ApprovalCount is the number of required PR approvals, default 1.
+	ApprovalCount int `yaml:"approvalCount"`
+
+	// DismissStale : set to true to require PR approvalse be dismissed when a PR is updated, default true.
+	DismissStale bool `yaml:"dismissStale"`
+
+	// BlockForce : set to true to block force pushes, default true.
+	BlockForce bool `yaml:"blockForce"`
 }
 
+// RepoConfig is the repo-level config for Branch Protection
 type RepoConfig struct {
-	OptConfig       config.RepoOptConfig `yaml:"optConfig"`        // Standard opt in/out config
-	EnforceDefault  *bool                `yaml:"enforceDefault"`   // If present, override same org config
-	EnforceBranches []string             `yaml:"enforceBranches"`  // Additive to any branches in org config, always allowed
-	RequireApproval *bool                `yaml:"requireAppproval"` // If present, override same org config
-	ApprovalCount   *int                 `yaml:"approvalCount"`    // If present, override same org config
-	DismissStale    *bool                `yaml:"dismissStale"`     // If present, override same org config
-	BlockForce      *bool                `yaml:"blockForce"`       // If present, override same org config
+	// OptConfig is the standard repo-level opt in/out config.
+	OptConfig config.RepoOptConfig `yaml:"optConfig"`
+
+	// EnforceDefault overrides the same setting in org-level, only if present.
+	EnforceDefault *bool `yaml:"enforceDefault"`
+
+	// EnforceBranches adds more branches to the org-level list. Does not
+	// override. Always allowed irrespective of DisableRepoOverride setting.
+	EnforceBranches []string `yaml:"enforceBranches"`
+
+	// RequireApproval overrides the same setting in org-level, only if present.
+	RequireApproval *bool `yaml:"requireAppproval"`
+
+	// ApprovalCount overrides the same setting in org-level, only if present.
+	ApprovalCount *int `yaml:"approvalCount"`
+
+	// DismissStale overrides the same setting in org-level, only if present.
+	DismissStale *bool `yaml:"dismissStale"`
+
+	// BlockForce overrides the same setting in org-level, only if present.
+	BlockForce *bool `yaml:"blockForce"`
 }
 
-type MergedConfig struct {
+type mergedConfig struct {
 	Action          string
 	EnforceDefault  bool
 	EnforceBranches []string
@@ -61,7 +94,7 @@ type MergedConfig struct {
 	BlockForce      bool
 }
 
-type Details struct {
+type details struct {
 	PRReviews    bool
 	NumReviews   int
 	DismissStale bool
@@ -74,15 +107,18 @@ func init() {
 	configFetchConfig = config.FetchConfig
 }
 
+// Branch is the Branch Protection policy object, implements policydef.Policy.
 type Branch bool
 
+// NewBranch returns a new BranchProtection polcy.
 func NewBranch() policydef.Policy {
 	var b Branch
 	return b
 }
 
+// Name returns the name of this policy, implementing policydef.Policy.Name()
 func (b Branch) Name() string {
-	return "Branch protection"
+	return "Branch Protection"
 }
 
 type repositories interface {
@@ -94,6 +130,8 @@ type repositories interface {
 		*github.Protection, *github.Response, error)
 }
 
+// Check performs the polcy check for Branch Protection based on the
+// configuration stored in the org/repo, implementing policydef.Policy.Check()
 func (b Branch) Check(ctx context.Context, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
 	return check(ctx, c.Repositories, c, owner, repo)
@@ -143,7 +181,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	}
 	pass := true
 	text := ""
-	details := make(map[string]Details, 0)
+	ds := make(map[string]details, 0)
 	for _, b := range allBranches {
 		p, rsp, err := rep.GetBranchProtection(ctx, owner, repo, b)
 		if err != nil {
@@ -151,13 +189,13 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 				// Branch not protected
 				pass = false
 				text = text + fmt.Sprintf("No protection found for branch %v\n", b)
-				details[b] = Details{}
+				ds[b] = details{}
 				continue
 			}
 			return nil, err
 		}
 
-		var d Details
+		var d details
 		rev := p.GetRequiredPullRequestReviews()
 		if rev != nil {
 			d.PRReviews = true
@@ -191,21 +229,26 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 				d.BlockForce = false
 			}
 		}
-		details[b] = d
+		ds[b] = d
 	}
 
 	return &policydef.Result{
 		Pass:       pass,
 		NotifyText: text,
-		Details:    details,
+		Details:    ds,
 	}, nil
 }
 
+// Fix implementing policydef.Policy.Fix(). Currently not supported. BP plans
+// to support this TODO.
 func (b Branch) Fix(ctx context.Context, c *github.Client, owner, repo string) error {
 	log.Printf("Action fix is not implemented for policy %v", b.Name())
 	return nil
 }
 
+// GetAction returns the configured action from Branch Protection's
+// configuration stored in the org-level repo, default log. Implementing
+// policydef.Policy.GetAction()
 func (b Branch) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
 	// drop errors, if cfg file is not there, go with defaults
 	oc := &OrgConfig{ // Fill out non-zero defaults
@@ -231,8 +274,8 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 	return oc, rc
 }
 
-func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *MergedConfig {
-	mc := &MergedConfig{
+func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
+	mc := &mergedConfig{
 		Action:          oc.Action,
 		EnforceDefault:  oc.EnforceDefault,
 		EnforceBranches: oc.EnforceBranches[repo],

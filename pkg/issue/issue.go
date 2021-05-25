@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package issue handles creating notification issues for allstar
+// Package issue handles creating notification GitHub issues for Allstar
 package issue
 
 import (
@@ -63,6 +63,9 @@ func getPolicyIssue(ctx context.Context, issues issues, owner, repo, policy stri
 	return issue, nil
 }
 
+// Ensure ensures an issue exists and is open for the provided repo and
+// policy. If opening, re-opening, or pinging an issue, the provided text will
+// be included.
 func Ensure(ctx context.Context, c *github.Client, owner, repo, policy, text string) error {
 	return ensure(ctx, c.Issues, owner, repo, policy, text)
 }
@@ -109,6 +112,8 @@ func ensure(ctx context.Context, issues issues, owner, repo, policy, text string
 	return nil
 }
 
+// Close ensures that there is not an issue open for the provided repo and
+// policy. If open it closes it with a message.
 func Close(ctx context.Context, c *github.Client, owner, repo, policy string) error {
 	return closeIssue(ctx, c.Issues, owner, repo, policy)
 }
