@@ -28,7 +28,22 @@ const config_Ping = (24 * time.Hour)
 
 const title = "Security Policy violation %v"
 
+type issues interface {
+	ListByRepo(context.Context, string, string, *github.IssueListByRepoOptions) (
+		[]*github.Issue, *github.Response, error)
+	Create(context.Context, string, string, *github.IssueRequest) (
+		*github.Issue, *github.Response, error)
+	Edit(context.Context, string, string, int, *github.IssueRequest) (
+		*github.Issue, *github.Response, error)
+	CreateComment(context.Context, string, string, int, *github.IssueComment) (
+		*github.IssueComment, *github.Response, error)
+}
+
 func Ensure(ctx context.Context, c *github.Client, owner, repo, policy, text string) error {
+	return ensure(ctx, c.Issues, owner, repo, policy, text)
+}
+
+func ensure(ctx context.Context, issues issues, owner, repo, policy, text string) error {
 	opt := &github.IssueListByRepoOptions{
 		State:  "all",
 		Labels: []string{config_Label},
@@ -37,7 +52,7 @@ func Ensure(ctx context.Context, c *github.Client, owner, repo, policy, text str
 		},
 	}
 	// TODO: check pagination
-	is, _, err := c.Issues.ListByRepo(ctx, owner, repo, opt)
+	is, _, err := issues.ListByRepo(ctx, owner, repo, opt)
 	if err != nil {
 		return err
 	}
@@ -56,7 +71,7 @@ func Ensure(ctx context.Context, c *github.Client, owner, repo, policy, text str
 			Body:   &body,
 			Labels: &[]string{config_Label},
 		}
-		_, _, err := c.Issues.Create(ctx, owner, repo, new)
+		_, _, err := issues.Create(ctx, owner, repo, new)
 		return err
 	}
 	if issue.GetState() == "closed" {
@@ -64,14 +79,14 @@ func Ensure(ctx context.Context, c *github.Client, owner, repo, policy, text str
 		update := &github.IssueRequest{
 			State: &state,
 		}
-		if _, _, err := c.Issues.Edit(ctx, owner, repo, issue.GetNumber(), update); err != nil {
+		if _, _, err := issues.Edit(ctx, owner, repo, issue.GetNumber(), update); err != nil {
 			return err
 		}
 		body := "Re-opening issue, status:\n" + text
 		comment := &github.IssueComment{
 			Body: &body,
 		}
-		_, _, err := c.Issues.CreateComment(ctx, owner, repo, issue.GetNumber(), comment)
+		_, _, err := issues.CreateComment(ctx, owner, repo, issue.GetNumber(), comment)
 		return err
 	}
 	if issue.GetUpdatedAt().Before(time.Now().Add(-1 * config_Ping)) {
@@ -79,13 +94,17 @@ func Ensure(ctx context.Context, c *github.Client, owner, repo, policy, text str
 		comment := &github.IssueComment{
 			Body: &body,
 		}
-		_, _, err := c.Issues.CreateComment(ctx, owner, repo, issue.GetNumber(), comment)
+		_, _, err := issues.CreateComment(ctx, owner, repo, issue.GetNumber(), comment)
 		return err
 	}
 	return nil
 }
 
 func Close(ctx context.Context, c *github.Client, owner, repo, policy string) error {
+	return closeIssue(ctx, c.Issues, owner, repo, policy)
+}
+
+func closeIssue(ctx context.Context, issues issues, owner, repo, policy string) error {
 	opt := &github.IssueListByRepoOptions{
 		State:  "all",
 		Labels: []string{config_Label},
@@ -94,7 +113,7 @@ func Close(ctx context.Context, c *github.Client, owner, repo, policy string) er
 		},
 	}
 	// TODO: check pagination
-	is, _, err := c.Issues.ListByRepo(ctx, owner, repo, opt)
+	is, _, err := issues.ListByRepo(ctx, owner, repo, opt)
 	if err != nil {
 		return err
 	}
@@ -112,14 +131,14 @@ func Close(ctx context.Context, c *github.Client, owner, repo, policy string) er
 		comment := &github.IssueComment{
 			Body: &body,
 		}
-		if _, _, err := c.Issues.CreateComment(ctx, owner, repo, issue.GetNumber(), comment); err != nil {
+		if _, _, err := issues.CreateComment(ctx, owner, repo, issue.GetNumber(), comment); err != nil {
 			return err
 		}
 		state := "closed"
 		update := &github.IssueRequest{
 			State: &state,
 		}
-		if _, _, err := c.Issues.Edit(ctx, owner, repo, issue.GetNumber(), update); err != nil {
+		if _, _, err := issues.Edit(ctx, owner, repo, issue.GetNumber(), update); err != nil {
 			return err
 		}
 	}
