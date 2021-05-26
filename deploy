@@ -1,0 +1,5 @@
+#!/bin/bash
+
+export KO_DOCKER_REPO="gcr.io/myproject"
+cont=$(ko publish ./cmd/allstar)
+gcloud app deploy --image-url ${cont}

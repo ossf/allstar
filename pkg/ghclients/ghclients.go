@@ -17,39 +17,48 @@
 package ghclients
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/bradleyfalzon/ghinstallation"
 	"github.com/google/go-github/v35/github"
 	"github.com/gregjones/httpcache"
+	"github.com/ossf/allstar/pkg/config/operator"
+	"gocloud.dev/runtimevar"
+	_ "gocloud.dev/runtimevar/gcpsecretmanager"
 )
 
-const config_AppID = 1
-const config_KeyFile = "key.pem"
-
-var ghinstallationNewAppsTransportKeyFromFile func(http.RoundTripper, int64,
-	string) (*ghinstallation.AppsTransport, error)
-var ghinstallationNewKeyFromFile func(http.RoundTripper, int64, int64, string) (
+var ghinstallationNewAppsTransport func(http.RoundTripper, int64,
+	[]byte) (*ghinstallation.AppsTransport, error)
+var ghinstallationNew func(http.RoundTripper, int64, int64, []byte) (
 	*ghinstallation.Transport, error)
+var getKey func(context.Context) ([]byte, error)
 
 func init() {
-	ghinstallationNewAppsTransportKeyFromFile = ghinstallation.NewAppsTransportKeyFromFile
-	ghinstallationNewKeyFromFile = ghinstallation.NewKeyFromFile
+	ghinstallationNewAppsTransport = ghinstallation.NewAppsTransport
+	ghinstallationNew = ghinstallation.New
+	getKey = getKeyReal
 }
 
 // GHClients stores clients per-installation for re-use througout a process.
 type GHClients struct {
 	clients map[int64]*github.Client
 	tr      http.RoundTripper
+	key     []byte
 }
 
 // NewGHClients returns a new GHClients. The provided RoundTripper will be
 // stored and used when creating new clients.
-func NewGHClients(t http.RoundTripper) *GHClients {
+func NewGHClients(ctx context.Context, t http.RoundTripper) (*GHClients, error) {
+	key, err := getKey(ctx)
+	if err != nil {
+		return nil, err
+	}
 	return &GHClients{
 		clients: make(map[int64]*github.Client),
 		tr:      t,
-	}
+		key:     key,
+	}, nil
 }
 
 // Get gets the client for installation id i, If i is 0 it gets the client for
@@ -62,9 +71,9 @@ func (g *GHClients) Get(i int64) (*github.Client, error) {
 	var tr http.RoundTripper
 	var err error
 	if i == 0 {
-		tr, err = ghinstallationNewAppsTransportKeyFromFile(g.tr, config_AppID, config_KeyFile)
+		tr, err = ghinstallationNewAppsTransport(g.tr, operator.AppID, g.key)
 	} else {
-		tr, err = ghinstallationNewKeyFromFile(g.tr, config_AppID, i, config_KeyFile)
+		tr, err = ghinstallationNew(g.tr, operator.AppID, i, g.key)
 	}
 	if err != nil {
 		return nil, err
@@ -76,4 +85,17 @@ func (g *GHClients) Get(i int64) (*github.Client, error) {
 	}
 	g.clients[i] = github.NewClient(&http.Client{Transport: ctr})
 	return g.clients[i], nil
+}
+
+func getKeyReal(ctx context.Context) ([]byte, error) {
+	v, err := runtimevar.OpenVariable(ctx, operator.KeySecret)
+	if err != nil {
+		return nil, err
+	}
+	defer v.Close()
+	s, err := v.Latest(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.Value.([]byte), nil
 }

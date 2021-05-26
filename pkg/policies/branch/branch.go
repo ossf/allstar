@@ -23,12 +23,13 @@ import (
 	"path"
 
 	"github.com/ossf/allstar/pkg/config"
+	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/policydef"
 
 	"github.com/google/go-github/v35/github"
 )
 
-const config_ConfigFile = "branch_protection.yaml"
+const configFile = "branch_protection.yaml"
 
 // OrgConfig is the org-level config definition for Branch Protection.
 type OrgConfig struct {
@@ -254,7 +255,7 @@ func (b Branch) GetAction(ctx context.Context, c *github.Client, owner, repo str
 	oc := &OrgConfig{ // Fill out non-zero defaults
 		Action: "log",
 	}
-	configFetchConfig(ctx, c, owner, config.GetOrgRepo(), config_ConfigFile, oc)
+	configFetchConfig(ctx, c, owner, operator.OrgConfigRepo, configFile, oc)
 	return oc.Action
 }
 
@@ -268,9 +269,9 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 		DismissStale:    true,
 		BlockForce:      true,
 	}
-	configFetchConfig(ctx, c, owner, config.GetOrgRepo(), config_ConfigFile, oc)
+	configFetchConfig(ctx, c, owner, operator.OrgConfigRepo, configFile, oc)
 	rc := &RepoConfig{}
-	configFetchConfig(ctx, c, owner, repo, path.Join(config.GetRepoDir(), config_ConfigFile), rc)
+	configFetchConfig(ctx, c, owner, repo, path.Join(operator.RepoConfigDir, configFile), rc)
 	return oc, rc
 }
 

@@ -17,7 +17,10 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/ossf/allstar/pkg/enforce"
@@ -25,18 +28,25 @@ import (
 )
 
 func main() {
-	ghc := ghclients.NewGHClients(http.DefaultTransport)
 
-	// Just run for 10 min now
-	ctx, cf := context.WithTimeout(context.Background(), (10 * time.Minute))
+	ctx, cf := context.WithCancel(context.Background())
+
+	ghc, err := ghclients.NewGHClients(ctx, http.DefaultTransport)
+	if err != nil {
+		log.Fatalf("Could not get app secret: %v", err)
+	}
 
 	var wg sync.WaitGroup
 	// Kickoff webhook listener, delayed enforce, reconcile job...
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		log.Print(enforce.EnforceJob(ctx, ghc, (1 * time.Minute)))
+		log.Print(enforce.EnforceJob(ctx, ghc, (5 * time.Minute)))
 	}()
-	wg.Wait()
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	<-sigs
 	cf()
+	log.Print("Shutting down gracefully")
+	wg.Wait()
 }

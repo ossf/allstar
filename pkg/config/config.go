@@ -21,12 +21,9 @@ import (
 	"path"
 
 	"github.com/google/go-github/v35/github"
+	"github.com/ossf/allstar/pkg/config/operator"
 	"gopkg.in/yaml.v2"
 )
-
-const config_OrgConfigRepo = ".allstar"
-const config_RepoConfigDir = ".allstar"
-const config_ConfigFile = "allstar.yaml"
 
 // OrgConfig is the org-level config definition for Allstar
 type OrgConfig struct {
@@ -65,19 +62,6 @@ type RepoOptConfig struct {
 
 	// OptOut: set to true to opt-out this repo when in opt-out strategy
 	OptOut bool `yaml:"optOut"`
-}
-
-// GetOrgRepo returns the configured name of the org-level repo which should
-// contain org-level config files.
-func GetOrgRepo() string {
-	return config_OrgConfigRepo
-}
-
-// GetRepoDir returns the configured expected name of the configuration
-// directory in each individual repo which should contain repo-level config
-// files.
-func GetRepoDir() string {
-	return config_RepoConfigDir
 }
 
 // FetchConfig grabs a yaml config file from github and writes it to out.
@@ -139,9 +123,9 @@ func IsBotEnabled(ctx context.Context, c *github.Client, owner, repo string) boo
 func isBotEnabled(ctx context.Context, r repositories, owner, repo string) bool {
 	// drop errors, if cfg file is not there, go with defaults
 	oc := &OrgConfig{}
-	fetchConfig(ctx, r, owner, config_OrgConfigRepo, config_ConfigFile, oc)
+	fetchConfig(ctx, r, owner, operator.OrgConfigRepo, operator.AppConfigFile, oc)
 	rc := &RepoConfig{}
-	fetchConfig(ctx, r, owner, repo, path.Join(config_RepoConfigDir, config_ConfigFile), rc)
+	fetchConfig(ctx, r, owner, repo, path.Join(operator.RepoConfigDir, operator.AppConfigFile), rc)
 
 	enabled := IsEnabled(oc.OptConfig, rc.OptConfig, repo)
 	log.Printf("Repo enabled? %v / %v : %v", owner, repo, enabled)
