@@ -21,10 +21,8 @@ import (
 	"time"
 
 	"github.com/google/go-github/v35/github"
+	"github.com/ossf/allstar/pkg/config/operator"
 )
-
-const config_Label = "allstar"
-const config_Ping = (24 * time.Hour)
 
 const title = "Security Policy violation %v"
 
@@ -42,7 +40,7 @@ type issues interface {
 func getPolicyIssue(ctx context.Context, issues issues, owner, repo, policy string) (*github.Issue, error) {
 	opt := &github.IssueListByRepoOptions{
 		State:  "all",
-		Labels: []string{config_Label},
+		Labels: []string{operator.GitHubIssueLabel},
 		ListOptions: github.ListOptions{
 			PerPage: 100,
 		},
@@ -81,7 +79,7 @@ func ensure(ctx context.Context, issues issues, owner, repo, policy, text string
 		new := &github.IssueRequest{
 			Title:  &t,
 			Body:   &body,
-			Labels: &[]string{config_Label},
+			Labels: &[]string{operator.GitHubIssueLabel},
 		}
 		_, _, err := issues.Create(ctx, owner, repo, new)
 		return err
@@ -101,7 +99,7 @@ func ensure(ctx context.Context, issues issues, owner, repo, policy, text string
 		_, _, err := issues.CreateComment(ctx, owner, repo, issue.GetNumber(), comment)
 		return err
 	}
-	if issue.GetUpdatedAt().Before(time.Now().Add(-1 * config_Ping)) {
+	if issue.GetUpdatedAt().Before(time.Now().Add(-1 * operator.NoticePingDuration)) {
 		body := "Updating issue after ping interval, status:\n" + text
 		comment := &github.IssueComment{
 			Body: &body,

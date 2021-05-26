@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/google/go-github/v35/github"
+	"github.com/ossf/allstar/pkg/config/operator"
 )
 
 var listByRepo func(context.Context, string, string,
@@ -70,7 +71,7 @@ func TestEnsure(t *testing.T) {
 			if *issue.Title != issueTitle {
 				t.Errorf("Unexpected title: %v", issue.GetTitle())
 			}
-			if (*issue.Labels)[0] != config_Label {
+			if (*issue.Labels)[0] != operator.GitHubIssueLabel {
 				t.Errorf("Unexpected title: %v", issue.GetTitle())
 			}
 			createCalled = true
@@ -148,7 +149,7 @@ func TestEnsure(t *testing.T) {
 		}
 	})
 	t.Run("OpenStaleIssue", func(t *testing.T) {
-		stale := time.Now().Add(-01 * config_Ping)
+		stale := time.Now().Add(-10 * operator.NoticePingDuration)
 		listByRepo = func(ctx context.Context, owner string, repo string,
 			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
 			return []*github.Issue{

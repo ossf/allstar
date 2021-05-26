@@ -15,6 +15,7 @@
 package ghclients
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -25,17 +26,23 @@ import (
 
 func TestGet(t *testing.T) {
 	called := 0
-	ghinstallationNewAppsTransportKeyFromFile = func(http.RoundTripper, int64,
-		string) (*ghinstallation.AppsTransport, error) {
+	ghinstallationNewAppsTransport = func(http.RoundTripper, int64,
+		[]byte) (*ghinstallation.AppsTransport, error) {
 		called = called + 1
 		return &ghinstallation.AppsTransport{BaseURL: fmt.Sprint(0)}, nil
 	}
-	ghinstallationNewKeyFromFile = func(r http.RoundTripper, a int64, i int64,
-		f string) (*ghinstallation.Transport, error) {
+	ghinstallationNew = func(r http.RoundTripper, a int64, i int64,
+		f []byte) (*ghinstallation.Transport, error) {
 		called = called + 1
 		return &ghinstallation.Transport{BaseURL: fmt.Sprint(i)}, nil
 	}
-	ghc := NewGHClients(http.DefaultTransport)
+	getKey = func(ctx context.Context) ([]byte, error) {
+		return nil, nil
+	}
+	ghc, err := NewGHClients(context.Background(), http.DefaultTransport)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 	c1, err := ghc.Get(0)
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
@@ -67,5 +74,4 @@ func TestGet(t *testing.T) {
 	if !reflect.DeepEqual(i1, i2) {
 		t.Errorf("Got wrong client")
 	}
-
 }
