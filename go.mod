@@ -8,6 +8,7 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
+	github.com/rs/zerolog v1.22.0 // indirect
 	gocloud.dev v0.23.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 	gopkg.in/yaml.v2 v2.2.8

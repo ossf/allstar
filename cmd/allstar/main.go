@@ -11,11 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 package main
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"os"
 	"os/signal"
@@ -25,15 +25,20 @@ import (
 
 	"github.com/ossf/allstar/pkg/enforce"
 	"github.com/ossf/allstar/pkg/ghclients"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 func main() {
-
+	setupLog()
 	ctx, cf := context.WithCancel(context.Background())
 
 	ghc, err := ghclients.NewGHClients(ctx, http.DefaultTransport)
 	if err != nil {
-		log.Fatalf("Could not get app secret: %v", err)
+		log.Fatal().
+			Err(err).
+			Msg("Could not load app secret, shutting down")
 	}
 
 	var wg sync.WaitGroup
@@ -41,12 +46,28 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		log.Print(enforce.EnforceJob(ctx, ghc, (5 * time.Minute)))
+		log.Info().
+			Err(enforce.EnforceJob(ctx, ghc, (5 * time.Minute))).
+			Msg("Enforce job shutting down.")
 	}()
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	<-sigs
+	s := <-sigs
 	cf()
-	log.Print("Shutting down gracefully")
+	log.Info().
+		Str("signal", s.String()).
+		Msg("Signal received, shutting down gracefully")
 	wg.Wait()
+}
+
+func setupLog() {
+	// Match expected values in GCP
+	zerolog.LevelFieldName = "severity"
+	zerolog.LevelTraceValue = "DEFAULT"
+	zerolog.LevelDebugValue = "DEBUG"
+	zerolog.LevelInfoValue = "INFO"
+	zerolog.LevelWarnValue = "WARNING"
+	zerolog.LevelErrorValue = "ERROR"
+	zerolog.LevelFatalValue = "CRITICAL"
+	zerolog.LevelPanicValue = "CRITICAL"
 }

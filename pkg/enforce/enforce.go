@@ -18,7 +18,6 @@ package enforce
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/ossf/allstar/pkg/config"
@@ -28,6 +27,7 @@ import (
 	"github.com/ossf/allstar/pkg/policydef"
 
 	"github.com/google/go-github/v35/github"
+	"github.com/rs/zerolog/log"
 )
 
 var policiesGetPolicies func() []policydef.Policy
@@ -82,7 +82,9 @@ func EnforceJob(ctx context.Context, ghc *ghclients.GHClients, d time.Duration) 
 	for {
 		err := EnforceAll(ctx, ghc)
 		if err != nil {
-			log.Printf("Error enforcing policies: %v", err)
+			log.Error().
+				Err(err).
+				Msg("Unexpected error enforcing policies.")
 		}
 		select {
 		case <-ctx.Done():
@@ -102,9 +104,14 @@ func RunPolicies(ctx context.Context, c *github.Client, owner, repo string) erro
 		if err != nil {
 			return err
 		}
-		log.Printf("Policy %v pass: %v", p.Name(), r.Pass)
-		log.Printf("Detailed status: %v", r.Details)
-		log.Printf("Notify text: %q", r.NotifyText)
+		log.Info().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("area", p.Name()).
+			Bool("result", r.Pass).
+			Str("notify", r.NotifyText).
+			Interface("details", r.Details).
+			Msg("Policy run result.")
 		a := p.GetAction(ctx, c, owner, repo)
 		if !r.Pass {
 			switch a {
@@ -115,14 +122,23 @@ func RunPolicies(ctx context.Context, c *github.Client, owner, repo string) erro
 					return err
 				}
 			case "email":
-				log.Print("Email action not implemented yet.")
+				log.Warn().
+					Str("org", owner).
+					Str("repo", repo).
+					Str("area", p.Name()).
+					Msg("Email action configured, but not implemented yet.")
 			case "fix":
 				err := p.Fix(ctx, c, owner, repo)
 				if err != nil {
 					return err
 				}
 			default:
-				log.Printf("Unknown action for policy %v : %v", p.Name(), a)
+				log.Warn().
+					Str("org", owner).
+					Str("repo", repo).
+					Str("area", p.Name()).
+					Str("action", a).
+					Msg("Unknown action configured.")
 			}
 		}
 		if r.Pass && a == "issue" {

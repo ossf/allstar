@@ -18,7 +18,6 @@ package branch
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"path"
 
@@ -27,9 +26,11 @@ import (
 	"github.com/ossf/allstar/pkg/policydef"
 
 	"github.com/google/go-github/v35/github"
+	"github.com/rs/zerolog/log"
 )
 
 const configFile = "branch_protection.yaml"
+const polName = "Branch Protection"
 
 // OrgConfig is the org-level config definition for Branch Protection.
 type OrgConfig struct {
@@ -119,7 +120,7 @@ func NewBranch() policydef.Policy {
 
 // Name returns the name of this policy, implementing policydef.Policy.Name()
 func (b Branch) Name() string {
-	return "Branch Protection"
+	return polName
 }
 
 type repositories interface {
@@ -142,7 +143,12 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
 	oc, rc := getConfig(ctx, c, owner, repo)
 	enabled := config.IsEnabled(oc.OptConfig, rc.OptConfig, repo)
-	log.Printf("Repo branch protection enabled? %v / %v : %v", owner, repo, enabled)
+	log.Info().
+		Str("org", owner).
+		Str("repo", repo).
+		Str("area", polName).
+		Bool("enabled", enabled).
+		Msg("Check repo enabled")
 	if !enabled {
 		return &policydef.Result{
 			Pass:       true,
@@ -243,7 +249,11 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 // Fix implementing policydef.Policy.Fix(). Currently not supported. BP plans
 // to support this TODO.
 func (b Branch) Fix(ctx context.Context, c *github.Client, owner, repo string) error {
-	log.Printf("Action fix is not implemented for policy %v", b.Name())
+	log.Warn().
+		Str("org", owner).
+		Str("repo", repo).
+		Str("area", polName).
+		Msg("Action fix is configured, but not implemented.")
 	return nil
 }
 
