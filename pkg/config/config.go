@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// package config defines and grabs overall bot config
+// Package config defines and grabs overall bot config.
 package config
 
 import (
 	"context"
-	"log"
 	"path"
 
-	"github.com/google/go-github/v35/github"
 	"github.com/ossf/allstar/pkg/config/operator"
+
+	"github.com/google/go-github/v35/github"
+	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v2"
 )
 
@@ -79,7 +80,13 @@ func fetchConfig(ctx context.Context, r repositories, owner, repo, path string, 
 		return err
 	}
 	if err := yaml.UnmarshalStrict([]byte(con), out); err != nil {
-		log.Printf("Malformed config file %v/%v:%v\t%v", owner, repo, path, err)
+		log.Warn().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("file", path).
+			Err(err).
+			Msg("Malformed config file, using defaults.")
+		// TODO: if UnmarshalStrict errors, does it still fill out the found fields?
 		return err
 	}
 	return nil
@@ -128,7 +135,12 @@ func isBotEnabled(ctx context.Context, r repositories, owner, repo string) bool 
 	fetchConfig(ctx, r, owner, repo, path.Join(operator.RepoConfigDir, operator.AppConfigFile), rc)
 
 	enabled := IsEnabled(oc.OptConfig, rc.OptConfig, repo)
-	log.Printf("Repo enabled? %v / %v : %v", owner, repo, enabled)
+	log.Info().
+		Str("org", owner).
+		Str("repo", repo).
+		Str("area", "bot").
+		Bool("enabled", enabled).
+		Msg("Check repo enabled")
 	return enabled
 }
 
