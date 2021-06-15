@@ -1,5 +1,3 @@
-
-
 #### OpenSSF All Star logos
 
 <table>
@@ -7,8 +5,8 @@
         <th colspan="2"></th>
     </tr>
     <tr>
-        <td><img src="openssf_allstar_alt.svg" width="100"></td>
-        <td><img src="openssf_allstar_alt.png" width="100"></td>
+        <td><img src="openssf_allstar_alt.svg" width="200"></td>
+        <td><img src="openssf_allstar_alt.png" width="200"></td>
     </tr>
 
 </table>
