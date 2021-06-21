@@ -1,12 +1,10 @@
 steps:
-  name: gcr.io/cloud-builders/go
+- name: gcr.io/cloud-builders/go
   args: ['get', 'github.com/google/ko@v0.8.3']
-steps:
-  name: gcr.io/cloud-builders/go
+- name: gcr.io/cloud-builders/go
   entrypoint: bash
   args: ['-c', 'KO_DOCKER_REPO="gcr.io/allstar-ossf" /go/bin/ko publish ./cmd/allstar > container']
-steps:
-  name: gcr.io/google.com/cloudsdktool/cloud-sdk
+- name: gcr.io/google.com/cloudsdktool/cloud-sdk
   entrypoint: bash
   args: ['-c', 'gcloud app deploy --project=allstar-ossf --image-url $(cat container)']
 options:
