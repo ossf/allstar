@@ -19,13 +19,13 @@ import "time"
 
 // AppID should be set to the application ID of the created GitHub App. See:
 // https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps#authenticating-as-a-github-app
-const AppID = 1
+const AppID = 119816
 
 // KeySecret should be set to the name of a secret containing a private key for
 // the App. See:
 // https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps#generating-a-private-key
 // The secret is retrieved with gocloud.dev/runtimevar.
-const KeySecret = "gcpsecretmanager://projects/myproject/secrets/mysecret?decoder=bytes"
+const KeySecret = "gcpsecretmanager://projects/allstar-ossf/secrets/allstar-private-key?decoder=bytes"
 
 // OrgConfigRepo is the name of the expected org-level repo to contain config.
 const OrgConfigRepo = ".allstar"
