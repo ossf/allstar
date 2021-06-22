@@ -63,7 +63,7 @@ func TestEnsure(t *testing.T) {
 	t.Run("NoIssue", func(t *testing.T) {
 		listByRepo = func(ctx context.Context, owner string, repo string,
 			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
-			return make([]*github.Issue, 0), nil, nil
+			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
 		}
 		createCalled := false
 		create = func(ctx context.Context, owner string, repo string,
@@ -95,7 +95,7 @@ func TestEnsure(t *testing.T) {
 					Title: &issueTitle,
 					State: &closed,
 				},
-			}, nil, nil
+			}, &github.Response{NextPage: 0}, nil
 		}
 		create = nil
 		editCalled := false
@@ -137,7 +137,7 @@ func TestEnsure(t *testing.T) {
 					State:     &open,
 					UpdatedAt: &now,
 				},
-			}, nil, nil
+			}, &github.Response{NextPage: 0}, nil
 		}
 		// Expect to not call nil functions
 		create = nil
@@ -158,7 +158,7 @@ func TestEnsure(t *testing.T) {
 					State:     &open,
 					UpdatedAt: &stale,
 				},
-			}, nil, nil
+			}, &github.Response{NextPage: 0}, nil
 		}
 		commentCalled := false
 		createComment = func(ctx context.Context, owner string, repo string,
@@ -187,7 +187,7 @@ func TestClose(t *testing.T) {
 	t.Run("NoIssue", func(t *testing.T) {
 		listByRepo = func(ctx context.Context, owner string, repo string,
 			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
-			return make([]*github.Issue, 0), nil, nil
+			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
 		}
 		// Expect to not call nil functions
 		createComment = nil
@@ -204,7 +204,7 @@ func TestClose(t *testing.T) {
 				&github.Issue{
 					Title: &issueTitle,
 				},
-			}, nil, nil
+			}, &github.Response{NextPage: 0}, nil
 		}
 		// Expect to not call nil functions
 		createComment = nil
@@ -223,7 +223,7 @@ func TestClose(t *testing.T) {
 					Title: &issueTitle,
 					State: &open,
 				},
-			}, nil, nil
+			}, &github.Response{NextPage: 0}, nil
 		}
 		commentCalled := false
 		createComment = func(ctx context.Context, owner string, repo string,

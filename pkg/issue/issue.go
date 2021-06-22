@@ -45,14 +45,21 @@ func getPolicyIssue(ctx context.Context, issues issues, owner, repo, policy stri
 			PerPage: 100,
 		},
 	}
-	// TODO: check pagination
-	is, _, err := issues.ListByRepo(ctx, owner, repo, opt)
-	if err != nil {
-		return nil, err
+	var allIssues []*github.Issue
+	for {
+		is, resp, err := issues.ListByRepo(ctx, owner, repo, opt)
+		if err != nil {
+			return nil, err
+		}
+		allIssues = append(allIssues, is...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
 	}
 	var issue *github.Issue
 	t := fmt.Sprintf(title, policy)
-	for _, i := range is {
+	for _, i := range allIssues {
 		if i.GetTitle() == t {
 			issue = i
 			break

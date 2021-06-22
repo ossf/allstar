@@ -163,11 +163,25 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		return nil, err
 	}
 
-	bs, _, err := rep.ListBranches(ctx, owner, repo, nil)
-	if err != nil {
-		return nil, err
+	opt := &github.BranchListOptions{
+		ListOptions: github.ListOptions{
+			PerPage: 100,
+		},
 	}
-	if len(bs) == 0 {
+	var branches []*github.Branch
+	for {
+		bs, resp, err := rep.ListBranches(ctx, owner, repo, opt)
+		if err != nil {
+			return nil, err
+		}
+		branches = append(branches, bs...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
+	}
+	// Don't really need pagination here, only checking if no branches exist.
+	if len(branches) == 0 {
 		return &policydef.Result{
 			Pass:       true,
 			NotifyText: "No branches to protect",
