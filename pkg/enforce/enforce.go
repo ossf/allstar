@@ -51,20 +51,42 @@ func EnforceAll(ctx context.Context, ghc *ghclients.GHClients) error {
 	if err != nil {
 		return err
 	}
-	insts, _, err := ac.Apps.ListInstallations(ctx, nil)
-	if err != nil {
-		return err
+	var insts []*github.Installation
+	opt := &github.ListOptions{
+		PerPage: 100,
+	}
+	for {
+		is, resp, err := ac.Apps.ListInstallations(ctx, opt)
+		if err != nil {
+			return err
+		}
+		insts = append(insts, is...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
 	}
 	for _, i := range insts {
 		ic, err := ghc.Get(*i.ID)
 		if err != nil {
 			return err
 		}
-		repos, _, err := ic.Apps.ListRepos(ctx, nil)
-		if err != nil {
-			return err
+		var repos []*github.Repository
+		opt := &github.ListOptions{
+			PerPage: 100,
 		}
-		for _, r := range repos.Repositories {
+		for {
+			rs, resp, err := ic.Apps.ListRepos(ctx, opt)
+			if err != nil {
+				return err
+			}
+			repos = append(repos, rs.Repositories...)
+			if resp.NextPage == 0 {
+				break
+			}
+			opt.Page = resp.NextPage
+		}
+		for _, r := range repos {
 			if config.IsBotEnabled(ctx, ic, *r.Owner.Login, *r.Name) {
 				err := RunPolicies(ctx, ic, *r.Owner.Login, *r.Name)
 				if err != nil {

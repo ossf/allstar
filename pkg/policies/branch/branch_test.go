@@ -217,7 +217,7 @@ func TestCheck(t *testing.T) {
 		*github.BranchListOptions) ([]*github.Branch, *github.Response, error) {
 		return []*github.Branch{
 			&github.Branch{},
-		}, nil, nil
+		}, &github.Response{NextPage: 0}, nil
 	}
 
 	for _, test := range tests {
@@ -258,7 +258,7 @@ func TestCheck(t *testing.T) {
 	t.Run("Emptyrepo", func(t *testing.T) {
 		listBranches = func(context.Context, string, string,
 			*github.BranchListOptions) ([]*github.Branch, *github.Response, error) {
-			return []*github.Branch{}, nil, nil
+			return []*github.Branch{}, &github.Response{NextPage: 0}, nil
 		}
 		res, err := check(context.Background(), mockRepos{}, nil, "", "thisrepo")
 		if err != nil {
