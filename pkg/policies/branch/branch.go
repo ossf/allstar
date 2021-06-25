@@ -37,7 +37,8 @@ type OrgConfig struct {
 	// OptConfig is the standard org-level opt in/out config, RepoOverride applies to all
 	// BP config.
 	OptConfig config.OrgOptConfig `yaml:"optConfig"`
-	// Action defines which action to take, default log, other: issue, block...
+
+	// Action defines which action to take, default log, other: issue...
 	Action string `yaml:"action"`
 
 	// EnforceDefault : set to true to enforce policy on default branch, default true.
@@ -65,6 +66,9 @@ type OrgConfig struct {
 type RepoConfig struct {
 	// OptConfig is the standard repo-level opt in/out config.
 	OptConfig config.RepoOptConfig `yaml:"optConfig"`
+
+	// Action overrides the same setting in org-level, only if present.
+	Action *string `yaml:"action"`
 
 	// EnforceDefault overrides the same setting in org-level, only if present.
 	EnforceDefault *bool `yaml:"enforceDefault"`
@@ -149,13 +153,6 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		Str("area", polName).
 		Bool("enabled", enabled).
 		Msg("Check repo enabled")
-	if !enabled {
-		return &policydef.Result{
-			Pass:       true,
-			NotifyText: "Disabled",
-			Details:    nil,
-		}, nil
-	}
 	mc := mergeConfig(oc, rc, repo)
 
 	r, _, err := rep.Get(ctx, owner, repo)
@@ -183,6 +180,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	// Don't really need pagination here, only checking if no branches exist.
 	if len(branches) == 0 {
 		return &policydef.Result{
+			Enabled:    enabled,
 			Pass:       true,
 			NotifyText: "No branches to protect",
 			Details:    nil,
@@ -195,6 +193,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	}
 	if len(allBranches) == 0 {
 		return &policydef.Result{
+			Enabled:    enabled,
 			Pass:       true,
 			NotifyText: "No branches configured for enforcement in policy",
 			Details:    nil,
@@ -254,6 +253,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	}
 
 	return &policydef.Result{
+		Enabled:    enabled,
 		Pass:       pass,
 		NotifyText: text,
 		Details:    ds,
@@ -310,21 +310,26 @@ func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 		BlockForce:      oc.BlockForce,
 	}
 	mc.EnforceBranches = append(mc.EnforceBranches, rc.EnforceBranches...)
-	// FIXME if repo override
-	if rc.EnforceDefault != nil {
-		mc.EnforceDefault = *rc.EnforceDefault
-	}
-	if rc.RequireApproval != nil {
-		mc.RequireApproval = *rc.RequireApproval
-	}
-	if rc.ApprovalCount != nil {
-		mc.ApprovalCount = *rc.ApprovalCount
-	}
-	if rc.DismissStale != nil {
-		mc.DismissStale = *rc.DismissStale
-	}
-	if rc.BlockForce != nil {
-		mc.BlockForce = *rc.BlockForce
+
+	if !oc.OptConfig.DisableRepoOverride {
+		if rc.Action != nil {
+			mc.Action = *rc.Action
+		}
+		if rc.EnforceDefault != nil {
+			mc.EnforceDefault = *rc.EnforceDefault
+		}
+		if rc.RequireApproval != nil {
+			mc.RequireApproval = *rc.RequireApproval
+		}
+		if rc.ApprovalCount != nil {
+			mc.ApprovalCount = *rc.ApprovalCount
+		}
+		if rc.DismissStale != nil {
+			mc.DismissStale = *rc.DismissStale
+		}
+		if rc.BlockForce != nil {
+			mc.BlockForce = *rc.BlockForce
+		}
 	}
 	return mc
 }

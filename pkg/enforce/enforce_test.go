@@ -71,7 +71,7 @@ func TestRunPolicies(t *testing.T) {
 	}{
 		{
 			Name:         "LogOnly",
-			Res:          policydef.Result{Pass: false},
+			Res:          policydef.Result{Enabled: true, Pass: false},
 			Action:       "log",
 			ShouldFix:    false,
 			ShouldEnsure: false,
@@ -79,7 +79,7 @@ func TestRunPolicies(t *testing.T) {
 		},
 		{
 			Name:         "OpenIssue",
-			Res:          policydef.Result{Pass: false},
+			Res:          policydef.Result{Enabled: true, Pass: false},
 			Action:       "issue",
 			ShouldFix:    false,
 			ShouldEnsure: true,
@@ -87,7 +87,7 @@ func TestRunPolicies(t *testing.T) {
 		},
 		{
 			Name:         "CloseIssue",
-			Res:          policydef.Result{Pass: true},
+			Res:          policydef.Result{Enabled: true, Pass: true},
 			Action:       "issue",
 			ShouldFix:    false,
 			ShouldEnsure: false,
@@ -95,9 +95,17 @@ func TestRunPolicies(t *testing.T) {
 		},
 		{
 			Name:         "Fix",
-			Res:          policydef.Result{Pass: false},
+			Res:          policydef.Result{Enabled: true, Pass: false},
 			Action:       "fix",
 			ShouldFix:    true,
+			ShouldEnsure: false,
+			ShouldClose:  false,
+		},
+		{
+			Name:         "PolicyDisabled",
+			Res:          policydef.Result{Enabled: false, Pass: false},
+			Action:       "fix",
+			ShouldFix:    false,
 			ShouldEnsure: false,
 			ShouldClose:  false,
 		},
@@ -109,7 +117,7 @@ func TestRunPolicies(t *testing.T) {
 			closeCalled = false
 			result = test.Res
 			action = test.Action
-			err := RunPolicies(context.Background(), nil, "", "")
+			err := RunPolicies(context.Background(), nil, "", "", true)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}

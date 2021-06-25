@@ -31,6 +31,9 @@ import (
 
 // Result is returned from a policy check.
 type Result struct {
+	// Enabled is whether the policy is enabled or not.
+	Enabled bool
+
 	// Pass is whether the policy passes or not.
 	Pass bool
 
