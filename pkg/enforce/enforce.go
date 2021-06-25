@@ -87,11 +87,10 @@ func EnforceAll(ctx context.Context, ghc *ghclients.GHClients) error {
 			opt.Page = resp.NextPage
 		}
 		for _, r := range repos {
-			if config.IsBotEnabled(ctx, ic, *r.Owner.Login, *r.Name) {
-				err := RunPolicies(ctx, ic, *r.Owner.Login, *r.Name)
-				if err != nil {
-					return err
-				}
+			enabled := config.IsBotEnabled(ctx, ic, *r.Owner.Login, *r.Name)
+			err := RunPolicies(ctx, ic, *r.Owner.Login, *r.Name, enabled)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -119,7 +118,7 @@ func EnforceJob(ctx context.Context, ghc *ghclients.GHClients, d time.Duration) 
 // RunPolicies enforces policies on the provided repo. It is meant to be called
 // from either jobs, webhooks, or delayed checks. TODO: implement concurrency
 // check to only run a single instance per repo at a time.
-func RunPolicies(ctx context.Context, c *github.Client, owner, repo string) error {
+func RunPolicies(ctx context.Context, c *github.Client, owner, repo string, enabled bool) error {
 	ps := policiesGetPolicies()
 	for _, p := range ps {
 		r, err := p.Check(ctx, c, owner, repo)
@@ -131,9 +130,13 @@ func RunPolicies(ctx context.Context, c *github.Client, owner, repo string) erro
 			Str("repo", repo).
 			Str("area", p.Name()).
 			Bool("result", r.Pass).
+			Bool("enabled", enabled && r.Enabled).
 			Str("notify", r.NotifyText).
 			Interface("details", r.Details).
 			Msg("Policy run result.")
+		if !enabled || !r.Enabled {
+			continue
+		}
 		a := p.GetAction(ctx, c, owner, repo)
 		if !r.Pass {
 			switch a {

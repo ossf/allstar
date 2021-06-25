@@ -61,6 +61,38 @@ func TestCheck(t *testing.T) {
 		Exp  policydef.Result
 	}{
 		{
+			Name: "NotEnabled",
+			Org: OrgConfig{
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   1,
+				DismissStale:    true,
+				BlockForce:      true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 1,
+					},
+				},
+			},
+			Exp: policydef.Result{
+				Enabled:    false,
+				Pass:       true,
+				NotifyText: "",
+				Details: map[string]details{
+					"main": details{
+						PRReviews:    true,
+						NumReviews:   1,
+						DismissStale: true,
+						BlockForce:   true,
+					},
+				},
+			},
+		},
+		{
 			Name: "CatchBlockForce",
 			Org: OrgConfig{
 				OptConfig: config.OrgOptConfig{
@@ -85,6 +117,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			Exp: policydef.Result{
+				Enabled:    true,
 				Pass:       false,
 				NotifyText: "Block force push not configured for branch main\n",
 				Details: map[string]details{
@@ -122,6 +155,7 @@ func TestCheck(t *testing.T) {
 				"release": github.Protection{},
 			},
 			Exp: policydef.Result{
+				Enabled:    true,
 				Pass:       false,
 				NotifyText: "PR Approvals not configured for branch release\n",
 				Details: map[string]details{
@@ -165,8 +199,48 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			Exp: policydef.Result{
+				Enabled:    true,
 				Pass:       true,
 				NotifyText: "",
+				Details: map[string]details{
+					"main": details{
+						PRReviews:    true,
+						NumReviews:   1,
+						DismissStale: false,
+						BlockForce:   true,
+					},
+				},
+			},
+		},
+		{
+			Name: "RepoOverridePrevented",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy:      true,
+					DisableRepoOverride: true,
+				},
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   2,
+				DismissStale:    true,
+				BlockForce:      true,
+			},
+			Repo: RepoConfig{
+				ApprovalCount: &one,
+				DismissStale:  &fal,
+			},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          false,
+						RequiredApprovingReviewCount: 1,
+					},
+				},
+			},
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Dismiss stale reviews not configured for branch main\nPR Approvals below threshold 1 : 2 for branch main\n",
 				Details: map[string]details{
 					"main": details{
 						PRReviews:    true,
@@ -192,6 +266,7 @@ func TestCheck(t *testing.T) {
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{},
 			Exp: policydef.Result{
+				Enabled:    true,
 				Pass:       false,
 				NotifyText: "No protection found for branch main\n",
 				Details: map[string]details{
@@ -265,6 +340,7 @@ func TestCheck(t *testing.T) {
 			t.Fatalf("Unexpected error: %v", err)
 		}
 		expect := &policydef.Result{
+			Enabled:    true,
 			Pass:       true,
 			NotifyText: "No branches to protect",
 		}
