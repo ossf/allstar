@@ -41,6 +41,9 @@ const AppConfigFile = "allstar.yaml"
 // Issues created by the bot.
 const GitHubIssueLabel = "allstar"
 
+// GitHubIssueFooter is added to the end of GitHub issues.
+const GitHubIssueFooter = "Issue created by Allstar. https://github.com/ossf/allstar"
+
 // NoticePingDuration is the duration to wait between pinging notice actions,
 // such as updating a GitHub issue.
 const NoticePingDuration = (24 * time.Hour)
