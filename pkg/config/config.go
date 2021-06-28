@@ -17,6 +17,7 @@ package config
 
 import (
 	"context"
+	"net/http"
 	"path"
 
 	"github.com/ossf/allstar/pkg/config/operator"
@@ -71,8 +72,11 @@ func FetchConfig(ctx context.Context, c *github.Client, owner, repo, path string
 }
 
 func fetchConfig(ctx context.Context, r repositories, owner, repo, path string, out interface{}) error {
-	cf, _, _, err := r.GetContents(ctx, owner, repo, path, nil)
+	cf, _, rsp, err := r.GetContents(ctx, owner, repo, path, nil)
 	if err != nil {
+		if rsp != nil && rsp.StatusCode == http.StatusNotFound {
+			return nil
+		}
 		return err
 	}
 	con, err := cf.GetContent()
@@ -87,7 +91,7 @@ func fetchConfig(ctx context.Context, r repositories, owner, repo, path string, 
 			Err(err).
 			Msg("Malformed config file, using defaults.")
 		// TODO: if UnmarshalStrict errors, does it still fill out the found fields?
-		return err
+		return nil
 	}
 	return nil
 }
@@ -130,9 +134,25 @@ func IsBotEnabled(ctx context.Context, c *github.Client, owner, repo string) boo
 func isBotEnabled(ctx context.Context, r repositories, owner, repo string) bool {
 	// drop errors, if cfg file is not there, go with defaults
 	oc := &OrgConfig{}
-	fetchConfig(ctx, r, owner, operator.OrgConfigRepo, operator.AppConfigFile, oc)
+	if err := fetchConfig(ctx, r, owner, operator.OrgConfigRepo, operator.AppConfigFile, oc); err != nil {
+		log.Error().
+			Str("org", owner).
+			Str("repo", operator.OrgConfigRepo).
+			Str("area", "bot").
+			Str("file", operator.AppConfigFile).
+			Err(err).
+			Msg("Unexpected config error, using defaults.")
+	}
 	rc := &RepoConfig{}
-	fetchConfig(ctx, r, owner, repo, path.Join(operator.RepoConfigDir, operator.AppConfigFile), rc)
+	if err := fetchConfig(ctx, r, owner, repo, path.Join(operator.RepoConfigDir, operator.AppConfigFile), rc); err != nil {
+		log.Error().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("area", "bot").
+			Str("file", path.Join(operator.RepoConfigDir, operator.AppConfigFile)).
+			Err(err).
+			Msg("Unexpected config error, using defaults.")
+	}
 
 	enabled := IsEnabled(oc.OptConfig, rc.OptConfig, repo)
 	log.Info().
