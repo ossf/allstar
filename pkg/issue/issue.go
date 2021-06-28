@@ -81,8 +81,8 @@ func ensure(ctx context.Context, issues issues, owner, repo, policy, text string
 		return err
 	}
 	if issue == nil {
-		body := fmt.Sprintf("Security Policy %v is out of compliance, status:\n", policy) + text +
-			"\n\n" + operator.GitHubIssueFooter
+		body := fmt.Sprintf("Security Policy %v is out of compliance, status:\n%v\n\n%v",
+			policy, text, operator.GitHubIssueFooter)
 		t := fmt.Sprintf(title, policy)
 		new := &github.IssueRequest{
 			Title:  &t,
