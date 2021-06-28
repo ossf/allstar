@@ -201,7 +201,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	}
 	pass := true
 	text := ""
-	ds := make(map[string]details, 0)
+	ds := make(map[string]details)
 	for _, b := range allBranches {
 		p, rsp, err := rep.GetBranchProtection(ctx, owner, repo, b)
 		if err != nil {
@@ -275,16 +275,12 @@ func (b Branch) Fix(ctx context.Context, c *github.Client, owner, repo string) e
 // configuration stored in the org-level repo, default log. Implementing
 // policydef.Policy.GetAction()
 func (b Branch) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
-	// drop errors, if cfg file is not there, go with defaults
-	oc := &OrgConfig{ // Fill out non-zero defaults
-		Action: "log",
-	}
-	configFetchConfig(ctx, c, owner, operator.OrgConfigRepo, configFile, oc)
-	return oc.Action
+	oc, rc := getConfig(ctx, c, owner, repo)
+	mc := mergeConfig(oc, rc, repo)
+	return mc.Action
 }
 
 func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgConfig, *RepoConfig) {
-	// drop errors, if cfg file is not there, go with defaults
 	oc := &OrgConfig{ // Fill out non-zero defaults
 		Action:          "log",
 		EnforceDefault:  true,
@@ -293,9 +289,25 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 		DismissStale:    true,
 		BlockForce:      true,
 	}
-	configFetchConfig(ctx, c, owner, operator.OrgConfigRepo, configFile, oc)
+	if err := configFetchConfig(ctx, c, owner, operator.OrgConfigRepo, configFile, oc); err != nil {
+		log.Error().
+			Str("org", owner).
+			Str("repo", operator.OrgConfigRepo).
+			Str("area", polName).
+			Str("file", configFile).
+			Err(err).
+			Msg("Unexpected config error, using defaults.")
+	}
 	rc := &RepoConfig{}
-	configFetchConfig(ctx, c, owner, repo, path.Join(operator.RepoConfigDir, configFile), rc)
+	if err := configFetchConfig(ctx, c, owner, repo, path.Join(operator.RepoConfigDir, configFile), rc); err != nil {
+		log.Error().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("area", polName).
+			Str("file", path.Join(operator.RepoConfigDir, configFile)).
+			Err(err).
+			Msg("Unexpected config error, using defaults.")
+	}
 	return oc, rc
 }
 
