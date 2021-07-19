@@ -18,6 +18,7 @@ package policies
 
 import (
 	"github.com/ossf/allstar/pkg/policies/branch"
+	"github.com/ossf/allstar/pkg/policies/outside"
 	"github.com/ossf/allstar/pkg/policies/security"
 	"github.com/ossf/allstar/pkg/policydef"
 )
@@ -27,5 +28,6 @@ func GetPolicies() []policydef.Policy {
 	return []policydef.Policy{
 		branch.NewBranch(),
 		security.NewSecurity(),
+		outside.NewOutside(),
 	}
 }
