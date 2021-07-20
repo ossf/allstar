@@ -22,7 +22,7 @@ import (
 
 	"github.com/ossf/allstar/pkg/config/operator"
 
-	"github.com/google/go-github/v35/github"
+	"github.com/google/go-github/v32/github"
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v2"
 )
