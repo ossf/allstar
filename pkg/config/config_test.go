@@ -20,7 +20,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/google/go-github/v35/github"
+	"github.com/google/go-github/v32/github"
 )
 
 var getContents func(context.Context, string, string, string,

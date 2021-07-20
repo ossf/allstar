@@ -26,7 +26,7 @@ import (
 	"github.com/ossf/allstar/pkg/policies"
 	"github.com/ossf/allstar/pkg/policydef"
 
-	"github.com/google/go-github/v35/github"
+	"github.com/google/go-github/v32/github"
 	"github.com/rs/zerolog/log"
 )
 
@@ -80,7 +80,7 @@ func EnforceAll(ctx context.Context, ghc *ghclients.GHClients) error {
 			if err != nil {
 				return err
 			}
-			repos = append(repos, rs.Repositories...)
+			repos = append(repos, rs...)
 			if resp.NextPage == 0 {
 				break
 			}

@@ -21,7 +21,7 @@ import (
 	"net/http"
 
 	"github.com/bradleyfalzon/ghinstallation"
-	"github.com/google/go-github/v35/github"
+	"github.com/google/go-github/v32/github"
 	"github.com/gregjones/httpcache"
 	"github.com/ossf/allstar/pkg/config/operator"
 	"gocloud.dev/runtimevar"
