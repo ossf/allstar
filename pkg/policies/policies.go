@@ -29,7 +29,7 @@ func GetPolicies() []policydef.Policy {
 	return []policydef.Policy{
 		binary.NewBinary(),
 		branch.NewBranch(),
-		security.NewSecurity(),
 		outside.NewOutside(),
+		security.NewSecurity(),
 	}
 }
