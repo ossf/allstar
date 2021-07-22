@@ -59,7 +59,7 @@ type mergedConfig struct {
 }
 
 type details struct {
-	Messages []string
+	Messages []checker.CheckDetail
 }
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, interface{}) error
@@ -83,11 +83,22 @@ func (b Binary) Name() string {
 }
 
 type logger struct {
-	Messages []string
+	Messages2 []checker.CheckDetail
 }
 
-func (l *logger) Logf(s string, f ...interface{}) {
-	l.Messages = append(l.Messages, fmt.Sprintf(s, f...))
+func (l *logger) Info(desc string, args ...interface{}) {
+	cd := checker.CheckDetail{Type: checker.DetailInfo, Msg: fmt.Sprintf(desc, args...)}
+	l.Messages2 = append(l.Messages2, cd)
+}
+
+func (l *logger) Warn(desc string, args ...interface{}) {
+	cd := checker.CheckDetail{Type: checker.DetailWarn, Msg: fmt.Sprintf(desc, args...)}
+	l.Messages2 = append(l.Messages2, cd)
+}
+
+func (l *logger) Debug(desc string, args ...interface{}) {
+	cd := checker.CheckDetail{Type: checker.DetailDebug, Msg: fmt.Sprintf(desc, args...)}
+	l.Messages2 = append(l.Messages2, cd)
 }
 
 // Check performs the polcy check for this policy based on the
@@ -116,27 +127,28 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		Owner:       owner,
 		Repo:        repo,
 		GraphClient: nil,
-		Logf:        l.Logf,
+		Dlogger:     &l,
 	}
 	// TODO, likely this should be a "scorecard" policy that runs multiple checks
 	// here, and uses config to enable/disable checks.
 	res := checks.BinaryArtifacts(cr)
-	if res.Error != nil {
-		return nil, res.Error
+	if res.Error2 != nil {
+		return nil, res.Error2
 	}
 
 	var notify string
-	if !res.Pass {
-		notify = "Scorecard Check Binary Artifacts failed.\n" +
-			"Please run scorecard directly for details: https://github.com/ossf/scorecard\n"
+	if res.Score < checker.MaxResultScore {
+		notify = fmt.Sprintf("Scorecard Check Binary Artifacts failed: %v\n"+
+			"Please run scorecard directly for details: https://github.com/ossf/scorecard\n",
+			res.Reason)
 	}
 
 	return &policydef.Result{
 		Enabled:    enabled,
-		Pass:       res.Pass,
+		Pass:       res.Score >= checker.MaxResultScore,
 		NotifyText: notify,
 		Details: details{
-			Messages: l.Messages,
+			Messages: l.Messages2,
 		},
 	}, nil
 }
