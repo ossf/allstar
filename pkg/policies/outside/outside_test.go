@@ -16,9 +16,9 @@ package outside
 
 import (
 	"context"
-	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v32/github"
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
@@ -167,8 +167,8 @@ func TestCheck(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
-			if !reflect.DeepEqual(res, &test.Exp) {
-				t.Errorf("Unexpected results. Got: %v, Expect: %v", res, &test.Exp)
+			if diff := cmp.Diff(&test.Exp, res); diff != "" {
+				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 		})
 	}

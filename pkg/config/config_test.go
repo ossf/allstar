@@ -17,9 +17,9 @@ package config
 import (
 	"context"
 	"encoding/base64"
-	"reflect"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v32/github"
 )
 
@@ -125,8 +125,8 @@ optConfig:
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
-			if !reflect.DeepEqual(test.Got, test.Expect) {
-				t.Errorf("Unexpected results. Got: %v, Expect: %v", test.Got, test.Expect)
+			if diff := cmp.Diff(test.Expect, test.Got); diff != "" {
+				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 		})
 	}
