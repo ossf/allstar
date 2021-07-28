@@ -118,6 +118,7 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 	if err := repoClient.InitRepo(owner, repo); err != nil {
 		return nil, err
 	}
+	defer repoClient.Close()
 	l := logger{}
 	cr := &checker.CheckRequest{
 		Ctx:         ctx,
