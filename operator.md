@@ -1,8 +1,9 @@
 # Operator Instructions
 
 You don't need to run an instance of Allstar to use it. The OpenSSF runs an
-instance that anyone can install and use LINK. However, you may wish to create
-and run your own instance of Allstar for security or customization reasons.
+instance that anyone can [install and use
+here](https://github.com/apps/allstar-app). However, you may wish to create and
+run your own instance of Allstar for security or customization reasons.
 
 ## Create a GitHub App
 
