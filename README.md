@@ -1,14 +1,14 @@
 # **Allstar**
 
 Allstar is a GitHub App installed on organizations or repositories to set and
-enforce security policies. It's goal is to be able to detect any GitHub setting,
+enforce security policies. Its goal is to be able to detect any GitHub setting
 or repository file contents that may be risky or not follow security best
-practices. Then, if Allstar finds a repository to be out of compliance, it will
+practices. If Allstar finds a repository to be out of compliance, it will
 take an action such as create an issue.
 
 The specific policies are intended to be highly configurable, to try to meet the
 needs of different project communities and organizations. Also, developing and
-contributing new policies is intended to be easy as well.
+contributing new policies is intended to be easy.
 
 Allstar is developed under the [OpenSSF](https://openssf.org/) and as a part of
 the [Securing Critical Projects Working
@@ -20,19 +20,18 @@ anyone if need be, see [the operator docs](operator.md) for more details.
 ## **Quick start**
 
 [Install Allstar](https://github.com/apps/allstar-app) on your organizations and
-repositories like any other GitHub App. Follow the [quick start
+repositories. Follow the [quick start
 instructions](quick-start.md) to setup the configuration files needed to enable
 Allstar on your repositories.
 
-These quick start instructions don't provide much explanation, for more details
-on all the configuration options, continue reading.
+For more details on advanced configuration, see below.
 
 ### [Help! I'm getting issues created by Allstar and I don't want them.](opt-out.md)
 
 ## **Enable Configuration**
 
-Allstar can be enabled on individual repositories at the app level, and
-additionally each security policy can be enabled or disabled as well. For
+Allstar can be enabled on individual repositories at the app level, with
+the option of enabling or disabling each security policy individually. For
 organization-level configuration, create a repository named `.allstar` in your
 organization. Then create a file called `allstar.yaml` in that
 repository.
@@ -101,8 +100,8 @@ or individual policies may not make sense for all repositories.
 
 Each individual policy configuration file (see below) also contains the exact
 same `optConfig` configuration object. This allows granularity to enable
-policies on individual repositories. A policy will not take action unless both
-it is enabled and Allstar is enabled as a whole.
+policies on individual repositories. A policy will not take action unless
+it is enabled **and** Allstar is enabled as a whole.
 
 ### Definition
 
@@ -206,7 +205,7 @@ contents defined in config.
 
 See [this repo](https://github.com/GoogleContainerTools/.allstar) as an example
 of Allstar config being used. As the organization adimistrator, consider a
-README.md with some informatino on how Allstar is being used in your
+README.md with some information on how Allstar is being used in your
 organization.
 
 ## **Contribute Policies**
