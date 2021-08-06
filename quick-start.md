@@ -64,3 +64,8 @@ enable Allstar on a single repository:
 
 See the [main README](README.md) for more details on all the configuration
 options available.
+
+## Example Config Repository
+
+See [this repo](https://github.com/GoogleContainerTools/.allstar) as an example
+of Allstar config being used.
