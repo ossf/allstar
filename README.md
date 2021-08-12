@@ -62,7 +62,7 @@ optConfig:
   optOutStrategy: true
 ```
 
-If you with to enable Allstar on all but a few repositories, you may use opt-out
+If you wish to enable Allstar on all but a few repositories, you may use opt-out
 and list the repositories to disable:
 
 ```
