@@ -69,16 +69,23 @@ func EnforceAll(ctx context.Context, ghc *ghclients.GHClients) error {
 	for _, i := range insts {
 		ic, err := ghc.Get(*i.ID)
 		if err != nil {
-			return err
+			log.Error().
+				Err(err).
+				Int64("instId", *i.ID).
+				Msg("Unexpected error getting installation client.")
+			continue
 		}
 		var repos []*github.Repository
 		opt := &github.ListOptions{
 			PerPage: 100,
 		}
+		err = nil
 		for {
-			rs, resp, err := ic.Apps.ListRepos(ctx, opt)
+			var rs []*github.Repository
+			var resp *github.Response
+			rs, resp, err = ic.Apps.ListRepos(ctx, opt)
 			if err != nil {
-				return err
+				break
 			}
 			repos = append(repos, rs...)
 			if resp.NextPage == 0 {
@@ -86,12 +93,25 @@ func EnforceAll(ctx context.Context, ghc *ghclients.GHClients) error {
 			}
 			opt.Page = resp.NextPage
 		}
+		if err != nil {
+			log.Error().
+				Err(err).
+				Msg("Unexpected error listing installation repos.")
+			continue
+		}
+		err = nil
 		for _, r := range repos {
 			enabled := config.IsBotEnabled(ctx, ic, *r.Owner.Login, *r.Name)
-			err := RunPolicies(ctx, ic, *r.Owner.Login, *r.Name, enabled)
+			err = RunPolicies(ctx, ic, *r.Owner.Login, *r.Name, enabled)
 			if err != nil {
-				return err
+				break
 			}
+		}
+		if err != nil {
+			log.Error().
+				Err(err).
+				Msg("Unexpected error running policies.")
+			continue
 		}
 	}
 	return nil
