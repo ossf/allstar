@@ -158,7 +158,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		return &policydef.Result{
 			Enabled:    enabled,
 			Pass:       false,
-			NotifyText: fmt.Sprintf(`Found %n outside collaborators with push access.
+			NotifyText: fmt.Sprintf(`Found %v outside collaborators with push access.
 This policy requires all users with push access to be members of the organisation. That way you can easily audit who has access to your repo, and if an account is compromised it can quickly be denied access to organization resources. To fix this you should either remove the user from repository-based access, or add them to the organization. 
 
 * Remove the user from the repository-based access. From the main page of the repository, go to Settings -> Manage Access. 
