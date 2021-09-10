@@ -81,7 +81,7 @@ func ensure(ctx context.Context, issues issues, owner, repo, policy, text string
 		return err
 	}
 	if issue == nil {
-		body := fmt.Sprintf("Security Policy %v is out of compliance, status:\n%v\n\n%v",
+		body := fmt.Sprintf("Allstar has detected that this repository’s %v security policy is out of compliance. Status:\n%v\n\n%v",
 			policy, text, operator.GitHubIssueFooter)
 		t := fmt.Sprintf(title, policy)
 		new := &github.IssueRequest{
@@ -100,7 +100,7 @@ func ensure(ctx context.Context, issues issues, owner, repo, policy, text string
 		if _, _, err := issues.Edit(ctx, owner, repo, issue.GetNumber(), update); err != nil {
 			return err
 		}
-		body := "Re-opening issue, status:\n" + text
+		body := "Reopening issue. Status:\n" + text
 		comment := &github.IssueComment{
 			Body: &body,
 		}
@@ -108,7 +108,7 @@ func ensure(ctx context.Context, issues issues, owner, repo, policy, text string
 		return err
 	}
 	if issue.GetUpdatedAt().Before(time.Now().Add(-1 * operator.NoticePingDuration)) {
-		body := "Updating issue after ping interval, status:\n" + text
+		body := "Updating issue after ping interval. Status:\n" + text
 		comment := &github.IssueComment{
 			Body: &body,
 		}
@@ -130,7 +130,7 @@ func closeIssue(ctx context.Context, issues issues, owner, repo, policy string) 
 		return err
 	}
 	if issue.GetState() == "open" {
-		body := "Policy is now in compliance. Closing issue."
+		body := "Policy is now in compliance. Closing issue."  
 		comment := &github.IssueComment{
 			Body: &body,
 		}
