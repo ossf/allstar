@@ -115,7 +115,12 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 				Enabled: enabled,
 				Pass:    false,
 				NotifyText: fmt.Sprintf("SECURITY.md not found.\n"+
-					"Go to https://github.com/%v/%v/security/policy to enable.\n", owner, repo),
+					`A SECURITY.md file can give users information about what constitutes a vulnerability and how to report one securely so that information about a bug is not publicly visible. Examples of secure reporting methods include using an issue tracker with private issue support, or encrypted email with a published key.
+
+To fix this, add a SECURITY.md file that explains how to handle vulnerabilities found in your repository. Go to https://github.com//%v/%v/security/policy to enable.
+
+For more information, see https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository.					
+							\n`, owner, repo),
 				Details: details{
 					Exists: false,
 					Empty:  true,
@@ -128,7 +133,13 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		return &policydef.Result{
 			Enabled:    enabled,
 			Pass:       false,
-			NotifyText: "SECURITY.md is empty.\n",
+			NotifyText: fmt.Sprintf("SECURITY.md is empty.\n"+
+			`A SECURITY.md file can give users information about what constitutes a vulnerability and how to report one securely so that information about a bug is not publicly visible. Examples of secure reporting methods include using an issue tracker with private issue support, or encrypted email with a published key.
+
+To fix this, add a SECURITY.md file that explains how to handle vulnerabilities found in your repository. Go to https://github.com//%v/%v/security/policy to enable.
+
+For more information, see https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository.					
+							\n`, owner, repo),
 			Details: details{
 				Exists: true,
 				Empty:  true,
