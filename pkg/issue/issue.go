@@ -130,7 +130,7 @@ func closeIssue(ctx context.Context, issues issues, owner, repo, policy string) 
 		return err
 	}
 	if issue.GetState() == "open" {
-		body := "In compliance, closing."
+		body := "Policy is now in compliance. Closing issue."
 		comment := &github.IssueComment{
 			Body: &body,
 		}
