@@ -158,7 +158,17 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		return &policydef.Result{
 			Enabled:    enabled,
 			Pass:       false,
-			NotifyText: fmt.Sprintf("Found %v outside collaborators with push access.\n", d.OutsidePushCount),
+			NotifyText: fmt.Sprintf(`Found %n outside collaborators with push access.
+This policy requires all users with push access to be members of the organisation. That way you can easily audit who has access to your repo, and if an account is compromised it can quickly be denied access to organization resources. To fix this you should either remove the user from repository-based access, or add them to the organization. 
+
+* Remove the user from the repository-based access. From the main page of the repository, go to Settings -> Manage Access. 
+(For more information, see https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-user-account/managing-access-to-your-personal-repositories/removing-a-collaborator-from-a-personal-repository)
+
+OR
+
+* Invite the user to join your organisation. Click your profile photo and choose “Your Organization” → choose the org name → “People” → “Invite Member.” (For more information, see https://docs.github.com/en/organizations/managing-membership-in-your-organization/inviting-users-to-join-your-organization)
+
+If you don't see the Settings tab you probably don't have administrative access. Reach out to the administrators of the organisation to fix this issue.`, d.OutsidePushCount),
 			Details:    d,
 		}, nil
 	}
@@ -166,7 +176,17 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		return &policydef.Result{
 			Enabled:    enabled,
 			Pass:       false,
-			NotifyText: fmt.Sprintf("Found %v outside collaborators with admin access.\n", d.OutsideAdminCount),
+			NotifyText: fmt.Sprintf(`Found %v outside collaborators with admin access.
+This policy requires all users with admin access to be members of the organisation. That way you can easily audit who has access to your repo, and if an account is compromised it can quickly be denied access to organization resources. To fix this you should either remove the user from repository-based access, or add them to the organization. 
+
+* Remove the user from the repository-based access. From the main page of the repository, go to Settings -> Manage Access. 
+(For more information, see https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-user-account/managing-access-to-your-personal-repositories/removing-a-collaborator-from-a-personal-repository)
+
+OR
+
+* Invite the user to join your organisation. Click your profile photo and choose “Your Organization” → choose the org name → “People” → “Invite Member.” (For more information, see https://docs.github.com/en/organizations/managing-membership-in-your-organization/inviting-users-to-join-your-organization)
+
+If you don't see the Settings tab you probably don't have administrative access. Reach out to the administrators of the organisation to fix this issue.`, d.OutsideAdminCount),
 			Details:    d,
 		}, nil
 	}
