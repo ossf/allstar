@@ -18,7 +18,6 @@ package security
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"path"
 
 	"github.com/ossf/allstar/pkg/config"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/google/go-github/v39/github"
 	"github.com/rs/zerolog/log"
+	"github.com/shurcooL/githubv4"
 )
 
 const configFile = "security.yaml"
@@ -65,8 +65,8 @@ type mergedConfig struct {
 }
 
 type details struct {
-	Exists bool
-	Empty  bool
+	Enabled bool
+	URL     string
 }
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, interface{}) error
@@ -114,29 +114,28 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		Bool("enabled", enabled).
 		Msg("Check repo enabled")
 
-	fc, _, rsp, err := rep.GetContents(ctx, owner, repo, filePath, nil)
-	if err != nil {
-		if rsp != nil && rsp.StatusCode == http.StatusNotFound {
-			return &policydef.Result{
-				Enabled:    enabled,
-				Pass:       false,
-				NotifyText: "SECURITY.md not found.\n" + fmt.Sprintf(notifyText, owner, repo),
-				Details: details{
-					Exists: false,
-					Empty:  true,
-				},
-			}, nil
-		}
+	v4c := githubv4.NewClient(c.Client())
+	var q struct {
+		Repository struct {
+			SecurityPolicyUrl       string
+			IsSecurityPolicyEnabled bool
+		} `graphql:"repository(owner: $owner, name: $name)"`
+	}
+	variables := map[string]interface{}{
+		"owner": githubv4.String(owner),
+		"name":  githubv4.String(repo),
+	}
+	if err := v4c.Query(ctx, &q, variables); err != nil {
 		return nil, err
 	}
-	if fc.GetSize() <= 4 { // Empty file could have a carriage return, etc.
+	if !q.Repository.IsSecurityPolicyEnabled {
 		return &policydef.Result{
 			Enabled:    enabled,
 			Pass:       false,
-			NotifyText: "SECURITY.md is empty.\n" + fmt.Sprintf(notifyText, owner, repo),
+			NotifyText: "Security policy not enabled.\n" + fmt.Sprintf(notifyText, owner, repo),
 			Details: details{
-				Exists: true,
-				Empty:  true,
+				Enabled: false,
+				URL:     q.Repository.SecurityPolicyUrl,
 			},
 		}, nil
 	}
@@ -145,8 +144,8 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		Pass:       true,
 		NotifyText: "",
 		Details: details{
-			Exists: true,
-			Empty:  false,
+			Enabled: true,
+			URL:     q.Repository.SecurityPolicyUrl,
 		},
 	}, nil
 }
