@@ -212,6 +212,15 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 				ds[b] = details{}
 				continue
 			}
+			if rsp != nil && rsp.StatusCode == http.StatusForbidden {
+				// Protection not available
+				pass = false
+				text = text + "Branch Protection enforcement is configured in Allstar, however Branch Protection is not available on this repository. Upgrade to GitHub Pro or make this repository public to enable this feature.\n" +
+					"See: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/about-protected-branches for more information.\n" +
+					"Alternatively, disable Branch Protection policy enforcement for this repository in Allstar configuration."
+				ds[b] = details{}
+				break
+			}
 			return nil, err
 		}
 
