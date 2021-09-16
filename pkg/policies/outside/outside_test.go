@@ -135,7 +135,7 @@ func TestCheck(t *testing.T) {
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
-				NotifyText: "Found 1 outside collaborators with admin access.\n",
+				NotifyText: "Found 1 outside collaborators with admin access.\nThis policy requires all users with admin access to be members of the organisation.",
 				Details: details{
 					OutsidePushCount:  2,
 					OutsidePushers:    []string{"alice", "bob"},
@@ -167,9 +167,17 @@ func TestCheck(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
-			if diff := cmp.Diff(&test.Exp, res); diff != "" {
+			c := cmp.Comparer(func(x, y string) bool { return trunc(x, 40) == trunc(y, 40) })
+			if diff := cmp.Diff(&test.Exp, res, c); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 		})
 	}
+}
+
+func trunc(s string, n int) string {
+	if n >= len(s) {
+		return s
+	}
+	return s[:n]
 }

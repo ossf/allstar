@@ -43,7 +43,8 @@ const GitHubIssueLabel = "allstar"
 
 // GitHubIssueFooter is added to the end of GitHub issues.
 const GitHubIssueFooter = `This issue will auto resolve when the policy is in compliance.
-Issue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer.` 
+
+Issue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer.`
 
 // NoticePingDuration is the duration to wait between pinging notice actions,
 // such as updating a GitHub issue.

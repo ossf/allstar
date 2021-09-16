@@ -97,7 +97,7 @@ func TestCheck(t *testing.T) {
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
-				NotifyText: "SECURITY.md not found.\nGo to https://github.com//thisrepo/security/policy to enable.\n",
+				NotifyText: "SECURITY.md not found.\nA SECURITY.md file can give users information about what constitutes a vulnerability",
 				Details: details{
 					Exists: false,
 					Empty:  true,
@@ -117,7 +117,7 @@ func TestCheck(t *testing.T) {
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
-				NotifyText: "SECURITY.md is empty.\n",
+				NotifyText: "SECURITY.md is empty.\nA SECURITY.md file can give users information about what constitutes a vulnerability",
 				Details: details{
 					Exists: true,
 					Empty:  true,
@@ -159,9 +159,17 @@ func TestCheck(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
-			if diff := cmp.Diff(&test.Exp, res); diff != "" {
+			c := cmp.Comparer(func(x, y string) bool { return trunc(x, 40) == trunc(y, 40) })
+			if diff := cmp.Diff(&test.Exp, res, c); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 		})
 	}
+}
+
+func trunc(s string, n int) string {
+	if n >= len(s) {
+		return s
+	}
+	return s[:n]
 }
