@@ -110,7 +110,7 @@ func TestEnsure(t *testing.T) {
 		commentCalled := false
 		createComment = func(ctx context.Context, owner string, repo string,
 			number int, comment *github.IssueComment) (*github.IssueComment, *github.Response, error) {
-			if !strings.HasPrefix(comment.GetBody(), "Re-opening issue") {
+			if !strings.HasPrefix(comment.GetBody(), "Reopening issue") {
 				t.Errorf("Unexpected comment: %v", comment.GetBody())
 			}
 			commentCalled = true
@@ -228,7 +228,7 @@ func TestClose(t *testing.T) {
 		commentCalled := false
 		createComment = func(ctx context.Context, owner string, repo string,
 			number int, comment *github.IssueComment) (*github.IssueComment, *github.Response, error) {
-			if comment.GetBody() != "In compliance, closing." {
+			if comment.GetBody() != "Policy is now in compliance. Closing issue." {
 				t.Errorf("Unexpected comment: %v", comment.GetBody())
 			}
 			commentCalled = true

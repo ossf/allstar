@@ -33,6 +33,12 @@ const configFile = "security.yaml"
 const polName = "SECURITY.md"
 const filePath = "SECURITY.md"
 
+const notifyText = `A SECURITY.md file can give users information about what constitutes a vulnerability and how to report one securely so that information about a bug is not publicly visible. Examples of secure reporting methods include using an issue tracker with private issue support, or encrypted email with a published key.
+
+To fix this, add a SECURITY.md file that explains how to handle vulnerabilities found in your repository. Go to https://github.com/%v/%v/security/policy to enable.
+
+For more information, see https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository.`
+
 // OrgConfig is the org-level config definition for Branch Protection.
 type OrgConfig struct {
 	// OptConfig is the standard org-level opt in/out config, RepoOverride applies to all
@@ -112,15 +118,9 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	if err != nil {
 		if rsp != nil && rsp.StatusCode == http.StatusNotFound {
 			return &policydef.Result{
-				Enabled: enabled,
-				Pass:    false,
-				NotifyText: fmt.Sprintf("SECURITY.md not found.\n"+
-					`A SECURITY.md file can give users information about what constitutes a vulnerability and how to report one securely so that information about a bug is not publicly visible. Examples of secure reporting methods include using an issue tracker with private issue support, or encrypted email with a published key.
-
-To fix this, add a SECURITY.md file that explains how to handle vulnerabilities found in your repository. Go to https://github.com//%v/%v/security/policy to enable.
-
-For more information, see https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository.					
-							\n`, owner, repo),
+				Enabled:    enabled,
+				Pass:       false,
+				NotifyText: "SECURITY.md not found.\n" + fmt.Sprintf(notifyText, owner, repo),
 				Details: details{
 					Exists: false,
 					Empty:  true,
@@ -133,13 +133,7 @@ For more information, see https://docs.github.com/en/code-security/getting-start
 		return &policydef.Result{
 			Enabled:    enabled,
 			Pass:       false,
-			NotifyText: fmt.Sprintf("SECURITY.md is empty.\n"+
-			`A SECURITY.md file can give users information about what constitutes a vulnerability and how to report one securely so that information about a bug is not publicly visible. Examples of secure reporting methods include using an issue tracker with private issue support, or encrypted email with a published key.
-
-To fix this, add a SECURITY.md file that explains how to handle vulnerabilities found in your repository. Go to https://github.com//%v/%v/security/policy to enable.
-
-For more information, see https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository.					
-							\n`, owner, repo),
+			NotifyText: "SECURITY.md is empty.\n" + fmt.Sprintf(notifyText, owner, repo),
 			Details: details{
 				Exists: true,
 				Empty:  true,
