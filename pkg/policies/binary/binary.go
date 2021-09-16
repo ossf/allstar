@@ -25,7 +25,8 @@ import (
 	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/policydef"
 
-	"github.com/google/go-github/v32/github"
+	gh32 "github.com/google/go-github/v32/github"
+	"github.com/google/go-github/v39/github"
 	"github.com/ossf/scorecard/checker"
 	"github.com/ossf/scorecard/checks"
 	"github.com/ossf/scorecard/clients/githubrepo"
@@ -114,7 +115,8 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		Bool("enabled", enabled).
 		Msg("Check repo enabled")
 
-	repoClient := githubrepo.CreateGithubRepoClient(ctx, c)
+	oldClient := gh32.NewClient(c.Client())
+	repoClient := githubrepo.CreateGithubRepoClient(ctx, oldClient)
 	if err := repoClient.InitRepo(owner, repo); err != nil {
 		return nil, err
 	}
@@ -122,7 +124,7 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 	l := logger{}
 	cr := &checker.CheckRequest{
 		Ctx:         ctx,
-		Client:      c,
+		Client:      oldClient,
 		RepoClient:  repoClient,
 		HTTPClient:  nil,
 		Owner:       owner,

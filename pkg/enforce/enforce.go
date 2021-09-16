@@ -26,7 +26,7 @@ import (
 	"github.com/ossf/allstar/pkg/policies"
 	"github.com/ossf/allstar/pkg/policydef"
 
-	"github.com/google/go-github/v32/github"
+	"github.com/google/go-github/v39/github"
 	"github.com/rs/zerolog/log"
 )
 
@@ -81,13 +81,13 @@ func EnforceAll(ctx context.Context, ghc *ghclients.GHClients) error {
 		}
 		err = nil
 		for {
-			var rs []*github.Repository
+			var rs *github.ListRepositories
 			var resp *github.Response
 			rs, resp, err = ic.Apps.ListRepos(ctx, opt)
 			if err != nil {
 				break
 			}
-			repos = append(repos, rs...)
+			repos = append(repos, rs.Repositories...)
 			if resp.NextPage == 0 {
 				break
 			}
