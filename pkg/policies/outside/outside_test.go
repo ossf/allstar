@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-github/v32/github"
+	"github.com/google/go-github/v39/github"
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
 )
@@ -87,13 +87,13 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				&github.User{
 					Login: &alice,
-					Permissions: &map[string]bool{
+					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
 				&github.User{
 					Login: &bob,
-					Permissions: &map[string]bool{
+					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
@@ -120,13 +120,13 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				&github.User{
 					Login: &alice,
-					Permissions: &map[string]bool{
+					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
 				&github.User{
 					Login: &bob,
-					Permissions: &map[string]bool{
+					Permissions: map[string]bool{
 						"push":  true,
 						"admin": true,
 					},
