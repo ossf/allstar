@@ -31,7 +31,6 @@ import (
 
 const configFile = "security.yaml"
 const polName = "SECURITY.md"
-const filePath = "SECURITY.md"
 
 const notifyText = `A SECURITY.md file can give users information about what constitutes a vulnerability and how to report one securely so that information about a bug is not publicly visible. Examples of secure reporting methods include using an issue tracker with private issue support, or encrypted email with a published key.
 
