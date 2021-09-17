@@ -75,6 +75,10 @@ func init() {
 	configFetchConfig = config.FetchConfig
 }
 
+type v4client interface {
+	Query(context.Context, interface{}, map[string]interface{}) error
+}
+
 // Security is the SECURITY.md policy object, implements policydef.Policy.
 type Security bool
 
@@ -89,22 +93,16 @@ func (s Security) Name() string {
 	return polName
 }
 
-type repositories interface {
-	GetContents(context.Context, string, string, string,
-		*github.RepositoryContentGetOptions) (*github.RepositoryContent,
-		[]*github.RepositoryContent, *github.Response, error)
-}
-
 // Check performs the polcy check for SECURITY.md policy based on the
 // configuration stored in the org/repo, implementing policydef.Policy.Check()
 func (s Security) Check(ctx context.Context, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
-	return check(ctx, c.Repositories, c, owner, repo)
+	v4c := githubv4.NewClient(c.Client())
+	return check(ctx, c, v4c, owner, repo)
 }
 
-func check(ctx context.Context, rep repositories, c *github.Client, owner,
+func check(ctx context.Context, c *github.Client, v4c v4client, owner,
 	repo string) (*policydef.Result, error) {
-
 	oc, rc := getConfig(ctx, c, owner, repo)
 	enabled := config.IsEnabled(oc.OptConfig, rc.OptConfig, repo)
 	log.Info().
@@ -114,7 +112,6 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		Bool("enabled", enabled).
 		Msg("Check repo enabled")
 
-	v4c := githubv4.NewClient(c.Client())
 	var q struct {
 		Repository struct {
 			SecurityPolicyUrl       string
