@@ -16,9 +16,6 @@ package security
 
 import (
 	"context"
-	"encoding/base64"
-	"errors"
-	"net/http"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -27,40 +24,34 @@ import (
 	"github.com/ossf/allstar/pkg/policydef"
 )
 
-var getContents func(context.Context, string, string, string,
-	*github.RepositoryContentGetOptions) (*github.RepositoryContent,
-	[]*github.RepositoryContent, *github.Response, error)
+var query func(context.Context, interface{}, map[string]interface{}) error
 
-type mockRepos struct{}
+type mockClient struct{}
 
-func (m mockRepos) GetContents(ctx context.Context, owner, repo, path string,
-	opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
-	[]*github.RepositoryContent, *github.Response, error) {
-	return getContents(ctx, owner, repo, path, opts)
+func (m mockClient) Query(ctx context.Context, q interface{}, v map[string]interface{}) error {
+	return query(ctx, q, v)
 }
 
 func TestCheck(t *testing.T) {
 	tests := []struct {
-		Name     string
-		Org      OrgConfig
-		Repo     RepoConfig
-		Exists   bool
-		Contents string
-		Exp      policydef.Result
+		Name       string
+		Org        OrgConfig
+		Repo       RepoConfig
+		SecEnabled bool
+		Exp        policydef.Result
 	}{
 		{
-			Name:     "NotEnabled",
-			Org:      OrgConfig{},
-			Repo:     RepoConfig{},
-			Exists:   true,
-			Contents: "notempty",
+			Name:       "NotEnabled",
+			Org:        OrgConfig{},
+			Repo:       RepoConfig{},
+			SecEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    false,
 				Pass:       true,
 				NotifyText: "",
 				Details: details{
-					Exists: true,
-					Empty:  false,
+					Enabled: true,
+					URL:     "",
 				},
 			},
 		},
@@ -71,56 +62,34 @@ func TestCheck(t *testing.T) {
 					OptOutStrategy: true,
 				},
 			},
-			Repo:     RepoConfig{},
-			Exists:   true,
-			Contents: "notempty",
+			Repo:       RepoConfig{},
+			SecEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
 				NotifyText: "",
 				Details: details{
-					Exists: true,
-					Empty:  false,
+					Enabled: true,
+					URL:     "",
 				},
 			},
 		},
 		{
-			Name: "Missing",
+			Name: "Fail",
 			Org: OrgConfig{
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
 			},
-			Repo:     RepoConfig{},
-			Exists:   false,
-			Contents: "",
+			Repo:       RepoConfig{},
+			SecEnabled: false,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
-				NotifyText: "SECURITY.md not found.\nA SECURITY.md file can give users information about what constitutes a vulnerability",
+				NotifyText: "Security policy not enabled.\nA SECURITY.md file can give users information about what constitutes a vulnerability",
 				Details: details{
-					Exists: false,
-					Empty:  true,
-				},
-			},
-		},
-		{
-			Name: "Empty",
-			Org: OrgConfig{
-				OptConfig: config.OrgOptConfig{
-					OptOutStrategy: true,
-				},
-			},
-			Repo:     RepoConfig{},
-			Exists:   true,
-			Contents: "",
-			Exp: policydef.Result{
-				Enabled:    true,
-				Pass:       false,
-				NotifyText: "SECURITY.md is empty.\nA SECURITY.md file can give users information about what constitutes a vulnerability",
-				Details: details{
-					Exists: true,
-					Empty:  true,
+					Enabled: false,
+					URL:     "",
 				},
 			},
 		},
@@ -139,23 +108,20 @@ func TestCheck(t *testing.T) {
 				}
 				return nil
 			}
-			getContents = func(ctx context.Context, owner, repo, path string,
-				opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
-				[]*github.RepositoryContent, *github.Response, error) {
-				if test.Exists {
-					e := "base64"
-					c := base64.StdEncoding.EncodeToString([]byte(test.Contents))
-					s := len(test.Contents)
-					return &github.RepositoryContent{
-						Encoding: &e,
-						Content:  &c,
-						Size:     &s,
-					}, nil, nil, nil
-				} else {
-					return nil, nil, &github.Response{Response: &http.Response{StatusCode: http.StatusNotFound}}, errors.New("Not Found")
+			query = func(ctx context.Context, q interface{}, v map[string]interface{}) error {
+				qc, ok := q.(*struct {
+					Repository struct {
+						SecurityPolicyUrl       string
+						IsSecurityPolicyEnabled bool
+					} `graphql:"repository(owner: $owner, name: $name)"`
+				})
+				if !ok {
+					t.Errorf("Query() called with unexpected query structure.")
 				}
+				qc.Repository.IsSecurityPolicyEnabled = test.SecEnabled
+				return nil
 			}
-			res, err := check(context.Background(), mockRepos{}, nil, "", "thisrepo")
+			res, err := check(context.Background(), nil, mockClient{}, "", "thisrepo")
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
