@@ -31,6 +31,9 @@ import (
 type OrgConfig struct {
 	// OptConfig contains the opt in/out configuration.
 	OptConfig OrgOptConfig `yaml:"optConfig"`
+
+	// OrgAccessRepoConfig contains the configuration of access repos.
+	AccessReposConfig OrgAccessReposConfig `yaml:"accessReposConfig"`
 }
 
 // OrgOptConfig is used in Allstar and policy-secific org-level config to
@@ -48,6 +51,14 @@ type OrgOptConfig struct {
 	// DisableRepoOverride : set to true to disallow repos from opt-in/out in
 	// their config.
 	DisableRepoOverride bool `yaml:"disableRepoOverride"`
+}
+
+type OrgAccessReposConfig struct {
+	// DisableAccessPrivateRepos : set to true to not access private repos. 
+	DisablePrivateRepos bool `yaml:"disablePrivateRepos"`
+
+	// DisableAccessPublicRepos : set to true to not access public repos.
+	DisablePublicRepos bool `yaml:"disablePublicRepos"`
 }
 
 // RepoConfig is the repo-level config definition for Allstar
@@ -129,6 +140,16 @@ func IsEnabled(o OrgOptConfig, r RepoOptConfig, repo string) bool {
 // IsBotEnabled determines if allstar is enabled overall on the provided repo.
 func IsBotEnabled(ctx context.Context, c *github.Client, owner, repo string) bool {
 	return isBotEnabled(ctx, c.Repositories, owner, repo)
+}
+
+// IsAccessPrivateRepoEnabled determines if allstar will access private repos.
+func IsAccessPrivateRepoEnabled(o OrgAccessReposConfig) bool {
+	return !o.DisablePrivateRepos
+}
+
+// IsAccessPrivateRepoEnabled determines if allstar will access public repos.
+func IsAccessPublicRepoEnabled(o OrgAccessReposConfig) bool {
+	return !o.DisablePublicRepos
 }
 
 func isBotEnabled(ctx context.Context, r repositories, owner, repo string) bool {
