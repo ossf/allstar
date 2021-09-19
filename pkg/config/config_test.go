@@ -80,6 +80,21 @@ optConfig:
 			Got: &OrgConfig{},
 		},
 		{
+			Name: "OrgAccessReposConfig",
+			Input: `
+accessReposConfig:
+  disablePrivateRepos: true
+  disablePublicRepos: true	
+`,
+			Expect: &OrgConfig{
+				AccessReposConfig: OrgAccessReposConfig{
+					DisablePrivateRepos: true,
+					DisablePublicRepos: true,
+				},
+			},
+			Got: &OrgConfig{},
+		},
+		{
 			Name: "OptOutRepo",
 			Input: `
 optConfig:
@@ -245,5 +260,29 @@ optConfig:
 
 	if !isBotEnabled(context.Background(), mockRepos{}, "", "thisrepo") {
 		t.Error("Expected repo to be enabled")
+	}
+}
+
+func TestIsAccessPrivateRepoEnabled(t *testing.T) {
+	oc := &OrgConfig{
+		AccessReposConfig: OrgAccessReposConfig{
+			DisablePrivateRepos: true,
+			DisablePublicRepos: false,
+		},
+	}
+	if IsAccessPrivateRepoEnabled(oc.AccessReposConfig) {
+		t.Error("Expected accessing private repo to be disabled")
+	}
+}
+
+func TestIsAccessPublicRepoEnabled(t *testing.T) {
+	oc := &OrgConfig{
+		AccessReposConfig: OrgAccessReposConfig{
+			DisablePrivateRepos: false,
+			DisablePublicRepos: true,
+		},
+	}
+	if IsAccessPublicRepoEnabled(oc.AccessReposConfig) {
+		t.Error("Expected accessing public repo to be disabled")
 	}
 }
