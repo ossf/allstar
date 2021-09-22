@@ -31,9 +31,6 @@ import (
 type OrgConfig struct {
 	// OptConfig contains the opt in/out configuration.
 	OptConfig OrgOptConfig `yaml:"optConfig"`
-
-	// OrgAccessRepoConfig contains the configuration of access repos.
-	AccessReposConfig OrgAccessReposConfig `yaml:"accessReposConfig"`
 }
 
 // OrgOptConfig is used in Allstar and policy-secific org-level config to
@@ -48,17 +45,15 @@ type OrgOptConfig struct {
 	// OptOutRepos is the list of repos to opt-out when in opt-out strategy.
 	OptOutRepos []string `yaml:"optOutRepos"`
 
+	// OptOutPrivateRepos : set to true to not access private repos.
+	OptOutPrivateRepos bool `yaml:"optOutPrivateRepos"`
+
+	// OptOutPublicRepos : set to true to not access public repos.
+	OptOutPublicRepos bool `yaml:"optOutPublicRepos"`
+
 	// DisableRepoOverride : set to true to disallow repos from opt-in/out in
 	// their config.
 	DisableRepoOverride bool `yaml:"disableRepoOverride"`
-}
-
-type OrgAccessReposConfig struct {
-	// DisableAccessPrivateRepos : set to true to not access private repos. 
-	DisablePrivateRepos bool `yaml:"disablePrivateRepos"`
-
-	// DisableAccessPublicRepos : set to true to not access public repos.
-	DisablePublicRepos bool `yaml:"disablePublicRepos"`
 }
 
 // RepoConfig is the repo-level config definition for Allstar
@@ -108,6 +103,8 @@ func fetchConfig(ctx context.Context, r repositories, owner, repo, path string, 
 }
 
 type repositories interface {
+	Get(context.Context, string, string) (*github.Repository,
+		*github.Response, error)
 	GetContents(context.Context, string, string, string,
 		*github.RepositoryContentGetOptions) (*github.RepositoryContent,
 		[]*github.RepositoryContent, *github.Response, error)
@@ -115,11 +112,23 @@ type repositories interface {
 
 // IsEnabled determines if a repo is enabled by interpreting the provided
 // org-level and repo-level OptConfigs.
-func IsEnabled(o OrgOptConfig, r RepoOptConfig, repo string) bool {
+func IsEnabled(ctx context.Context, o OrgOptConfig, r RepoOptConfig, rep repositories, owner, repo string) (bool, error) {
 	var enabled bool
+
+	gr, _, err := rep.Get(ctx, owner, repo)
+	if err != nil {
+		return false, err
+	}
+
 	if o.OptOutStrategy {
 		enabled = true
 		if contains(o.OptOutRepos, repo) {
+			enabled = false
+		}
+		if o.OptOutPrivateRepos && gr.GetPrivate() {
+			enabled = false
+		}
+		if o.OptOutPublicRepos && !gr.GetPrivate() {
 			enabled = false
 		}
 		if !o.DisableRepoOverride && r.OptOut {
@@ -134,22 +143,12 @@ func IsEnabled(o OrgOptConfig, r RepoOptConfig, repo string) bool {
 			enabled = true
 		}
 	}
-	return enabled
+	return enabled, nil
 }
 
 // IsBotEnabled determines if allstar is enabled overall on the provided repo.
 func IsBotEnabled(ctx context.Context, c *github.Client, owner, repo string) bool {
 	return isBotEnabled(ctx, c.Repositories, owner, repo)
-}
-
-// IsAccessPrivateRepoEnabled determines if allstar will access private repos.
-func IsAccessPrivateRepoEnabled(o OrgAccessReposConfig) bool {
-	return !o.DisablePrivateRepos
-}
-
-// IsAccessPrivateRepoEnabled determines if allstar will access public repos.
-func IsAccessPublicRepoEnabled(o OrgAccessReposConfig) bool {
-	return !o.DisablePublicRepos
 }
 
 func isBotEnabled(ctx context.Context, r repositories, owner, repo string) bool {
@@ -175,7 +174,7 @@ func isBotEnabled(ctx context.Context, r repositories, owner, repo string) bool 
 			Msg("Unexpected config error, using defaults.")
 	}
 
-	enabled := IsEnabled(oc.OptConfig, rc.OptConfig, repo)
+	enabled, _ := IsEnabled(ctx, oc.OptConfig, rc.OptConfig, r, owner, repo)
 	log.Info().
 		Str("org", owner).
 		Str("repo", repo).
