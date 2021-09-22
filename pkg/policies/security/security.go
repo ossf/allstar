@@ -103,7 +103,7 @@ func (s Security) Check(ctx context.Context, c *github.Client, owner,
 func check(ctx context.Context, c *github.Client, v4c v4client, owner,
 	repo string) (*policydef.Result, error) {
 	oc, rc := getConfig(ctx, c, owner, repo)
-	enabled := config.IsEnabled(oc.OptConfig, rc.OptConfig, repo)
+	enabled, _ := config.IsEnabled(ctx, oc.OptConfig, rc.OptConfig, c.Repositories, owner, repo)
 	log.Info().
 		Str("org", owner).
 		Str("repo", repo).
