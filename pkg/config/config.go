@@ -174,7 +174,17 @@ func isBotEnabled(ctx context.Context, r repositories, owner, repo string) bool 
 			Msg("Unexpected config error, using defaults.")
 	}
 
-	enabled, _ := IsEnabled(ctx, oc.OptConfig, rc.OptConfig, r, owner, repo)
+	enabled, err := IsEnabled(ctx, oc.OptConfig, rc.OptConfig, r, owner, repo)
+	if err != nil {
+		log.Error().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("owner", owner).
+			Str("area", "bot").
+			Bool("enabled", enabled).
+			Err(err).
+			Msg("Unexpected config error, using defaults.")
+	}
 	log.Info().
 		Str("org", owner).
 		Str("repo", repo).
