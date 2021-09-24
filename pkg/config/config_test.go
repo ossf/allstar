@@ -262,3 +262,61 @@ optConfig:
 		t.Error("Expected repo to be enabled")
 	}
 }
+
+func TestGetIssueLabel(t *testing.T) {
+	tests := []struct {
+		Name   string
+		OrgAction  OrgActionConfig
+		Expect string
+	}{
+		{
+			Name: "IssueLabel",
+			OrgAction: OrgActionConfig{
+				IssueLabel: "testlabel",
+			},
+			Expect: "testlabel",
+		},
+		{
+			Name: "NoIssueLabel",
+			OrgAction: OrgActionConfig{},
+			Expect: "allstar",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			if GetIssueLabel(test.OrgAction) != test.Expect {
+				t.Errorf("Unexpected results. Expected: %v", test.Expect)
+			}
+		})
+	}
+}
+
+func TestIssueFooter(t *testing.T) {
+	tests := []struct {
+		Name   string
+		OrgAction  OrgActionConfig
+		Expect string
+	}{
+		{
+			Name: "IssueFooter",
+			OrgAction: OrgActionConfig{
+				IssueFooter: "testlabel",
+			},
+			Expect: "testlabel",
+		},
+		{
+			Name: "NoIssueFooter",
+			OrgAction: OrgActionConfig{},
+			Expect: `This issue will auto resolve when the policy is in compliance.
+
+Issue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer.`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			if GetIssueFooter(test.OrgAction) != test.Expect {
+				t.Errorf("Unexpected results. Expected: %v", test.Expect)
+			}
+		})
+	}
+}
