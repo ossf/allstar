@@ -80,6 +80,21 @@ optConfig:
 			Got: &OrgConfig{},
 		},
 		{
+			Name: "actionConfig",
+			Input: `
+actionConfig:
+  issueLabel: testlabel
+  issueFooter: testfooter
+`,
+			Expect: &OrgConfig{
+				ActionConfig: OrgActionConfig{
+					IssueLabel:      "testlabel",
+					IssueFooter:     "testfooter",
+				},
+			},
+			Got: &OrgConfig{},
+		},
+		{
 			Name: "OptOutRepo",
 			Input: `
 optConfig:

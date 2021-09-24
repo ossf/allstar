@@ -31,6 +31,9 @@ import (
 type OrgConfig struct {
 	// OptConfig contains the opt in/out configuration.
 	OptConfig OrgOptConfig `yaml:"optConfig"`
+
+	// IssueConfig contains the issue configuration.
+	ActionConfig OrgActionConfig `yaml:"actionConfig"`
 }
 
 // OrgOptConfig is used in Allstar and policy-secific org-level config to
@@ -48,6 +51,19 @@ type OrgOptConfig struct {
 	// DisableRepoOverride : set to true to disallow repos from opt-in/out in
 	// their config.
 	DisableRepoOverride bool `yaml:"disableRepoOverride"`
+}
+
+// OrgActionConfig is used in Allstar and policy-secific org-level config to
+// define the action configuration.
+type OrgActionConfig struct {
+	// IssueLabel : set to override GitHubIssueLabel in operator.go.
+	// GitHubIssueLabel is the label used to tag, search, and identify GitHub
+	// Issues created by the bot.
+	IssueLabel string `yaml:"issueLabel"`
+	
+	// IssueFooter : set to override GitHubIssueFooter in operator.go.
+	// IssueFooter is added to the end of GitHub issues.
+	IssueFooter string `yaml:"issueFooter"`
 }
 
 // RepoConfig is the repo-level config definition for Allstar
