@@ -126,7 +126,7 @@ func (o Outside) Check(ctx context.Context, c *github.Client, owner,
 func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
 	oc, rc := getConfig(ctx, c, owner, repo)
-	enabled, err := config.IsEnabled(ctx, oc.OptConfig, rc.OptConfig, c.Repositories, owner, repo)
+	enabled, err := config.IsEnabled(ctx, oc.OptConfig, rc.OptConfig, c, owner, repo)
 	if err != nil {
 		return nil, err
 	}

@@ -112,7 +112,11 @@ type repositories interface {
 
 // IsEnabled determines if a repo is enabled by interpreting the provided
 // org-level and repo-level OptConfigs.
-func IsEnabled(ctx context.Context, o OrgOptConfig, r RepoOptConfig, rep repositories, owner, repo string) (bool, error) {
+func IsEnabled(ctx context.Context, o OrgOptConfig, r RepoOptConfig, c *github.Client, owner, repo string) (bool, error) {
+	return isEnabled(ctx, o, r, c.Repositories, owner, repo)
+}
+
+func isEnabled(ctx context.Context, o OrgOptConfig, r RepoOptConfig, rep repositories, owner, repo string) (bool, error) {
 	var enabled bool
 
 	gr, _, err := rep.Get(ctx, owner, repo)
@@ -174,7 +178,7 @@ func isBotEnabled(ctx context.Context, r repositories, owner, repo string) bool 
 			Msg("Unexpected config error, using defaults.")
 	}
 
-	enabled, err := IsEnabled(ctx, oc.OptConfig, rc.OptConfig, r, owner, repo)
+	enabled, err := isEnabled(ctx, oc.OptConfig, rc.OptConfig, r, owner, repo)
 	if err != nil {
 		log.Error().
 			Str("org", owner).

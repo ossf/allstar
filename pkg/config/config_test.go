@@ -261,7 +261,7 @@ func TestIsEnabled(t *testing.T) {
 					Private: &b,
 				}, nil, nil
 			}
-			got, _ := IsEnabled(context.Background(), test.Org, test.Repo, mockRepos{}, "thisorg", "thisrepo")
+			got, _ := isEnabled(context.Background(), test.Org, test.Repo, mockRepos{}, "thisorg", "thisrepo")
 			if got != test.Expect {
 				t.Errorf("Unexpected results on %v. Expected: %v", test.Name, test.Expect)
 			}
