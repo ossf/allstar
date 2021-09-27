@@ -73,6 +73,15 @@ optConfig:
   - repo-two
 ```
 
+To opt-out all private/public repositories, add `optOutPrivateRepos` or `optOutPublicRepos`. ex:
+
+```
+optConfig:
+  optOutStrategy: true
+  optOutPrivateRepos: true
+  optOutPublicRepos: false
+```
+
 ### Repository Override
 
 Individual repositories can also opt in or out using configuration files inside
