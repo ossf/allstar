@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/google/go-github/v39/github"
+	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/config/operator"
 )
 
@@ -60,7 +61,13 @@ func TestEnsure(t *testing.T) {
 	issueTitle := fmt.Sprintf(title, "thispolicy")
 	closed := "closed"
 	open := "open"
+	oa := config.OrgActionConfig{
+		IssueLabel: "testlabel",
+		IssueFooter: "testfooter",
+	}
 	t.Run("NoIssue", func(t *testing.T) {
+		policy := "thispolicy"
+		text := "Status text"
 		listByRepo = func(ctx context.Context, owner string, repo string,
 			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
 			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
@@ -71,15 +78,20 @@ func TestEnsure(t *testing.T) {
 			if *issue.Title != issueTitle {
 				t.Errorf("Unexpected title: %v", issue.GetTitle())
 			}
-			if (*issue.Labels)[0] != operator.GitHubIssueLabel {
-				t.Errorf("Unexpected title: %v", issue.GetTitle())
+			if (*issue.Labels)[0] != oa.IssueLabel {
+				t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
+			}
+			body := fmt.Sprintf("Allstar has detected that this repository’s %v security policy is out of compliance. Status:\n%v\n\n%v",
+				policy, text, oa.IssueFooter)
+			if *issue.Body != body {
+				t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
 			}
 			createCalled = true
 			return nil, nil, nil
 		}
 		edit = nil
 		createComment = nil
-		err := ensure(context.Background(), mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), oa, mockIssues{}, "", "", policy, text)
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -116,7 +128,7 @@ func TestEnsure(t *testing.T) {
 			commentCalled = true
 			return nil, nil, nil
 		}
-		err := ensure(context.Background(), mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), oa, mockIssues{}, "", "", "thispolicy", "Status text")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -143,7 +155,7 @@ func TestEnsure(t *testing.T) {
 		create = nil
 		edit = nil
 		createComment = nil
-		err := ensure(context.Background(), mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), oa, mockIssues{}, "", "", "thispolicy", "Status text")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -172,7 +184,7 @@ func TestEnsure(t *testing.T) {
 		// Expect to not call nil functions
 		create = nil
 		edit = nil
-		err := ensure(context.Background(), mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), oa, mockIssues{}, "", "", "thispolicy", "Status text")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -184,6 +196,10 @@ func TestEnsure(t *testing.T) {
 
 func TestClose(t *testing.T) {
 	issueTitle := fmt.Sprintf(title, "thispolicy")
+	oa := config.OrgActionConfig{
+		IssueLabel: "testlabel",
+		IssueFooter: "testfooter",
+	}
 	t.Run("NoIssue", func(t *testing.T) {
 		listByRepo = func(ctx context.Context, owner string, repo string,
 			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
@@ -192,7 +208,7 @@ func TestClose(t *testing.T) {
 		// Expect to not call nil functions
 		createComment = nil
 		edit = nil
-		err := closeIssue(context.Background(), mockIssues{}, "", "", "thispolicy")
+		err := closeIssue(context.Background(), oa, mockIssues{}, "", "", "thispolicy")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -209,7 +225,7 @@ func TestClose(t *testing.T) {
 		// Expect to not call nil functions
 		createComment = nil
 		edit = nil
-		err := closeIssue(context.Background(), mockIssues{}, "", "", "thispolicy")
+		err := closeIssue(context.Background(), oa, mockIssues{}, "", "", "thispolicy")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -243,7 +259,7 @@ func TestClose(t *testing.T) {
 			editCalled = true
 			return nil, nil, nil
 		}
-		err := closeIssue(context.Background(), mockIssues{}, "", "", "thispolicy")
+		err := closeIssue(context.Background(), oa, mockIssues{}, "", "", "thispolicy")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}

@@ -31,8 +31,8 @@ import (
 )
 
 var policiesGetPolicies func() []policydef.Policy
-var issueEnsure func(ctx context.Context, c *github.Client, owner, repo, policy, text string) error
-var issueClose func(ctx context.Context, c *github.Client, owner, repo, policy string) error
+var issueEnsure func(ctx context.Context, o config.OrgConfig, c *github.Client, owner, repo, policy, text string) error
+var issueClose func(ctx context.Context, o config.OrgConfig, c *github.Client, owner, repo, policy string) error
 
 func init() {
 	policiesGetPolicies = policies.GetPolicies
