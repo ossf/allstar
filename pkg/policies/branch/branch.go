@@ -109,8 +109,11 @@ type details struct {
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, interface{}) error
 
+var configIsEnabled func(ctx context.Context, o config.OrgOptConfig, r config.RepoOptConfig, c *github.Client, owner, repo string) (bool, error)
+
 func init() {
 	configFetchConfig = config.FetchConfig
+	configIsEnabled = config.IsEnabled
 }
 
 // Branch is the Branch Protection policy object, implements policydef.Policy.
@@ -146,7 +149,7 @@ func (b Branch) Check(ctx context.Context, c *github.Client, owner,
 func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
 	oc, rc := getConfig(ctx, c, owner, repo)
-	enabled, err := config.IsEnabled(ctx, oc.OptConfig, rc.OptConfig, c, owner, repo)
+	enabled, err := configIsEnabled(ctx, oc.OptConfig, rc.OptConfig, c, owner, repo)
 	if err != nil {
 		return nil, err
 	}
