@@ -55,10 +55,11 @@ func TestCheck(t *testing.T) {
 	fal := false
 	tests := []struct {
 		Name string
-		Org  OrgConfig
-		Repo RepoConfig
-		Prot map[string]github.Protection
-		Exp  policydef.Result
+		Org          OrgConfig
+		Repo         RepoConfig
+		Prot         map[string]github.Protection
+		cofigEnabled bool
+		Exp          policydef.Result
 	}{
 		{
 			Name: "NotEnabled",
@@ -78,6 +79,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
+			cofigEnabled: false,
 			Exp: policydef.Result{
 				Enabled:    false,
 				Pass:       true,
@@ -116,6 +118,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -154,6 +157,7 @@ func TestCheck(t *testing.T) {
 				},
 				"release": github.Protection{},
 			},
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -198,6 +202,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
@@ -237,6 +242,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -265,6 +271,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{},
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -321,6 +328,10 @@ func TestCheck(t *testing.T) {
 					}, errors.New("404")
 				}
 			}
+			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, r config.RepoOptConfig,
+				c *github.Client, owner, repo string) (bool, error){
+				 return test.cofigEnabled, nil
+		 }
 			res, err := check(context.Background(), mockRepos{}, nil, "", "thisrepo")
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)

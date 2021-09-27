@@ -34,17 +34,19 @@ func (m mockClient) Query(ctx context.Context, q interface{}, v map[string]inter
 
 func TestCheck(t *testing.T) {
 	tests := []struct {
-		Name       string
-		Org        OrgConfig
-		Repo       RepoConfig
-		SecEnabled bool
-		Exp        policydef.Result
+		Name         string
+		Org          OrgConfig
+		Repo         RepoConfig
+		SecEnabled   bool
+		cofigEnabled bool
+		Exp          policydef.Result
 	}{
 		{
 			Name:       "NotEnabled",
 			Org:        OrgConfig{},
 			Repo:       RepoConfig{},
 			SecEnabled: true,
+			cofigEnabled: false,
 			Exp: policydef.Result{
 				Enabled:    false,
 				Pass:       true,
@@ -64,6 +66,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo:       RepoConfig{},
 			SecEnabled: true,
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
@@ -83,6 +86,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo:       RepoConfig{},
 			SecEnabled: false,
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -121,6 +125,10 @@ func TestCheck(t *testing.T) {
 				qc.Repository.IsSecurityPolicyEnabled = test.SecEnabled
 				return nil
 			}
+			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, r config.RepoOptConfig,
+				c *github.Client, owner, repo string) (bool, error){
+				 return test.cofigEnabled, nil
+		 	}
 			res, err := check(context.Background(), nil, mockClient{}, "", "thisrepo")
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
