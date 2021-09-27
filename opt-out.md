@@ -7,19 +7,12 @@ To determine if Allstar is configured in the opt-out strategy, there will be a r
     optConfig:
       optOutStrategy: true
 
-To opt-out specific repository, submit a PR to that `.allstar` repo, and add the name of your repository to the opt-out list. ex:
+To opt-out, submit a PR to that `.allstar` repo, and add the name of your repository to the opt-out list. ex:
 
     optConfig:
       optOutStrategy: true
       optOutRepos:
       - my-repo-name-here
-
-To opt-out all private/public repositories, submit a PR to that `.allstar` repo, and add `optOutPrivateRepos` or `optOutPublicRepos`. ex:
-
-    optConfig:
-      optOutStrategy: true
-      optOutPrivateRepos: true
-      optOutPublicRepos: false
 
 ### With repo-override
 
