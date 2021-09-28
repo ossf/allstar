@@ -30,6 +30,10 @@ const KeySecret = "gcpsecretmanager://projects/allstar-ossf/secrets/allstar-priv
 // OrgConfigRepo is the name of the expected org-level repo to contain config.
 const OrgConfigRepo = ".allstar"
 
+// OrgConfigDir is the name of the expected directory in the org-level .github
+// repo.
+const OrgConfigDir = "allstar"
+
 // RepoConfigDir is the name of the expected directory in each repo to contain
 // repo-level config.
 const RepoConfigDir = ".allstar"

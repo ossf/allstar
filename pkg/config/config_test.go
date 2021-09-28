@@ -143,6 +143,10 @@ optConfig:
 					Content:  &c,
 				}, nil, nil, nil
 			}
+			get = func(ctx context.Context, owner, repo string) (*github.Repository,
+				*github.Response, error) {
+				return nil, nil, nil
+			}
 			err := fetchConfig(context.Background(), mockRepos{}, "", "", "", true, test.Got)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
