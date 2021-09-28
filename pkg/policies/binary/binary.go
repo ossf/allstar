@@ -19,10 +19,8 @@ package binary
 import (
 	"context"
 	"fmt"
-	"path"
 
 	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/policydef"
 
 	gh32 "github.com/google/go-github/v32/github"
@@ -63,7 +61,7 @@ type details struct {
 	Messages []checker.CheckDetail
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string, interface{}) error
+var configFetchConfig func(context.Context, *github.Client, string, string, string, bool, interface{}) error
 
 func init() {
 	configFetchConfig = config.FetchConfig
@@ -182,22 +180,24 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 	oc := &OrgConfig{ // Fill out non-zero defaults
 		Action: "log",
 	}
-	if err := configFetchConfig(ctx, c, owner, operator.OrgConfigRepo, configFile, oc); err != nil {
+	if err := configFetchConfig(ctx, c, owner, "", configFile, true, oc); err != nil {
 		log.Error().
 			Str("org", owner).
-			Str("repo", operator.OrgConfigRepo).
+			Str("repo", repo).
+			Bool("orgLevel", true).
 			Str("area", polName).
 			Str("file", configFile).
 			Err(err).
 			Msg("Unexpected config error, using defaults.")
 	}
 	rc := &RepoConfig{}
-	if err := configFetchConfig(ctx, c, owner, repo, path.Join(operator.RepoConfigDir, configFile), rc); err != nil {
+	if err := configFetchConfig(ctx, c, owner, repo, configFile, false, rc); err != nil {
 		log.Error().
 			Str("org", owner).
 			Str("repo", repo).
+			Bool("orgLevel", false).
 			Str("area", polName).
-			Str("file", path.Join(operator.RepoConfigDir, configFile)).
+			Str("file", configFile).
 			Err(err).
 			Msg("Unexpected config error, using defaults.")
 	}
