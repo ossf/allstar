@@ -47,6 +47,7 @@ func init() {
 // TBD: determine if this should remain exported, or if it will only be called
 // from EnforceJob.
 func EnforceAll(ctx context.Context, ghc *ghclients.GHClients) error {
+	var repoCount int
 	ac, err := ghc.Get(0)
 	if err != nil {
 		return err
@@ -66,6 +67,10 @@ func EnforceAll(ctx context.Context, ghc *ghclients.GHClients) error {
 		}
 		opt.Page = resp.NextPage
 	}
+	log.Info().
+		Str("area", "bot").
+		Int("count", len(insts)).
+		Msg("Enforcing policies on installations.")
 	for _, i := range insts {
 		ic, err := ghc.Get(*i.ID)
 		if err != nil {
@@ -100,6 +105,12 @@ func EnforceAll(ctx context.Context, ghc *ghclients.GHClients) error {
 			continue
 		}
 		err = nil
+		log.Info().
+			Str("area", "bot").
+			Int64("id", *i.ID).
+			Int("count", len(repos)).
+			Msg("Enforcing policies on repos of installation.")
+		repoCount = repoCount + len(repos)
 		for _, r := range repos {
 			enabled := config.IsBotEnabled(ctx, ic, *r.Owner.Login, *r.Name)
 			err = RunPolicies(ctx, ic, *r.Owner.Login, *r.Name, enabled)
@@ -114,6 +125,11 @@ func EnforceAll(ctx context.Context, ghc *ghclients.GHClients) error {
 			continue
 		}
 	}
+	ghc.LogCacheSize()
+	log.Info().
+		Str("area", "bot").
+		Int("count", repoCount).
+		Msg("EnforceAll complete.")
 	return nil
 }
 
