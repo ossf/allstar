@@ -82,6 +82,8 @@ type RepoOptConfig struct {
 	OptOut bool `yaml:"optOut"`
 }
 
+const githubConfRepo = ".github"
+
 // FetchConfig grabs a yaml config file from github and writes it to out.
 func FetchConfig(ctx context.Context, c *github.Client, owner, repo, name string, orgLevel bool, out interface{}) error {
 	return fetchConfig(ctx, c.Repositories, owner, repo, name, orgLevel, out)
@@ -91,8 +93,16 @@ func fetchConfig(ctx context.Context, r repositories, owner, repoIn, name string
 	var repo string
 	var p string
 	if orgLevel {
-		repo = operator.OrgConfigRepo
-		p = name
+		_, rsp, err := r.Get(ctx, owner, operator.OrgConfigRepo)
+		if err == nil {
+			repo = operator.OrgConfigRepo
+			p = name
+		} else if rsp != nil && rsp.StatusCode == http.StatusNotFound {
+			repo = githubConfRepo
+			p = path.Join(operator.OrgConfigDir, name)
+		} else {
+			return err
+		}
 	} else {
 		repo = repoIn
 		p = path.Join(operator.RepoConfigDir, name)
