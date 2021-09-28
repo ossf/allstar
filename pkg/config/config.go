@@ -83,12 +83,21 @@ type RepoOptConfig struct {
 }
 
 // FetchConfig grabs a yaml config file from github and writes it to out.
-func FetchConfig(ctx context.Context, c *github.Client, owner, repo, path string, out interface{}) error {
-	return fetchConfig(ctx, c.Repositories, owner, repo, path, out)
+func FetchConfig(ctx context.Context, c *github.Client, owner, repo, name string, orgLevel bool, out interface{}) error {
+	return fetchConfig(ctx, c.Repositories, owner, repo, name, orgLevel, out)
 }
 
-func fetchConfig(ctx context.Context, r repositories, owner, repo, path string, out interface{}) error {
-	cf, _, rsp, err := r.GetContents(ctx, owner, repo, path, nil)
+func fetchConfig(ctx context.Context, r repositories, owner, repoIn, name string, orgLevel bool, out interface{}) error {
+	var repo string
+	var p string
+	if orgLevel {
+		repo = operator.OrgConfigRepo
+		p = name
+	} else {
+		repo = repoIn
+		p = path.Join(operator.RepoConfigDir, name)
+	}
+	cf, _, rsp, err := r.GetContents(ctx, owner, repo, p, nil)
 	if err != nil {
 		if rsp != nil && rsp.StatusCode == http.StatusNotFound {
 			return nil
@@ -103,7 +112,7 @@ func fetchConfig(ctx context.Context, r repositories, owner, repo, path string, 
 		log.Warn().
 			Str("org", owner).
 			Str("repo", repo).
-			Str("file", path).
+			Str("file", p).
 			Err(err).
 			Msg("Malformed config file, using defaults.")
 		// TODO: if UnmarshalStrict errors, does it still fill out the found fields?
@@ -195,22 +204,24 @@ func GetAppConfigs(ctx context.Context, c *github.Client, owner, repo string) (*
 func getAppConfigs(ctx context.Context, r repositories, owner, repo string) (*OrgConfig, *RepoConfig) {
 	// drop errors, if cfg file is not there, go with defaults
 	oc := &OrgConfig{}
-	if err := fetchConfig(ctx, r, owner, operator.OrgConfigRepo, operator.AppConfigFile, oc); err != nil {
+	if err := fetchConfig(ctx, r, owner, "", operator.AppConfigFile, true, oc); err != nil {
 		log.Error().
 			Str("org", owner).
-			Str("repo", operator.OrgConfigRepo).
+			Str("repo", repo).
+			Bool("orgLevel", true).
 			Str("area", "bot").
 			Str("file", operator.AppConfigFile).
 			Err(err).
 			Msg("Unexpected config error, using defaults.")
 	}
 	rc := &RepoConfig{}
-	if err := fetchConfig(ctx, r, owner, repo, path.Join(operator.RepoConfigDir, operator.AppConfigFile), rc); err != nil {
+	if err := fetchConfig(ctx, r, owner, repo, operator.AppConfigFile, false, rc); err != nil {
 		log.Error().
 			Str("org", owner).
 			Str("repo", repo).
+			Bool("orgLevel", false).
 			Str("area", "bot").
-			Str("file", path.Join(operator.RepoConfigDir, operator.AppConfigFile)).
+			Str("file", operator.AppConfigFile).
 			Err(err).
 			Msg("Unexpected config error, using defaults.")
 	}

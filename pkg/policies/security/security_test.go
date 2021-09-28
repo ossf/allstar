@@ -42,10 +42,10 @@ func TestCheck(t *testing.T) {
 		Exp          policydef.Result
 	}{
 		{
-			Name:       "NotEnabled",
-			Org:        OrgConfig{},
-			Repo:       RepoConfig{},
-			SecEnabled: true,
+			Name:         "NotEnabled",
+			Org:          OrgConfig{},
+			Repo:         RepoConfig{},
+			SecEnabled:   true,
 			cofigEnabled: false,
 			Exp: policydef.Result{
 				Enabled:    false,
@@ -64,8 +64,8 @@ func TestCheck(t *testing.T) {
 					OptOutStrategy: true,
 				},
 			},
-			Repo:       RepoConfig{},
-			SecEnabled: true,
+			Repo:         RepoConfig{},
+			SecEnabled:   true,
 			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
@@ -84,8 +84,8 @@ func TestCheck(t *testing.T) {
 					OptOutStrategy: true,
 				},
 			},
-			Repo:       RepoConfig{},
-			SecEnabled: false,
+			Repo:         RepoConfig{},
+			SecEnabled:   false,
 			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
@@ -102,7 +102,7 @@ func TestCheck(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			configFetchConfig = func(ctx context.Context, c *github.Client,
-				owner string, repo string, path string, out interface{}) error {
+				owner string, repo string, path string, ol bool, out interface{}) error {
 				if repo == "thisrepo" {
 					rc := out.(*RepoConfig)
 					*rc = test.Repo
@@ -126,9 +126,9 @@ func TestCheck(t *testing.T) {
 				return nil
 			}
 			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, r config.RepoOptConfig,
-				c *github.Client, owner, repo string) (bool, error){
-				 return test.cofigEnabled, nil
-		 	}
+				c *github.Client, owner, repo string) (bool, error) {
+				return test.cofigEnabled, nil
+			}
 			res, err := check(context.Background(), nil, mockClient{}, "", "thisrepo")
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
