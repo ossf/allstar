@@ -24,6 +24,7 @@ import (
 	"github.com/google/go-github/v39/github"
 	"github.com/gregjones/httpcache"
 	"github.com/ossf/allstar/pkg/config/operator"
+	"github.com/rs/zerolog/log"
 	"gocloud.dev/runtimevar"
 	_ "gocloud.dev/runtimevar/gcpsecretmanager"
 )
@@ -45,6 +46,7 @@ type GHClients struct {
 	clients map[int64]*github.Client
 	tr      http.RoundTripper
 	key     []byte
+	cache   *memoryCache
 }
 
 // NewGHClients returns a new GHClients. The provided RoundTripper will be
@@ -58,6 +60,7 @@ func NewGHClients(ctx context.Context, t http.RoundTripper) (*GHClients, error) 
 		clients: make(map[int64]*github.Client),
 		tr:      t,
 		key:     key,
+		cache:   newMemoryCache(),
 	}, nil
 }
 
@@ -80,11 +83,22 @@ func (g *GHClients) Get(i int64) (*github.Client, error) {
 	}
 	ctr := &httpcache.Transport{
 		Transport:           tr,
-		Cache:               httpcache.NewMemoryCache(),
+		Cache:               g.cache,
 		MarkCachedResponses: true,
 	}
 	g.clients[i] = github.NewClient(&http.Client{Transport: ctr})
 	return g.clients[i], nil
+}
+
+func (g *GHClients) LogCacheSize() {
+	var total int
+	for _, b := range g.cache.Items {
+		total = total + len(b)
+	}
+	log.Info().
+		Str("area", "bot").
+		Int("size", total).
+		Msg("Total cache size.")
 }
 
 func getKeyReal(ctx context.Context) ([]byte, error) {
