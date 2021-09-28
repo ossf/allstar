@@ -82,6 +82,21 @@ optConfig:
   optOutPublicRepos: false
 ```
 
+### Secondary Org-Level configuration location
+
+By default, org-level configuration files, such as the `allstar.yaml` file
+above, are expected to be in a `.allstar` repository. If this repository does
+not exist, then the `.github` repository `allstar` directory is used as a
+secondary location. To clarify, for `allstar.yaml`:
+
+| Prescedence | Repository | Path |
+| - | - | - |
+| Primary | `.allstar` | `allstar.yaml` |
+| Secondary | `.github` | `allstar/allstar.yaml` |
+
+This is also true for the org-level configuration files for the individual
+policies, as described below.
+
 ### Repository Override
 
 Individual repositories can also opt in or out using configuration files inside
