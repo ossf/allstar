@@ -24,7 +24,6 @@ import (
 	"github.com/google/go-github/v39/github"
 	"github.com/gregjones/httpcache"
 	"github.com/ossf/allstar/pkg/config/operator"
-	"github.com/rs/zerolog/log"
 	"gocloud.dev/runtimevar"
 	_ "gocloud.dev/runtimevar/gcpsecretmanager"
 )
@@ -91,14 +90,7 @@ func (g *GHClients) Get(i int64) (*github.Client, error) {
 }
 
 func (g *GHClients) LogCacheSize() {
-	var total int
-	for _, b := range g.cache.Items {
-		total = total + len(b)
-	}
-	log.Info().
-		Str("area", "bot").
-		Int("size", total).
-		Msg("Total cache size.")
+	g.cache.LogCacheSize()
 }
 
 func getKeyReal(ctx context.Context) ([]byte, error) {
