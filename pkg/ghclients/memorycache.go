@@ -20,21 +20,25 @@
 // IN THE SOFTWARE.
 package ghclients
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/rs/zerolog/log"
+)
 
 // memoryCache is an implemtation of httpcache.Cache that stores responses in
-// an in-memory map.  It is a copy of httpcache.MemoryCache but exposes Items
-// to allow for calculating and logging the cache size.
+// an in-memory map.  It is a copy of httpcache.MemoryCache but adds
+// LogCacheSize()
 type memoryCache struct {
 	mu    sync.RWMutex
-	Items map[string][]byte
+	items map[string][]byte
 }
 
 // Get returns the []byte representation of the response and true if present,
 // false if not
 func (c *memoryCache) Get(key string) (resp []byte, ok bool) {
 	c.mu.RLock()
-	resp, ok = c.Items[key]
+	resp, ok = c.items[key]
 	c.mu.RUnlock()
 	return resp, ok
 }
@@ -42,20 +46,31 @@ func (c *memoryCache) Get(key string) (resp []byte, ok bool) {
 // Set saves response resp to the cache with key
 func (c *memoryCache) Set(key string, resp []byte) {
 	c.mu.Lock()
-	c.Items[key] = resp
+	c.items[key] = resp
 	c.mu.Unlock()
 }
 
 // Delete removes key from the cache
 func (c *memoryCache) Delete(key string) {
 	c.mu.Lock()
-	delete(c.Items, key)
+	delete(c.items, key)
 	c.mu.Unlock()
+}
+
+func (c *memoryCache) LogCacheSize() {
+	var total int
+	for _, b := range c.items {
+		total = total + len(b)
+	}
+	log.Info().
+		Str("area", "bot").
+		Int("size", total).
+		Msg("Total cache size.")
 }
 
 // newMemoryCache returns a new memoryCache that will store items in an
 // in-memory map
 func newMemoryCache() *memoryCache {
-	c := &memoryCache{Items: map[string][]byte{}}
+	c := &memoryCache{items: map[string][]byte{}}
 	return c
 }
