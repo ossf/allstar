@@ -180,20 +180,6 @@ func isBotEnabled(ctx context.Context, r repositories, owner, repo string) bool 
 	return enabled
 }
 
-func GetIssueLabel(oa OrgActionConfig) string {
-	if len(oa.IssueLabel) > 0 {
-		return oa.IssueLabel
-	}
-	return operator.GitHubIssueLabel
-}
-
-func GetIssueFooter(oa OrgActionConfig) string {
-	if len(oa.IssueFooter) > 0 {
-		return oa.IssueFooter
-	}
-	return operator.GitHubIssueFooter
-}
-
 func contains(s []string, e string) bool {
 	for _, v := range s {
 		if v == e {

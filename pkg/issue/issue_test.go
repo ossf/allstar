@@ -22,7 +22,7 @@ import (
 	"time"
 
 	"github.com/google/go-github/v39/github"
-	"github.com/ossf/allstar/pkg/config"
+	"github.com/ossf/allstar/pkg/configdef"
 	"github.com/ossf/allstar/pkg/config/operator"
 )
 
@@ -61,7 +61,7 @@ func TestEnsure(t *testing.T) {
 	issueTitle := fmt.Sprintf(title, "thispolicy")
 	closed := "closed"
 	open := "open"
-	oa := config.OrgActionConfig{
+	oa := configdef.OrgActionConfig{
 		IssueLabel: "testlabel",
 		IssueFooter: "testfooter",
 	}
@@ -196,7 +196,7 @@ func TestEnsure(t *testing.T) {
 
 func TestClose(t *testing.T) {
 	issueTitle := fmt.Sprintf(title, "thispolicy")
-	oa := config.OrgActionConfig{
+	oa := configdef.OrgActionConfig{
 		IssueLabel: "testlabel",
 		IssueFooter: "testfooter",
 	}
