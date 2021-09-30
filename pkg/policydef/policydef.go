@@ -70,7 +70,7 @@ type Policy interface {
 	// validation is needed by the policy, it will be done centrally.
 	GetAction(ctx context.Context, c *github.Client, owner, repo string) string
 
-	// GetAction must return the configured action from the policy's config. No
-	// validation is needed by the policy, it will be done centrally.
+	// GetOrgActionConfig must return the configuration for the action from org and repo config.
+	// The return value must follow configdef.OrgActionConfig.
 	GetOrgActionConfig(ctx context.Context, c *github.Client, owner, repo string) configdef.OrgActionConfig
 }

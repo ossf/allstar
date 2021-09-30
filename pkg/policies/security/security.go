@@ -45,10 +45,11 @@ type OrgConfig struct {
 	// BP config.
 	OptConfig config.OrgOptConfig `yaml:"optConfig"`
 
+	// ActionConfig contins action the standard org-level config to override IssueLabel, IssueFooter...
+	ActionConfig config.OrgActionConfig `yaml:"actionConfig"`
+
 	// Action defines which action to take, default log, other: issue...
 	Action string `yaml:"action"`
-
-	ActionConfig config.OrgActionConfig `yaml:"actionConfig"`
 
 	//TODO add default contents for "fix" action
 }
@@ -58,10 +59,11 @@ type RepoConfig struct {
 	// OptConfig is the standard repo-level opt in/out config.
 	OptConfig config.RepoOptConfig `yaml:"optConfig"`
 
+	// ActionConfig contins action the standard org-level config to override IssueLabel, IssueFooter...
+	ActionConfig config.OrgActionConfig `yaml:"actionConfig"`
+
 	// Action overrides the same setting in org-level, only if present.
 	Action *string `yaml:"action"`
-
-	ActionConfig config.OrgActionConfig `yaml:"actionConfig"`
 }
 
 type mergedConfig struct {

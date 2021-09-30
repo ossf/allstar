@@ -32,7 +32,7 @@ type OrgConfig struct {
 	// OptConfig contains the opt in/out configuration.
 	OptConfig OrgOptConfig `yaml:"optConfig"`
 
-	// IssueConfig contains the issue configuration.
+	// ActionConfig contains the issue configuration.
 	ActionConfig OrgActionConfig `yaml:"actionConfig"`
 }
 
