@@ -20,6 +20,8 @@ import (
 
 	"github.com/google/go-github/v39/github"
 	"github.com/ossf/allstar/pkg/policydef"
+	"github.com/ossf/allstar/pkg/configdef"
+	"github.com/ossf/allstar/pkg/config/operator"
 )
 
 var result policydef.Result
@@ -45,6 +47,13 @@ func (p pol) GetAction(ctx context.Context, c *github.Client, owner, repo string
 	return action
 }
 
+func (p pol) GetOrgActionConfig(ctx context.Context, c *github.Client, owner, repo string) configdef.OrgActionConfig {
+	return configdef.OrgActionConfig{
+		IssueLabel: operator.GitHubIssueLabel,
+		IssueFooter: operator.GitHubIssueFooter,
+	}
+}
+
 func TestRunPolicies(t *testing.T) {
 	policiesGetPolicies = func() []policydef.Policy {
 		return []policydef.Policy{
@@ -52,12 +61,12 @@ func TestRunPolicies(t *testing.T) {
 		}
 	}
 	ensureCalled := false
-	issueEnsure = func(ctx context.Context, c *github.Client, owner, repo, policy, text string) error {
+	issueEnsure = func(ctx context.Context, oa configdef.OrgActionConfig, c *github.Client, owner, repo, policy, text string) error {
 		ensureCalled = true
 		return nil
 	}
 	closeCalled := false
-	issueClose = func(ctx context.Context, c *github.Client, owner, repo, policy string) error {
+	issueClose = func(ctx context.Context, oa configdef.OrgActionConfig, c *github.Client, owner, repo, policy string) error {
 		closeCalled = true
 		return nil
 	}
