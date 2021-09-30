@@ -205,9 +205,6 @@ func TestGetOrgActionConfig(t *testing.T) {
 		{
 			Name:       "OrgCustomIssueLabel",
 			Org:        OrgConfig{
-				OptConfig: config.OrgOptConfig{
-					DisableRepoOverride: true,
-				},
 				ActionConfig: config.OrgActionConfig{
 					IssueLabel: "customlabel",
 				},
@@ -234,9 +231,6 @@ func TestGetOrgActionConfig(t *testing.T) {
 		{
 			Name:       "OrgCustomIssueFooter",
 			Org:        OrgConfig{
-				OptConfig: config.OrgOptConfig{
-					DisableRepoOverride: true,
-				},
 				ActionConfig: config.OrgActionConfig{
 					IssueFooter: "customfooter",
 				},

@@ -358,6 +358,13 @@ func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 	}
 	mc.EnforceBranches = append(mc.EnforceBranches, rc.EnforceBranches...)
 
+	if len(oc.ActionConfig.IssueLabel) > 0 {
+		mc.ActionConfig.IssueLabel = oc.ActionConfig.IssueLabel
+	}
+	if len(oc.ActionConfig.IssueFooter) > 0 {
+		mc.ActionConfig.IssueFooter = oc.ActionConfig.IssueFooter
+	}
+	
 	if !oc.OptConfig.DisableRepoOverride {
 		if rc.Action != nil {
 			mc.Action = *rc.Action
@@ -377,22 +384,12 @@ func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 		if rc.BlockForce != nil {
 			mc.BlockForce = *rc.BlockForce
 		}
-	}
-
-	if oc.OptConfig.DisableRepoOverride {
-		if len(oc.ActionConfig.IssueLabel) > 0 {
-			mc.ActionConfig.IssueLabel = oc.ActionConfig.IssueLabel
-		}
-		if len(oc.ActionConfig.IssueFooter) > 0 {
-			mc.ActionConfig.IssueFooter = oc.ActionConfig.IssueFooter
-		}
-	} else {
 		if len(rc.ActionConfig.IssueLabel) > 0 {
 			mc.ActionConfig.IssueLabel = rc.ActionConfig.IssueLabel
 		}
 		if len(rc.ActionConfig.IssueFooter) > 0 {
 			mc.ActionConfig.IssueFooter = rc.ActionConfig.IssueFooter
 		}
-	}	
+	}
 	return mc
 }
