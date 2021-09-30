@@ -76,8 +76,11 @@ type details struct {
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, interface{}) error
 
+var configIsEnabled func(ctx context.Context, o config.OrgOptConfig, r config.RepoOptConfig, c *github.Client, owner, repo string) (bool, error)
+
 func init() {
 	configFetchConfig = config.FetchConfig
+	configIsEnabled = config.IsEnabled
 }
 
 type v4client interface {
@@ -109,7 +112,10 @@ func (s Security) Check(ctx context.Context, c *github.Client, owner,
 func check(ctx context.Context, c *github.Client, v4c v4client, owner,
 	repo string) (*policydef.Result, error) {
 	oc, rc := getConfig(ctx, c, owner, repo)
-	enabled := config.IsEnabled(oc.OptConfig, rc.OptConfig, repo)
+	enabled, err := configIsEnabled(ctx, oc.OptConfig, rc.OptConfig, c, owner, repo)
+	if err != nil {
+		return nil, err
+	}
 	log.Info().
 		Str("org", owner).
 		Str("repo", repo).

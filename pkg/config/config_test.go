@@ -27,12 +27,20 @@ var getContents func(context.Context, string, string, string,
 	*github.RepositoryContentGetOptions) (*github.RepositoryContent,
 	[]*github.RepositoryContent, *github.Response, error)
 
+var get func(context.Context, string, string) (*github.Repository,
+	*github.Response, error)
+
 type mockRepos struct{}
 
 func (m mockRepos) GetContents(ctx context.Context, owner, repo, path string,
 	opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
 	[]*github.RepositoryContent, *github.Response, error) {
 	return getContents(ctx, owner, repo, path, opts)
+}
+
+func (m mockRepos) Get(ctx context.Context, owner, repo string) (*github.Repository,
+	*github.Response, error) {
+	return get(ctx, owner, repo)
 }
 
 func TestFetchConfig(t *testing.T) {
@@ -50,12 +58,16 @@ optConfig:
   optOutRepos:
   - repo1
   - repo2
+  optOutPrivateRepos: true
+  optOutPublicRepos: true
   disableRepoOverride: true
 `,
 			Expect: &OrgConfig{
 				OptConfig: OrgOptConfig{
 					OptOutStrategy:      true,
 					OptOutRepos:         []string{"repo1", "repo2"},
+					OptOutPrivateRepos:  true,
+					OptOutPublicRepos:  true,
 					DisableRepoOverride: true,
 				},
 			},
@@ -149,10 +161,11 @@ optConfig:
 
 func TestIsEnabled(t *testing.T) {
 	tests := []struct {
-		Name   string
-		Org    OrgOptConfig
-		Repo   RepoOptConfig
-		Expect bool
+		Name           string
+		Org            OrgOptConfig
+		Repo           RepoOptConfig
+		IsPrivateRepo  bool
+		Expect         bool
 	}{
 		{
 			Name: "OptInOrg",
@@ -161,6 +174,7 @@ func TestIsEnabled(t *testing.T) {
 				OptInRepos:     []string{"thisrepo"},
 			},
 			Repo:   RepoOptConfig{},
+			IsPrivateRepo: false,
 			Expect: true,
 		},
 		{
@@ -170,6 +184,7 @@ func TestIsEnabled(t *testing.T) {
 				OptInRepos:     []string{"otherrepo"},
 			},
 			Repo:   RepoOptConfig{},
+			IsPrivateRepo: false,
 			Expect: false,
 		},
 		{
@@ -178,6 +193,7 @@ func TestIsEnabled(t *testing.T) {
 				OptOutStrategy: true,
 			},
 			Repo:   RepoOptConfig{},
+			IsPrivateRepo: false,			
 			Expect: true,
 		},
 		{
@@ -187,7 +203,48 @@ func TestIsEnabled(t *testing.T) {
 				OptOutRepos:    []string{"thisrepo"},
 			},
 			Repo:   RepoOptConfig{},
+			IsPrivateRepo: false,			
 			Expect: false,
+		},
+		{
+			Name: "OptOutPrivateRepos",
+			Org: OrgOptConfig{
+				OptOutStrategy: true,
+				OptOutPrivateRepos: true,
+			},
+			Repo:   RepoOptConfig{},
+			IsPrivateRepo: true,			
+			Expect: false,
+		},
+		{
+			Name: "NoOptOutPrivateRepos",
+			Org: OrgOptConfig{
+				OptOutStrategy: true,
+				OptOutPrivateRepos: false,
+			},
+			Repo:   RepoOptConfig{},
+			IsPrivateRepo: true,	
+			Expect: true,
+		},
+		{
+			Name: "OptOutPublicRepos",
+			Org: OrgOptConfig{
+				OptOutStrategy: true,
+				OptOutPublicRepos: true,
+			},
+			Repo:   RepoOptConfig{},
+			IsPrivateRepo: false,
+			Expect: false,
+		},
+		{
+			Name: "NoOptOutPublicRepos",
+			Org: OrgOptConfig{
+				OptOutStrategy: true,
+				OptOutPublicRepos: false,
+			},
+			Repo:   RepoOptConfig{},
+			IsPrivateRepo: false,
+			Expect: true,
 		},
 		{
 			Name: "RepoOptIn",
@@ -195,6 +252,7 @@ func TestIsEnabled(t *testing.T) {
 			Repo: RepoOptConfig{
 				OptIn: true,
 			},
+			IsPrivateRepo: false,
 			Expect: true,
 		},
 		{
@@ -205,6 +263,7 @@ func TestIsEnabled(t *testing.T) {
 			Repo: RepoOptConfig{
 				OptOut: true,
 			},
+			IsPrivateRepo: false,
 			Expect: false,
 		},
 		{
@@ -216,13 +275,21 @@ func TestIsEnabled(t *testing.T) {
 			Repo: RepoOptConfig{
 				OptOut: true,
 			},
+			IsPrivateRepo: false,
 			Expect: true,
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			if IsEnabled(test.Org, test.Repo, "thisrepo") != test.Expect {
-				t.Errorf("Unexpected results. Expected: %v", test.Expect)
+			get = func(context.Context, string, string) (*github.Repository,
+				*github.Response, error) {
+				return &github.Repository{
+					Private: &test.IsPrivateRepo,
+				}, nil, nil
+			}
+			got, _ := isEnabled(context.Background(), test.Org, test.Repo, mockRepos{}, "thisorg", "thisrepo")
+			if got != test.Expect {
+				t.Errorf("Unexpected results on %v. Expected: %v", test.Name, test.Expect)
 			}
 		})
 	}

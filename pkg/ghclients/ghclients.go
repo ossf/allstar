@@ -45,6 +45,7 @@ type GHClients struct {
 	clients map[int64]*github.Client
 	tr      http.RoundTripper
 	key     []byte
+	cache   *memoryCache
 }
 
 // NewGHClients returns a new GHClients. The provided RoundTripper will be
@@ -58,6 +59,7 @@ func NewGHClients(ctx context.Context, t http.RoundTripper) (*GHClients, error) 
 		clients: make(map[int64]*github.Client),
 		tr:      t,
 		key:     key,
+		cache:   newMemoryCache(),
 	}, nil
 }
 
@@ -80,11 +82,15 @@ func (g *GHClients) Get(i int64) (*github.Client, error) {
 	}
 	ctr := &httpcache.Transport{
 		Transport:           tr,
-		Cache:               httpcache.NewMemoryCache(),
+		Cache:               g.cache,
 		MarkCachedResponses: true,
 	}
 	g.clients[i] = github.NewClient(&http.Client{Transport: ctr})
 	return g.clients[i], nil
+}
+
+func (g *GHClients) LogCacheSize() {
+	g.cache.LogCacheSize()
 }
 
 func getKeyReal(ctx context.Context) ([]byte, error) {

@@ -40,11 +40,12 @@ func TestCheck(t *testing.T) {
 	bob := "bob"
 	alice := "alice"
 	tests := []struct {
-		Name  string
-		Org   OrgConfig
-		Repo  RepoConfig
-		Users []*github.User
-		Exp   policydef.Result
+		Name           string
+		Org            OrgConfig
+		Repo           RepoConfig
+		Users          []*github.User
+		cofigEnabled   bool
+		Exp            policydef.Result
 	}{
 		{
 			Name: "NotEnabled",
@@ -53,6 +54,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo:  RepoConfig{},
 			Users: nil,
+			cofigEnabled: false,
 			Exp: policydef.Result{
 				Enabled:    false,
 				Pass:       true,
@@ -70,6 +72,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo:  RepoConfig{},
 			Users: nil,
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
@@ -100,6 +103,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
@@ -134,6 +138,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -164,6 +169,10 @@ func TestCheck(t *testing.T) {
 			listCollaborators = func(c context.Context, o, r string,
 				op *github.ListCollaboratorsOptions) ([]*github.User, *github.Response, error) {
 				return test.Users, &github.Response{NextPage: 0}, nil
+			}
+			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, r config.RepoOptConfig,
+				 c *github.Client, owner, repo string) (bool, error){
+					return test.cofigEnabled, nil
 			}
 			res, err := check(context.Background(), mockRepos{}, nil, "", "thisrepo")
 			if err != nil {

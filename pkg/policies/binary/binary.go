@@ -113,7 +113,10 @@ func (l *logger) Debug(desc string, args ...interface{}) {
 func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
 	oc, rc := getConfig(ctx, c, owner, repo)
-	enabled := config.IsEnabled(oc.OptConfig, rc.OptConfig, repo)
+	enabled, err := config.IsEnabled(ctx, oc.OptConfig, rc.OptConfig, c, owner, repo)
+	if err != nil {
+		return nil, err
+	}
 	log.Info().
 		Str("org", owner).
 		Str("repo", repo).
