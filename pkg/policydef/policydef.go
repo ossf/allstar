@@ -26,6 +26,7 @@ package policydef
 import (
 	"context"
 
+	"github.com/ossf/allstar/pkg/configdef"
 	"github.com/google/go-github/v39/github"
 )
 
@@ -68,4 +69,8 @@ type Policy interface {
 	// GetAction must return the configured action from the policy's config. No
 	// validation is needed by the policy, it will be done centrally.
 	GetAction(ctx context.Context, c *github.Client, owner, repo string) string
+
+	// GetAction must return the configured action from the policy's config. No
+	// validation is needed by the policy, it will be done centrally.
+	GetOrgActionConfig(ctx context.Context, c *github.Client, owner, repo string) configdef.OrgActionConfig
 }

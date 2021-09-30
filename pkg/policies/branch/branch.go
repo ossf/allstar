@@ -22,6 +22,7 @@ import (
 	"path"
 
 	"github.com/ossf/allstar/pkg/config"
+	"github.com/ossf/allstar/pkg/configdef"	
 	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/policydef"
 
@@ -40,6 +41,8 @@ type OrgConfig struct {
 
 	// Action defines which action to take, default log, other: issue...
 	Action string `yaml:"action"`
+
+	ActionConfig config.OrgActionConfig `yaml:"actionConfig"`
 
 	// EnforceDefault : set to true to enforce policy on default branch, default true.
 	EnforceDefault bool `yaml:"enforceDefault"`
@@ -70,6 +73,8 @@ type RepoConfig struct {
 	// Action overrides the same setting in org-level, only if present.
 	Action *string `yaml:"action"`
 
+	ActionConfig config.OrgActionConfig `yaml:"actionConfig"`
+
 	// EnforceDefault overrides the same setting in org-level, only if present.
 	EnforceDefault *bool `yaml:"enforceDefault"`
 
@@ -92,6 +97,7 @@ type RepoConfig struct {
 
 type mergedConfig struct {
 	Action          string
+	ActionConfig configdef.OrgActionConfig	
 	EnforceDefault  bool
 	EnforceBranches []string
 	RequireApproval bool
@@ -289,6 +295,16 @@ func (b Branch) GetAction(ctx context.Context, c *github.Client, owner, repo str
 	return mc.Action
 }
 
+func (b Branch) GetOrgActionConfig(ctx context.Context, c *github.Client, owner, repo string) configdef.OrgActionConfig {
+	return getOrgActionConfig(ctx, c, owner, repo)
+}
+
+func getOrgActionConfig(ctx context.Context, c *github.Client, owner, repo string) configdef.OrgActionConfig {
+	oc, rc := getConfig(ctx, c, owner, repo)
+	mc := mergeConfig(oc, rc, repo)
+	return mc.ActionConfig
+}
+
 func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgConfig, *RepoConfig) {
 	oc := &OrgConfig{ // Fill out non-zero defaults
 		Action:          "log",
@@ -323,6 +339,10 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 	mc := &mergedConfig{
 		Action:          oc.Action,
+		ActionConfig: configdef.OrgActionConfig{
+			IssueLabel: operator.GitHubIssueLabel,
+			IssueFooter: operator.GitHubIssueFooter,
+		},		
 		EnforceDefault:  oc.EnforceDefault,
 		EnforceBranches: oc.EnforceBranches[repo],
 		RequireApproval: oc.RequireApproval,
@@ -352,5 +372,21 @@ func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 			mc.BlockForce = *rc.BlockForce
 		}
 	}
+
+	if oc.OptConfig.DisableRepoOverride {
+		if len(oc.ActionConfig.IssueLabel) > 0 {
+			mc.ActionConfig.IssueLabel = oc.ActionConfig.IssueLabel
+		}
+		if len(oc.ActionConfig.IssueFooter) > 0 {
+			mc.ActionConfig.IssueFooter = oc.ActionConfig.IssueFooter
+		}
+	} else {
+		if len(rc.ActionConfig.IssueLabel) > 0 {
+			mc.ActionConfig.IssueLabel = rc.ActionConfig.IssueLabel
+		}
+		if len(rc.ActionConfig.IssueFooter) > 0 {
+			mc.ActionConfig.IssueFooter = rc.ActionConfig.IssueFooter
+		}
+	}	
 	return mc
 }

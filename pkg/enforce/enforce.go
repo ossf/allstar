@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/ossf/allstar/pkg/config"
+	"github.com/ossf/allstar/pkg/configdef"
 	"github.com/ossf/allstar/pkg/ghclients"
 	"github.com/ossf/allstar/pkg/issue"
 	"github.com/ossf/allstar/pkg/policies"
@@ -31,8 +32,8 @@ import (
 )
 
 var policiesGetPolicies func() []policydef.Policy
-var issueEnsure func(ctx context.Context, o config.OrgConfig, c *github.Client, owner, repo, policy, text string) error
-var issueClose func(ctx context.Context, o config.OrgConfig, c *github.Client, owner, repo, policy string) error
+var issueEnsure func(ctx context.Context, oa configdef.OrgActionConfig, c *github.Client, owner, repo, policy, text string) error
+var issueClose func(ctx context.Context, oa configdef.OrgActionConfig, c *github.Client, owner, repo, policy string) error
 
 func init() {
 	policiesGetPolicies = policies.GetPolicies
@@ -158,11 +159,12 @@ func RunPolicies(ctx context.Context, c *github.Client, owner, repo string, enab
 			continue
 		}
 		a := p.GetAction(ctx, c, owner, repo)
+		oa := p.GetOrgActionConfig(ctx, c, owner, repo)
 		if !r.Pass {
 			switch a {
 			case "log":
 			case "issue":
-				err := issueEnsure(ctx, c, owner, repo, p.Name(), r.NotifyText)
+				err := issueEnsure(ctx, oa, c, owner, repo, p.Name(), r.NotifyText)
 				if err != nil {
 					return err
 				}
@@ -187,7 +189,7 @@ func RunPolicies(ctx context.Context, c *github.Client, owner, repo string, enab
 			}
 		}
 		if r.Pass && a == "issue" {
-			err := issueClose(ctx, c, owner, repo, p.Name())
+			err := issueClose(ctx, oa, c, owner, repo, p.Name())
 			if err != nil {
 				return err
 			}

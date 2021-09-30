@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package security
+package binary
 
 import (
 	"context"
@@ -23,117 +23,7 @@ import (
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/configdef"
-	"github.com/ossf/allstar/pkg/policydef"
 )
-
-var query func(context.Context, interface{}, map[string]interface{}) error
-
-type mockClient struct{}
-
-func (m mockClient) Query(ctx context.Context, q interface{}, v map[string]interface{}) error {
-	return query(ctx, q, v)
-}
-
-func TestCheck(t *testing.T) {
-	tests := []struct {
-		Name       string
-		Org        OrgConfig
-		Repo       RepoConfig
-		SecEnabled bool
-		Exp        policydef.Result
-	}{
-		{
-			Name:       "NotEnabled",
-			Org:        OrgConfig{},
-			Repo:       RepoConfig{},
-			SecEnabled: true,
-			Exp: policydef.Result{
-				Enabled:    false,
-				Pass:       true,
-				NotifyText: "",
-				Details: details{
-					Enabled: true,
-					URL:     "",
-				},
-			},
-		},
-		{
-			Name: "Pass",
-			Org: OrgConfig{
-				OptConfig: config.OrgOptConfig{
-					OptOutStrategy: true,
-				},
-			},
-			Repo:       RepoConfig{},
-			SecEnabled: true,
-			Exp: policydef.Result{
-				Enabled:    true,
-				Pass:       true,
-				NotifyText: "",
-				Details: details{
-					Enabled: true,
-					URL:     "",
-				},
-			},
-		},
-		{
-			Name: "Fail",
-			Org: OrgConfig{
-				OptConfig: config.OrgOptConfig{
-					OptOutStrategy: true,
-				},
-			},
-			Repo:       RepoConfig{},
-			SecEnabled: false,
-			Exp: policydef.Result{
-				Enabled:    true,
-				Pass:       false,
-				NotifyText: "Security policy not enabled.\nA SECURITY.md file can give users information about what constitutes a vulnerability",
-				Details: details{
-					Enabled: false,
-					URL:     "",
-				},
-			},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.Name, func(t *testing.T) {
-			configFetchConfig = func(ctx context.Context, c *github.Client,
-				owner string, repo string, path string, out interface{}) error {
-				if repo == "thisrepo" {
-					rc := out.(*RepoConfig)
-					*rc = test.Repo
-				} else {
-					oc := out.(*OrgConfig)
-					*oc = test.Org
-				}
-				return nil
-			}
-			query = func(ctx context.Context, q interface{}, v map[string]interface{}) error {
-				qc, ok := q.(*struct {
-					Repository struct {
-						SecurityPolicyUrl       string
-						IsSecurityPolicyEnabled bool
-					} `graphql:"repository(owner: $owner, name: $name)"`
-				})
-				if !ok {
-					t.Errorf("Query() called with unexpected query structure.")
-				}
-				qc.Repository.IsSecurityPolicyEnabled = test.SecEnabled
-				return nil
-			}
-			res, err := check(context.Background(), nil, mockClient{}, "", "thisrepo")
-			if err != nil {
-				t.Fatalf("Unexpected error: %v", err)
-			}
-			c := cmp.Comparer(func(x, y string) bool { return trunc(x, 40) == trunc(y, 40) })
-			if diff := cmp.Diff(&test.Exp, res, c); diff != "" {
-				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
-			}
-		})
-	}
-}
 
 func TestGetOrgActionConfig(t *testing.T) {
 	tests := []struct {
@@ -230,11 +120,4 @@ func TestGetOrgActionConfig(t *testing.T) {
 			}
 		})
 	}
-}
-
-func trunc(s string, n int) string {
-	if n >= len(s) {
-		return s
-	}
-	return s[:n]
 }

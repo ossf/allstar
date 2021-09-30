@@ -21,6 +21,7 @@ import (
 	"path"
 
 	"github.com/ossf/allstar/pkg/config"
+	"github.com/ossf/allstar/pkg/configdef"	
 	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/policydef"
 
@@ -53,6 +54,8 @@ type OrgConfig struct {
 	// Action defines which action to take, default log, other: issue...
 	Action string `yaml:"action"`
 
+	ActionConfig config.OrgActionConfig `yaml:"actionConfig"`
+
 	// PushAllowed defined if outside collaboraters are allowed to have push
 	// access, default true.
 	PushAllowed bool `yaml:"pushAllowed"`
@@ -71,6 +74,8 @@ type RepoConfig struct {
 	// Action overrides the same setting in org-level, only if present.
 	Action *string `yaml:"action"`
 
+	ActionConfig config.OrgActionConfig `yaml:"actionConfig"`
+
 	// PushAllowed overrides the same setting in org-level, only if present.
 	PushAllowed *bool `yaml:"pushAllowed"`
 
@@ -80,6 +85,7 @@ type RepoConfig struct {
 
 type mergedConfig struct {
 	Action       string
+	ActionConfig configdef.OrgActionConfig
 	PushAllowed  bool
 	AdminAllowed bool
 }
@@ -210,6 +216,17 @@ func (o Outside) GetAction(ctx context.Context, c *github.Client, owner, repo st
 	return mc.Action
 }
 
+func (o Outside) GetOrgActionConfig(ctx context.Context, c *github.Client, owner, repo string) configdef.OrgActionConfig {
+	return getOrgActionConfig(ctx, c, owner, repo)
+}
+
+func getOrgActionConfig(ctx context.Context, c *github.Client, owner, repo string) configdef.OrgActionConfig {
+	oc, rc := getConfig(ctx, c, owner, repo)
+	mc := mergeConfig(oc, rc, repo)
+	return mc.ActionConfig
+}
+
+
 func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgConfig, *RepoConfig) {
 	oc := &OrgConfig{ // Fill out non-zero defaults
 		Action:      "log",
@@ -240,6 +257,10 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 	mc := &mergedConfig{
 		Action:       oc.Action,
+		ActionConfig: configdef.OrgActionConfig{
+			IssueLabel: operator.GitHubIssueLabel,
+			IssueFooter: operator.GitHubIssueFooter,
+		},
 		PushAllowed:  oc.PushAllowed,
 		AdminAllowed: oc.AdminAllowed,
 	}
@@ -253,6 +274,22 @@ func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 		}
 		if rc.AdminAllowed != nil {
 			mc.AdminAllowed = *rc.AdminAllowed
+		}
+	}
+
+	if oc.OptConfig.DisableRepoOverride {
+		if len(oc.ActionConfig.IssueLabel) > 0 {
+			mc.ActionConfig.IssueLabel = oc.ActionConfig.IssueLabel
+		}
+		if len(oc.ActionConfig.IssueFooter) > 0 {
+			mc.ActionConfig.IssueFooter = oc.ActionConfig.IssueFooter
+		}
+	} else {
+		if len(rc.ActionConfig.IssueLabel) > 0 {
+			mc.ActionConfig.IssueLabel = rc.ActionConfig.IssueLabel
+		}
+		if len(rc.ActionConfig.IssueFooter) > 0 {
+			mc.ActionConfig.IssueFooter = rc.ActionConfig.IssueFooter
 		}
 	}
 	return mc
