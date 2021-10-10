@@ -19,6 +19,9 @@ import (
 	"encoding/base64"
 	"testing"
 
+	"github.com/ossf/allstar/pkg/configdef"
+	"github.com/ossf/allstar/pkg/config/operator"	
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v39/github"
 )
@@ -87,6 +90,19 @@ optConfig:
 					OptOutStrategy:      false,
 					OptInRepos:          []string{"repo1", "repo2"},
 					DisableRepoOverride: false,
+				},
+			},
+			Got: &OrgConfig{},
+		},
+		{
+			Name: "actionConfig",
+			Input: `
+actionConfig:
+  issueLabel: testlabel
+`,
+			Expect: &OrgConfig{
+				ActionConfig: ActionConfig{
+					IssueLabel:      "testlabel",
 				},
 			},
 			Got: &OrgConfig{},
@@ -312,5 +328,76 @@ optConfig:
 
 	if !isBotEnabled(context.Background(), mockRepos{}, "", "thisrepo") {
 		t.Error("Expected repo to be enabled")
+	}
+}
+
+func TestGetActionConfig(t *testing.T) {
+	tests := []struct {
+		Name   string
+		OrgIn  string
+		RepoIn  string
+		Expect *configdef.ActionConfig
+	}{
+		{
+			Name: "Default",
+			OrgIn: "",
+			RepoIn: "",
+			Expect: &configdef.ActionConfig{
+				IssueLabel: operator.GitHubIssueLabel,
+			},
+		},
+		{
+			Name: "OrgActionConfig",
+			OrgIn: `
+optConfig:
+  disableRepoOverride: true
+actionConfig:
+  issueLabel: testorglabel
+`,
+			RepoIn: `
+actionConfig:
+  issueLabel: testrepolabel
+`,
+			Expect: &configdef.ActionConfig{
+				IssueLabel: "testorglabel",
+			},
+		},
+		{
+			Name: "RepoActionConfig",
+			OrgIn: `
+actionConfig:
+  issueLabel: testorglabel
+`,
+			RepoIn: `
+actionConfig:
+  issueLabel: testrepolabel
+`,
+			Expect: &configdef.ActionConfig{
+				IssueLabel: "testrepolabel",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			getContents = func(ctx context.Context, owner, repo, path string,
+				opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
+				[]*github.RepositoryContent, *github.Response, error) {
+				e := "base64"
+				var c string
+				if repo == "thisrepo" {
+					c = base64.StdEncoding.EncodeToString([]byte(test.RepoIn))
+				} else {
+					c = base64.StdEncoding.EncodeToString([]byte(test.OrgIn))
+				}
+				return &github.RepositoryContent{
+					Encoding: &e,
+					Content:  &c,
+				}, nil, nil, nil
+			}
+			got := getActionConfig(context.Background(), mockRepos{}, "", "thisrepo")
+			if diff := cmp.Diff(test.Expect, got); diff != "" {
+				t.Errorf("%s:Unexpected results. (-want +got):\n%s", test.Name, diff)
+			}
+		})
 	}
 }

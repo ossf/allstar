@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/google/go-github/v39/github"
+	"github.com/ossf/allstar/pkg/configdef"
 	"github.com/ossf/allstar/pkg/config/operator"
 )
 
@@ -60,6 +61,9 @@ func TestEnsure(t *testing.T) {
 	issueTitle := fmt.Sprintf(title, "thispolicy")
 	closed := "closed"
 	open := "open"
+	ac := &configdef.ActionConfig{
+		IssueLabel: "testlabel",
+	}
 	t.Run("NoIssue", func(t *testing.T) {
 		listByRepo = func(ctx context.Context, owner string, repo string,
 			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
@@ -79,7 +83,7 @@ func TestEnsure(t *testing.T) {
 		}
 		edit = nil
 		createComment = nil
-		err := ensure(context.Background(), mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), ac, mockIssues{}, "", "", "thispolicy", "Status text")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -116,7 +120,7 @@ func TestEnsure(t *testing.T) {
 			commentCalled = true
 			return nil, nil, nil
 		}
-		err := ensure(context.Background(), mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), ac, mockIssues{}, "", "", "thispolicy", "Status text")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -143,7 +147,7 @@ func TestEnsure(t *testing.T) {
 		create = nil
 		edit = nil
 		createComment = nil
-		err := ensure(context.Background(), mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), ac, mockIssues{}, "", "", "thispolicy", "Status text")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -172,7 +176,7 @@ func TestEnsure(t *testing.T) {
 		// Expect to not call nil functions
 		create = nil
 		edit = nil
-		err := ensure(context.Background(), mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), ac, mockIssues{}, "", "", "thispolicy", "Status text")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -184,6 +188,9 @@ func TestEnsure(t *testing.T) {
 
 func TestClose(t *testing.T) {
 	issueTitle := fmt.Sprintf(title, "thispolicy")
+	ac := &configdef.ActionConfig{
+		IssueLabel: "testlabel",
+	}
 	t.Run("NoIssue", func(t *testing.T) {
 		listByRepo = func(ctx context.Context, owner string, repo string,
 			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
@@ -192,7 +199,7 @@ func TestClose(t *testing.T) {
 		// Expect to not call nil functions
 		createComment = nil
 		edit = nil
-		err := closeIssue(context.Background(), mockIssues{}, "", "", "thispolicy")
+		err := closeIssue(context.Background(), ac, mockIssues{}, "", "", "thispolicy")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -209,7 +216,7 @@ func TestClose(t *testing.T) {
 		// Expect to not call nil functions
 		createComment = nil
 		edit = nil
-		err := closeIssue(context.Background(), mockIssues{}, "", "", "thispolicy")
+		err := closeIssue(context.Background(), ac, mockIssues{}, "", "", "thispolicy")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -243,7 +250,7 @@ func TestClose(t *testing.T) {
 			editCalled = true
 			return nil, nil, nil
 		}
-		err := closeIssue(context.Background(), mockIssues{}, "", "", "thispolicy")
+		err := closeIssue(context.Background(), ac, mockIssues{}, "", "", "thispolicy")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}

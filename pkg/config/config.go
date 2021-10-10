@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"path"
 
+	"github.com/ossf/allstar/pkg/configdef"
 	"github.com/ossf/allstar/pkg/config/operator"
 
 	"github.com/google/go-github/v39/github"
@@ -31,6 +32,9 @@ import (
 type OrgConfig struct {
 	// OptConfig contains the opt in/out configuration.
 	OptConfig OrgOptConfig `yaml:"optConfig"`
+
+	// ActionConfig contains the issue configuration.
+	ActionConfig ActionConfig `yaml:"actionConfig"`
 }
 
 // OrgOptConfig is used in Allstar and policy-secific org-level config to
@@ -60,6 +64,9 @@ type OrgOptConfig struct {
 type RepoConfig struct {
 	// OptConfig contains the opt in/out configuration.
 	OptConfig RepoOptConfig `yaml:"optConfig"`
+
+	// ActionConfig contains the issue configuration.
+	ActionConfig ActionConfig `yaml:"actionConfig"`
 }
 
 // RepoOptConfig is used in Allstar and policy-specific repo-level config to
@@ -70,6 +77,14 @@ type RepoOptConfig struct {
 
 	// OptOut: set to true to opt-out this repo when in opt-out strategy
 	OptOut bool `yaml:"optOut"`
+}
+
+// ActionConfig is used in repo/org level config to define the action configuration.
+type ActionConfig struct {
+	// IssueLabel : set to override GitHubIssueLabel in operator.go.
+	// GitHubIssueLabel is the label used to tag, search, and identify GitHub
+	// Issues created by the bot.
+	IssueLabel string `yaml:"issueLabel"`
 }
 
 // FetchConfig grabs a yaml config file from github and writes it to out.
@@ -156,6 +171,28 @@ func IsBotEnabled(ctx context.Context, c *github.Client, owner, repo string) boo
 }
 
 func isBotEnabled(ctx context.Context, r repositories, owner, repo string) bool {
+	oc, rc := getAppConfigs(ctx, r, owner, repo)
+	enabled, err := isEnabled(ctx, oc.OptConfig, rc.OptConfig, r, owner, repo)
+	if err != nil {
+		log.Error().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("owner", owner).
+			Str("area", "bot").
+			Bool("enabled", enabled).
+			Err(err).
+			Msg("Unexpected config error, using defaults.")
+	}
+	log.Info().
+		Str("org", owner).
+		Str("repo", repo).
+		Str("area", "bot").
+		Bool("enabled", enabled).
+		Msg("Check repo enabled")
+	return enabled
+}
+
+func getAppConfigs(ctx context.Context, r repositories, owner, repo string) (*OrgConfig, *RepoConfig) {
 	// drop errors, if cfg file is not there, go with defaults
 	oc := &OrgConfig{}
 	if err := fetchConfig(ctx, r, owner, operator.OrgConfigRepo, operator.AppConfigFile, oc); err != nil {
@@ -177,25 +214,30 @@ func isBotEnabled(ctx context.Context, r repositories, owner, repo string) bool 
 			Err(err).
 			Msg("Unexpected config error, using defaults.")
 	}
+	return oc, rc
+}
 
-	enabled, err := isEnabled(ctx, oc.OptConfig, rc.OptConfig, r, owner, repo)
-	if err != nil {
-		log.Error().
-			Str("org", owner).
-			Str("repo", repo).
-			Str("owner", owner).
-			Str("area", "bot").
-			Bool("enabled", enabled).
-			Err(err).
-			Msg("Unexpected config error, using defaults.")
+// GetActionConfig return merged ActionConfig in org/repo allstar.yaml.
+func GetActionConfig(ctx context.Context, c *github.Client, owner, repo string) *configdef.ActionConfig {
+	return getActionConfig(ctx, c.Repositories, owner, repo)
+}
+
+func getActionConfig(ctx context.Context, r repositories, owner, repo string) *configdef.ActionConfig {
+	ac := &configdef.ActionConfig{
+		IssueLabel: operator.GitHubIssueLabel,
 	}
-	log.Info().
-		Str("org", owner).
-		Str("repo", repo).
-		Str("area", "bot").
-		Bool("enabled", enabled).
-		Msg("Check repo enabled")
-	return enabled
+	oc, rc := getAppConfigs(ctx, r, owner, repo)
+
+	if len(oc.ActionConfig.IssueLabel) > 0 {
+		ac.IssueLabel = oc.ActionConfig.IssueLabel
+	}
+
+	if !oc.OptConfig.DisableRepoOverride {
+		if len(rc.ActionConfig.IssueLabel) > 0 {
+			ac.IssueLabel = rc.ActionConfig.IssueLabel
+		}
+	}
+	return ac
 }
 
 func contains(s []string, e string) bool {
