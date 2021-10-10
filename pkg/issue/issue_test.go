@@ -75,8 +75,8 @@ func TestEnsure(t *testing.T) {
 			if *issue.Title != issueTitle {
 				t.Errorf("Unexpected title: %v", issue.GetTitle())
 			}
-			if (*issue.Labels)[0] != operator.GitHubIssueLabel {
-				t.Errorf("Unexpected title: %v", issue.GetTitle())
+			if (*issue.Labels)[0] != ac.IssueLabel {
+				t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
 			}
 			createCalled = true
 			return nil, nil, nil
