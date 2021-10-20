@@ -20,9 +20,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/go-github/v39/github"
-	"github.com/ossf/allstar/pkg/configdef"	
+	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/config/operator"
+
+	"github.com/google/go-github/v39/github"
 )
 
 const title = "Security Policy violation %v"
@@ -38,10 +39,16 @@ type issues interface {
 		*github.IssueComment, *github.Response, error)
 }
 
-func getPolicyIssue(ctx context.Context, ac *configdef.ActionConfig, issues issues, owner, repo, policy string) (*github.Issue, error) {
+var configGetAppConfigs func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig)
+
+func init() {
+	configGetAppConfigs = config.GetAppConfigs
+}
+
+func getPolicyIssue(ctx context.Context, issues issues, owner, repo, policy, label string) (*github.Issue, error) {
 	opt := &github.IssueListByRepoOptions{
 		State:  "all",
-		Labels: []string{ac.IssueLabel},
+		Labels: []string{label},
 		ListOptions: github.ListOptions{
 			PerPage: 100,
 		},
@@ -72,12 +79,13 @@ func getPolicyIssue(ctx context.Context, ac *configdef.ActionConfig, issues issu
 // Ensure ensures an issue exists and is open for the provided repo and
 // policy. If opening, re-opening, or pinging an issue, the provided text will
 // be included.
-func Ensure(ctx context.Context, ac *configdef.ActionConfig, c *github.Client, owner, repo, policy, text string) error {
-	return ensure(ctx, ac, c.Issues, owner, repo, policy, text)
+func Ensure(ctx context.Context, c *github.Client, owner, repo, policy, text string) error {
+	return ensure(ctx, c, c.Issues, owner, repo, policy, text)
 }
 
-func ensure(ctx context.Context, ac *configdef.ActionConfig, issues issues, owner, repo, policy, text string) error {
-	issue, err := getPolicyIssue(ctx, ac, issues, owner, repo, policy)
+func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, policy, text string) error {
+	label := getIssueLabel(ctx, c, owner, repo)
+	issue, err := getPolicyIssue(ctx, issues, owner, repo, policy, label)
 	if err != nil {
 		return err
 	}
@@ -88,7 +96,7 @@ func ensure(ctx context.Context, ac *configdef.ActionConfig, issues issues, owne
 		new := &github.IssueRequest{
 			Title:  &t,
 			Body:   &body,
-			Labels: &[]string{ac.IssueLabel},
+			Labels: &[]string{label},
 		}
 		_, _, err := issues.Create(ctx, owner, repo, new)
 		return err
@@ -121,12 +129,13 @@ func ensure(ctx context.Context, ac *configdef.ActionConfig, issues issues, owne
 
 // Close ensures that there is not an issue open for the provided repo and
 // policy. If open it closes it with a message.
-func Close(ctx context.Context, ac *configdef.ActionConfig, c *github.Client, owner, repo, policy string) error {
-	return closeIssue(ctx, ac, c.Issues, owner, repo, policy)
+func Close(ctx context.Context, c *github.Client, owner, repo, policy string) error {
+	return closeIssue(ctx, c, c.Issues, owner, repo, policy)
 }
 
-func closeIssue(ctx context.Context, ac *configdef.ActionConfig, issues issues, owner, repo, policy string) error {
-	issue, err := getPolicyIssue(ctx, ac, issues, owner, repo, policy)
+func closeIssue(ctx context.Context, c *github.Client, issues issues, owner, repo, policy string) error {
+	label := getIssueLabel(ctx, c, owner, repo)
+	issue, err := getPolicyIssue(ctx, issues, owner, repo, policy, label)
 	if err != nil {
 		return err
 	}
@@ -147,4 +156,16 @@ func closeIssue(ctx context.Context, ac *configdef.ActionConfig, issues issues, 
 		}
 	}
 	return nil
+}
+
+func getIssueLabel(ctx context.Context, c *github.Client, owner, repo string) string {
+	label := operator.GitHubIssueLabel
+	oc, rc := configGetAppConfigs(ctx, c, owner, repo)
+	if len(oc.IssueLabel) > 0 {
+		label = oc.IssueLabel
+	}
+	if len(rc.IssueLabel) > 0 {
+		label = rc.IssueLabel
+	}
+	return label
 }

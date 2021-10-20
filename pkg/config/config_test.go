@@ -19,9 +19,6 @@ import (
 	"encoding/base64"
 	"testing"
 
-	"github.com/ossf/allstar/pkg/configdef"
-	"github.com/ossf/allstar/pkg/config/operator"	
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v39/github"
 )
@@ -70,7 +67,7 @@ optConfig:
 					OptOutStrategy:      true,
 					OptOutRepos:         []string{"repo1", "repo2"},
 					OptOutPrivateRepos:  true,
-					OptOutPublicRepos:  true,
+					OptOutPublicRepos:   true,
 					DisableRepoOverride: true,
 				},
 			},
@@ -95,15 +92,12 @@ optConfig:
 			Got: &OrgConfig{},
 		},
 		{
-			Name: "actionConfig",
+			Name: "IssueLabel",
 			Input: `
-actionConfig:
-  issueLabel: testlabel
+issueLabel: testlabel
 `,
 			Expect: &OrgConfig{
-				ActionConfig: ActionConfig{
-					IssueLabel:      "testlabel",
-				},
+				IssueLabel: "testlabel",
 			},
 			Got: &OrgConfig{},
 		},
@@ -162,11 +156,11 @@ optConfig:
 
 func TestIsEnabled(t *testing.T) {
 	tests := []struct {
-		Name           string
-		Org            OrgOptConfig
-		Repo           RepoOptConfig
-		IsPrivateRepo  bool
-		Expect         bool
+		Name          string
+		Org           OrgOptConfig
+		Repo          RepoOptConfig
+		IsPrivateRepo bool
+		Expect        bool
 	}{
 		{
 			Name: "OptInOrg",
@@ -174,9 +168,9 @@ func TestIsEnabled(t *testing.T) {
 				OptOutStrategy: false,
 				OptInRepos:     []string{"thisrepo"},
 			},
-			Repo:   RepoOptConfig{},
+			Repo:          RepoOptConfig{},
 			IsPrivateRepo: false,
-			Expect: true,
+			Expect:        true,
 		},
 		{
 			Name: "NoOptInOrg",
@@ -184,18 +178,18 @@ func TestIsEnabled(t *testing.T) {
 				OptOutStrategy: false,
 				OptInRepos:     []string{"otherrepo"},
 			},
-			Repo:   RepoOptConfig{},
+			Repo:          RepoOptConfig{},
 			IsPrivateRepo: false,
-			Expect: false,
+			Expect:        false,
 		},
 		{
 			Name: "OptOutOrg",
 			Org: OrgOptConfig{
 				OptOutStrategy: true,
 			},
-			Repo:   RepoOptConfig{},
-			IsPrivateRepo: false,			
-			Expect: true,
+			Repo:          RepoOptConfig{},
+			IsPrivateRepo: false,
+			Expect:        true,
 		},
 		{
 			Name: "NoOptOutOrg",
@@ -203,49 +197,49 @@ func TestIsEnabled(t *testing.T) {
 				OptOutStrategy: true,
 				OptOutRepos:    []string{"thisrepo"},
 			},
-			Repo:   RepoOptConfig{},
-			IsPrivateRepo: false,			
-			Expect: false,
+			Repo:          RepoOptConfig{},
+			IsPrivateRepo: false,
+			Expect:        false,
 		},
 		{
 			Name: "OptOutPrivateRepos",
 			Org: OrgOptConfig{
-				OptOutStrategy: true,
+				OptOutStrategy:     true,
 				OptOutPrivateRepos: true,
 			},
-			Repo:   RepoOptConfig{},
-			IsPrivateRepo: true,			
-			Expect: false,
+			Repo:          RepoOptConfig{},
+			IsPrivateRepo: true,
+			Expect:        false,
 		},
 		{
 			Name: "NoOptOutPrivateRepos",
 			Org: OrgOptConfig{
-				OptOutStrategy: true,
+				OptOutStrategy:     true,
 				OptOutPrivateRepos: false,
 			},
-			Repo:   RepoOptConfig{},
-			IsPrivateRepo: true,	
-			Expect: true,
+			Repo:          RepoOptConfig{},
+			IsPrivateRepo: true,
+			Expect:        true,
 		},
 		{
 			Name: "OptOutPublicRepos",
 			Org: OrgOptConfig{
-				OptOutStrategy: true,
+				OptOutStrategy:    true,
 				OptOutPublicRepos: true,
 			},
-			Repo:   RepoOptConfig{},
+			Repo:          RepoOptConfig{},
 			IsPrivateRepo: false,
-			Expect: false,
+			Expect:        false,
 		},
 		{
 			Name: "NoOptOutPublicRepos",
 			Org: OrgOptConfig{
-				OptOutStrategy: true,
+				OptOutStrategy:    true,
 				OptOutPublicRepos: false,
 			},
-			Repo:   RepoOptConfig{},
+			Repo:          RepoOptConfig{},
 			IsPrivateRepo: false,
-			Expect: true,
+			Expect:        true,
 		},
 		{
 			Name: "RepoOptIn",
@@ -254,7 +248,7 @@ func TestIsEnabled(t *testing.T) {
 				OptIn: true,
 			},
 			IsPrivateRepo: false,
-			Expect: true,
+			Expect:        true,
 		},
 		{
 			Name: "RepoOptOut",
@@ -265,7 +259,7 @@ func TestIsEnabled(t *testing.T) {
 				OptOut: true,
 			},
 			IsPrivateRepo: false,
-			Expect: false,
+			Expect:        false,
 		},
 		{
 			Name: "DissallowOptOut",
@@ -277,7 +271,7 @@ func TestIsEnabled(t *testing.T) {
 				OptOut: true,
 			},
 			IsPrivateRepo: false,
-			Expect: true,
+			Expect:        true,
 		},
 	}
 	for _, test := range tests {
@@ -328,76 +322,5 @@ optConfig:
 
 	if !isBotEnabled(context.Background(), mockRepos{}, "", "thisrepo") {
 		t.Error("Expected repo to be enabled")
-	}
-}
-
-func TestGetActionConfig(t *testing.T) {
-	tests := []struct {
-		Name   string
-		OrgIn  string
-		RepoIn  string
-		Expect *configdef.ActionConfig
-	}{
-		{
-			Name: "Default",
-			OrgIn: "",
-			RepoIn: "",
-			Expect: &configdef.ActionConfig{
-				IssueLabel: operator.GitHubIssueLabel,
-			},
-		},
-		{
-			Name: "OrgActionConfig",
-			OrgIn: `
-optConfig:
-  disableRepoOverride: true
-actionConfig:
-  issueLabel: testorglabel
-`,
-			RepoIn: `
-actionConfig:
-  issueLabel: testrepolabel
-`,
-			Expect: &configdef.ActionConfig{
-				IssueLabel: "testorglabel",
-			},
-		},
-		{
-			Name: "RepoActionConfig",
-			OrgIn: `
-actionConfig:
-  issueLabel: testorglabel
-`,
-			RepoIn: `
-actionConfig:
-  issueLabel: testrepolabel
-`,
-			Expect: &configdef.ActionConfig{
-				IssueLabel: "testrepolabel",
-			},
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.Name, func(t *testing.T) {
-			getContents = func(ctx context.Context, owner, repo, path string,
-				opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
-				[]*github.RepositoryContent, *github.Response, error) {
-				e := "base64"
-				var c string
-				if repo == "thisrepo" {
-					c = base64.StdEncoding.EncodeToString([]byte(test.RepoIn))
-				} else {
-					c = base64.StdEncoding.EncodeToString([]byte(test.OrgIn))
-				}
-				return &github.RepositoryContent{
-					Encoding: &e,
-					Content:  &c,
-				}, nil, nil, nil
-			}
-			got := getActionConfig(context.Background(), mockRepos{}, "", "thisrepo")
-			if diff := cmp.Diff(test.Expect, got); diff != "" {
-				t.Errorf("%s:Unexpected results. (-want +got):\n%s", test.Name, diff)
-			}
-		})
 	}
 }

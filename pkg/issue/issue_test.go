@@ -21,9 +21,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-github/v39/github"
-	"github.com/ossf/allstar/pkg/configdef"
+	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/config/operator"
+
+	"github.com/google/go-github/v39/github"
 )
 
 var listByRepo func(context.Context, string, string,
@@ -61,8 +62,8 @@ func TestEnsure(t *testing.T) {
 	issueTitle := fmt.Sprintf(title, "thispolicy")
 	closed := "closed"
 	open := "open"
-	ac := &configdef.ActionConfig{
-		IssueLabel: "testlabel",
+	configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig) {
+		return &config.OrgConfig{}, &config.RepoConfig{}
 	}
 	t.Run("NoIssue", func(t *testing.T) {
 		listByRepo = func(ctx context.Context, owner string, repo string,
@@ -75,7 +76,7 @@ func TestEnsure(t *testing.T) {
 			if *issue.Title != issueTitle {
 				t.Errorf("Unexpected title: %v", issue.GetTitle())
 			}
-			if (*issue.Labels)[0] != ac.IssueLabel {
+			if (*issue.Labels)[0] != operator.GitHubIssueLabel {
 				t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
 			}
 			createCalled = true
@@ -83,7 +84,7 @@ func TestEnsure(t *testing.T) {
 		}
 		edit = nil
 		createComment = nil
-		err := ensure(context.Background(), ac, mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -120,7 +121,7 @@ func TestEnsure(t *testing.T) {
 			commentCalled = true
 			return nil, nil, nil
 		}
-		err := ensure(context.Background(), ac, mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -147,7 +148,7 @@ func TestEnsure(t *testing.T) {
 		create = nil
 		edit = nil
 		createComment = nil
-		err := ensure(context.Background(), ac, mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -176,7 +177,7 @@ func TestEnsure(t *testing.T) {
 		// Expect to not call nil functions
 		create = nil
 		edit = nil
-		err := ensure(context.Background(), ac, mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -188,8 +189,8 @@ func TestEnsure(t *testing.T) {
 
 func TestClose(t *testing.T) {
 	issueTitle := fmt.Sprintf(title, "thispolicy")
-	ac := &configdef.ActionConfig{
-		IssueLabel: "testlabel",
+	configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig) {
+		return &config.OrgConfig{}, &config.RepoConfig{}
 	}
 	t.Run("NoIssue", func(t *testing.T) {
 		listByRepo = func(ctx context.Context, owner string, repo string,
@@ -199,7 +200,7 @@ func TestClose(t *testing.T) {
 		// Expect to not call nil functions
 		createComment = nil
 		edit = nil
-		err := closeIssue(context.Background(), ac, mockIssues{}, "", "", "thispolicy")
+		err := closeIssue(context.Background(), nil, mockIssues{}, "", "", "thispolicy")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -216,7 +217,7 @@ func TestClose(t *testing.T) {
 		// Expect to not call nil functions
 		createComment = nil
 		edit = nil
-		err := closeIssue(context.Background(), ac, mockIssues{}, "", "", "thispolicy")
+		err := closeIssue(context.Background(), nil, mockIssues{}, "", "", "thispolicy")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -250,7 +251,7 @@ func TestClose(t *testing.T) {
 			editCalled = true
 			return nil, nil, nil
 		}
-		err := closeIssue(context.Background(), ac, mockIssues{}, "", "", "thispolicy")
+		err := closeIssue(context.Background(), nil, mockIssues{}, "", "", "thispolicy")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -261,5 +262,45 @@ func TestClose(t *testing.T) {
 			t.Error("Expected issue to be closed")
 		}
 	})
+}
 
+func TestLabel(t *testing.T) {
+	tests := []struct {
+		Name      string
+		OrgLabel  string
+		RepoLabel string
+		Expect    string
+	}{
+		{
+			Name:   "None",
+			Expect: operator.GitHubIssueLabel,
+		},
+		{
+			Name:     "Org",
+			OrgLabel: "orglabel",
+			Expect:   "orglabel",
+		},
+		{
+			Name:      "Repo1",
+			RepoLabel: "repolabel",
+			Expect:    "repolabel",
+		},
+		{
+			Name:      "Repo2",
+			OrgLabel:  "orglabel",
+			RepoLabel: "repolabel",
+			Expect:    "repolabel",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig) {
+				return &config.OrgConfig{IssueLabel: test.OrgLabel}, &config.RepoConfig{IssueLabel: test.RepoLabel}
+			}
+			got := getIssueLabel(context.Background(), nil, "", "")
+			if got != test.Expect {
+				t.Errorf("Unexpected label. Want: %q Got: %q", test.Expect, got)
+			}
+		})
+	}
 }

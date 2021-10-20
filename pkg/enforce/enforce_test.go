@@ -20,7 +20,6 @@ import (
 
 	"github.com/google/go-github/v39/github"
 	"github.com/ossf/allstar/pkg/policydef"
-	"github.com/ossf/allstar/pkg/configdef"
 )
 
 var result policydef.Result
@@ -53,12 +52,12 @@ func TestRunPolicies(t *testing.T) {
 		}
 	}
 	ensureCalled := false
-	issueEnsure = func(ctx context.Context, ac *configdef.ActionConfig, c *github.Client, owner, repo, policy, text string) error {
+	issueEnsure = func(ctx context.Context, c *github.Client, owner, repo, policy, text string) error {
 		ensureCalled = true
 		return nil
 	}
 	closeCalled := false
-	issueClose = func(ctx context.Context, ac *configdef.ActionConfig, c *github.Client, owner, repo, policy string) error {
+	issueClose = func(ctx context.Context, c *github.Client, owner, repo, policy string) error {
 		closeCalled = true
 		return nil
 	}
@@ -118,10 +117,7 @@ func TestRunPolicies(t *testing.T) {
 			closeCalled = false
 			result = test.Res
 			action = test.Action
-			ac := &configdef.ActionConfig{
-				IssueLabel: "testlabel",
-			}
-			err := RunPolicies(context.Background(), ac, nil, "", "", true)
+			err := RunPolicies(context.Background(), nil, "", "", true)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
