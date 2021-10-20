@@ -20,7 +20,6 @@ import (
 	"net/http"
 	"path"
 
-	"github.com/ossf/allstar/pkg/configdef"
 	"github.com/ossf/allstar/pkg/config/operator"
 
 	"github.com/google/go-github/v39/github"
@@ -33,8 +32,10 @@ type OrgConfig struct {
 	// OptConfig contains the opt in/out configuration.
 	OptConfig OrgOptConfig `yaml:"optConfig"`
 
-	// ActionConfig contains the issue configuration.
-	ActionConfig ActionConfig `yaml:"actionConfig"`
+	// IssueLabel is the label used to tag, search, and identify GitHub Issues
+	// created by the bot. The defeault is specified by the operator of Allstar,
+	// currently: "allstar"
+	IssueLabel string `yaml:"issueLabel"`
 }
 
 // OrgOptConfig is used in Allstar and policy-secific org-level config to
@@ -65,8 +66,10 @@ type RepoConfig struct {
 	// OptConfig contains the opt in/out configuration.
 	OptConfig RepoOptConfig `yaml:"optConfig"`
 
-	// ActionConfig contains the issue configuration.
-	ActionConfig ActionConfig `yaml:"actionConfig"`
+	// IssueLabel is the label used to tag, search, and identify GitHub Issues
+	// created by the bot. Repo-level label my override Org-level setting
+	// regardless of Optconfig.DisableRepoOverride.
+	IssueLabel string `yaml:"issueLabel"`
 }
 
 // RepoOptConfig is used in Allstar and policy-specific repo-level config to
@@ -77,14 +80,6 @@ type RepoOptConfig struct {
 
 	// OptOut: set to true to opt-out this repo when in opt-out strategy
 	OptOut bool `yaml:"optOut"`
-}
-
-// ActionConfig is used in repo/org level config to define the action configuration.
-type ActionConfig struct {
-	// IssueLabel : set to override GitHubIssueLabel in operator.go.
-	// GitHubIssueLabel is the label used to tag, search, and identify GitHub
-	// Issues created by the bot.
-	IssueLabel string `yaml:"issueLabel"`
 }
 
 // FetchConfig grabs a yaml config file from github and writes it to out.
@@ -192,6 +187,11 @@ func isBotEnabled(ctx context.Context, r repositories, owner, repo string) bool 
 	return enabled
 }
 
+// GetAppConfigs gets the Allstar configurations for both Org and Repo level.
+func GetAppConfigs(ctx context.Context, c *github.Client, owner, repo string) (*OrgConfig, *RepoConfig) {
+	return getAppConfigs(ctx, c.Repositories, owner, repo)
+}
+
 func getAppConfigs(ctx context.Context, r repositories, owner, repo string) (*OrgConfig, *RepoConfig) {
 	// drop errors, if cfg file is not there, go with defaults
 	oc := &OrgConfig{}
@@ -215,29 +215,6 @@ func getAppConfigs(ctx context.Context, r repositories, owner, repo string) (*Or
 			Msg("Unexpected config error, using defaults.")
 	}
 	return oc, rc
-}
-
-// GetActionConfig return merged ActionConfig in org/repo allstar.yaml.
-func GetActionConfig(ctx context.Context, c *github.Client, owner, repo string) *configdef.ActionConfig {
-	return getActionConfig(ctx, c.Repositories, owner, repo)
-}
-
-func getActionConfig(ctx context.Context, r repositories, owner, repo string) *configdef.ActionConfig {
-	ac := &configdef.ActionConfig{
-		IssueLabel: operator.GitHubIssueLabel,
-	}
-	oc, rc := getAppConfigs(ctx, r, owner, repo)
-
-	if len(oc.ActionConfig.IssueLabel) > 0 {
-		ac.IssueLabel = oc.ActionConfig.IssueLabel
-	}
-
-	if !oc.OptConfig.DisableRepoOverride {
-		if len(rc.ActionConfig.IssueLabel) > 0 {
-			ac.IssueLabel = rc.ActionConfig.IssueLabel
-		}
-	}
-	return ac
 }
 
 func contains(s []string, e string) bool {
