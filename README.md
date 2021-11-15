@@ -164,6 +164,17 @@ future.
 - `email`: Allstar would send an email to the repository administrator(s).
 - `rpc`: Allstar would send an rpc to some organization-specific system.
 
+### **Action configuration**
+
+Two settings are available to configure the issue action:
+
+- `issueLabel` is available at the organization and repository level. Setting it
+  will override the default `allstar` label used by Allstar to identify its
+  issues.
+
+- `issueRepo` is available at the orgainaztion level. Setting it will force all
+  issues created in the organization to be created in the repo specfied.
+
 ## **Policies**
 
 Similar to the Allstar app enable configuration, all policies are enabled and
