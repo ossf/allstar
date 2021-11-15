@@ -59,7 +59,8 @@ func (m mockIssues) CreateComment(ctx context.Context, owner string, repo string
 }
 
 func TestEnsure(t *testing.T) {
-	issueTitle := fmt.Sprintf(title, "thispolicy")
+	//issueTitle := fmt.Sprintf(sameRepoTitle, "thispolicy")
+	issueTitle := "Security Policy violation thispolicy"
 	closed := "closed"
 	open := "open"
 	configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig) {
@@ -74,7 +75,7 @@ func TestEnsure(t *testing.T) {
 		create = func(ctx context.Context, owner string, repo string,
 			issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
 			if *issue.Title != issueTitle {
-				t.Errorf("Unexpected title: %v", issue.GetTitle())
+				t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
 			}
 			if (*issue.Labels)[0] != operator.GitHubIssueLabel {
 				t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
@@ -188,7 +189,7 @@ func TestEnsure(t *testing.T) {
 }
 
 func TestClose(t *testing.T) {
-	issueTitle := fmt.Sprintf(title, "thispolicy")
+	issueTitle := fmt.Sprintf(sameRepoTitle, "thispolicy")
 	configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig) {
 		return &config.OrgConfig{}, &config.RepoConfig{}
 	}
@@ -300,6 +301,47 @@ func TestLabel(t *testing.T) {
 			got := getIssueLabel(context.Background(), nil, "", "")
 			if got != test.Expect {
 				t.Errorf("Unexpected label. Want: %q Got: %q", test.Expect, got)
+			}
+		})
+	}
+}
+
+func TestRepoTitle(t *testing.T) {
+	tests := []struct {
+		Name      string
+		Repo      string
+		Policy    string
+		IssueRepo string
+		ExpRepo   string
+		ExpTitle  string
+	}{
+		{
+			Name:     "Not set",
+			Repo:     "testrepo",
+			Policy:   "testpolicy",
+			ExpRepo:  "testrepo",
+			ExpTitle: "Security Policy violation testpolicy",
+		},
+		{
+			Name:      "Set",
+			Repo:      "testrepo",
+			Policy:    "testpolicy",
+			IssueRepo: "issuerepo",
+			ExpRepo:   "issuerepo",
+			ExpTitle:  "Security Policy violation for repository \"testrepo\" testpolicy",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig) {
+				return &config.OrgConfig{IssueRepo: test.IssueRepo}, nil
+			}
+			gotRepo, gotTitle := getIssueRepoTitle(context.Background(), nil, "", test.Repo, test.Policy)
+			if gotRepo != test.ExpRepo {
+				t.Errorf("Unexpected Issue Repo. Want: %q Got: %q", test.ExpRepo, gotRepo)
+			}
+			if gotTitle != test.ExpTitle {
+				t.Errorf("Unexpected Issue Title. Want: %q Got: %q", test.ExpTitle, gotTitle)
 			}
 		})
 	}

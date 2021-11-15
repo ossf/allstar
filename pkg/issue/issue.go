@@ -26,7 +26,8 @@ import (
 	"github.com/google/go-github/v39/github"
 )
 
-const title = "Security Policy violation %v"
+const issueRepoTitle = "Security Policy violation for repository %q %v"
+const sameRepoTitle = "Security Policy violation %v"
 
 type issues interface {
 	ListByRepo(context.Context, string, string, *github.IssueListByRepoOptions) (
@@ -45,7 +46,7 @@ func init() {
 	configGetAppConfigs = config.GetAppConfigs
 }
 
-func getPolicyIssue(ctx context.Context, issues issues, owner, repo, policy, label string) (*github.Issue, error) {
+func getPolicyIssue(ctx context.Context, issues issues, owner, repo, policy, title, label string) (*github.Issue, error) {
 	opt := &github.IssueListByRepoOptions{
 		State:  "all",
 		Labels: []string{label},
@@ -66,9 +67,8 @@ func getPolicyIssue(ctx context.Context, issues issues, owner, repo, policy, lab
 		opt.Page = resp.NextPage
 	}
 	var issue *github.Issue
-	t := fmt.Sprintf(title, policy)
 	for _, i := range allIssues {
-		if i.GetTitle() == t {
+		if i.GetTitle() == title {
 			issue = i
 			break
 		}
@@ -84,21 +84,21 @@ func Ensure(ctx context.Context, c *github.Client, owner, repo, policy, text str
 }
 
 func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, policy, text string) error {
+	issueRepo, title := getIssueRepoTitle(ctx, c, owner, repo, policy)
 	label := getIssueLabel(ctx, c, owner, repo)
-	issue, err := getPolicyIssue(ctx, issues, owner, repo, policy, label)
+	issue, err := getPolicyIssue(ctx, issues, owner, issueRepo, policy, title, label)
 	if err != nil {
 		return err
 	}
 	if issue == nil {
 		body := fmt.Sprintf("Allstar has detected that this repository’s %v security policy is out of compliance. Status:\n%v\n\n%v",
 			policy, text, operator.GitHubIssueFooter)
-		t := fmt.Sprintf(title, policy)
 		new := &github.IssueRequest{
-			Title:  &t,
+			Title:  &title,
 			Body:   &body,
 			Labels: &[]string{label},
 		}
-		_, _, err := issues.Create(ctx, owner, repo, new)
+		_, _, err := issues.Create(ctx, owner, issueRepo, new)
 		return err
 	}
 	if issue.GetState() == "closed" {
@@ -106,14 +106,14 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		update := &github.IssueRequest{
 			State: &state,
 		}
-		if _, _, err := issues.Edit(ctx, owner, repo, issue.GetNumber(), update); err != nil {
+		if _, _, err := issues.Edit(ctx, owner, issueRepo, issue.GetNumber(), update); err != nil {
 			return err
 		}
 		body := "Reopening issue. Status:\n" + text
 		comment := &github.IssueComment{
 			Body: &body,
 		}
-		_, _, err := issues.CreateComment(ctx, owner, repo, issue.GetNumber(), comment)
+		_, _, err := issues.CreateComment(ctx, owner, issueRepo, issue.GetNumber(), comment)
 		return err
 	}
 	if issue.GetUpdatedAt().Before(time.Now().Add(-1 * operator.NoticePingDuration)) {
@@ -121,7 +121,7 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		comment := &github.IssueComment{
 			Body: &body,
 		}
-		_, _, err := issues.CreateComment(ctx, owner, repo, issue.GetNumber(), comment)
+		_, _, err := issues.CreateComment(ctx, owner, issueRepo, issue.GetNumber(), comment)
 		return err
 	}
 	return nil
@@ -134,8 +134,9 @@ func Close(ctx context.Context, c *github.Client, owner, repo, policy string) er
 }
 
 func closeIssue(ctx context.Context, c *github.Client, issues issues, owner, repo, policy string) error {
+	issueRepo, title := getIssueRepoTitle(ctx, c, owner, repo, policy)
 	label := getIssueLabel(ctx, c, owner, repo)
-	issue, err := getPolicyIssue(ctx, issues, owner, repo, policy, label)
+	issue, err := getPolicyIssue(ctx, issues, owner, issueRepo, policy, title, label)
 	if err != nil {
 		return err
 	}
@@ -144,14 +145,14 @@ func closeIssue(ctx context.Context, c *github.Client, issues issues, owner, rep
 		comment := &github.IssueComment{
 			Body: &body,
 		}
-		if _, _, err := issues.CreateComment(ctx, owner, repo, issue.GetNumber(), comment); err != nil {
+		if _, _, err := issues.CreateComment(ctx, owner, issueRepo, issue.GetNumber(), comment); err != nil {
 			return err
 		}
 		state := "closed"
 		update := &github.IssueRequest{
 			State: &state,
 		}
-		if _, _, err := issues.Edit(ctx, owner, repo, issue.GetNumber(), update); err != nil {
+		if _, _, err := issues.Edit(ctx, owner, issueRepo, issue.GetNumber(), update); err != nil {
 			return err
 		}
 	}
@@ -168,4 +169,12 @@ func getIssueLabel(ctx context.Context, c *github.Client, owner, repo string) st
 		label = rc.IssueLabel
 	}
 	return label
+}
+
+func getIssueRepoTitle(ctx context.Context, c *github.Client, owner, repo, policy string) (string, string) {
+	oc, _ := configGetAppConfigs(ctx, c, owner, repo)
+	if len(oc.IssueRepo) > 0 {
+		return oc.IssueRepo, fmt.Sprintf(issueRepoTitle, repo, policy)
+	}
+	return repo, fmt.Sprintf(sameRepoTitle, policy)
 }

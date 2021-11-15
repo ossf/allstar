@@ -36,6 +36,20 @@ type OrgConfig struct {
 	// created by the bot. The defeault is specified by the operator of Allstar,
 	// currently: "allstar"
 	IssueLabel string `yaml:"issueLabel"`
+
+	// IssueRepo is the name of a repository in the organization to create issues
+	// in. If left unset, by default Allstar will create issues in the repository
+	// that is out of compliance. Setting the IssueRepo will instruct Allstar to
+	// only create issues in the specified repository for non-compliance found in
+	// any repository in the organization.
+	//
+	// This can be useful for previewing the issues that Allstar would create in
+	// all repositories. Also, it can be used to centrally audit non-compliance
+	// issues.
+	//
+	// Note: When changing this setting, Allstar does not clean up previously
+	// created issues from a previous setting.
+	IssueRepo string `yaml:"issueRepo"`
 }
 
 // OrgOptConfig is used in Allstar and policy-secific org-level config to

@@ -102,6 +102,16 @@ issueLabel: testlabel
 			Got: &OrgConfig{},
 		},
 		{
+			Name: "IssueRepo",
+			Input: `
+issueRepo: testrepository
+`,
+			Expect: &OrgConfig{
+				IssueRepo: "testrepository",
+			},
+			Got: &OrgConfig{},
+		},
+		{
 			Name: "OptOutRepo",
 			Input: `
 optConfig:
