@@ -172,8 +172,8 @@ Two settings are available to configure the issue action:
   will override the default `allstar` label used by Allstar to identify its
   issues.
 
-- `issueRepo` is available at the orgainaztion level. Setting it will force all
-  issues created in the organization to be created in the repo specfied.
+- `issueRepo` is available at the organization level. Setting it will force all
+  issues created in the organization to be created in the repository specified.
 
 ## **Policies**
 
