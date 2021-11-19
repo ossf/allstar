@@ -115,6 +115,17 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		Str("area", polName).
 		Bool("enabled", enabled).
 		Msg("Check repo enabled")
+	if !enabled {
+		// Don't run this policy unless enabled, as it is expensive. This is only
+		// checking enablement of policy, but not Allstar overall, this is ok for
+		// now.
+		return &policydef.Result{
+			Enabled:    enabled,
+			Pass:       true,
+			NotifyText: "Disabled",
+			Details:    details{},
+		}, nil
+	}
 
 	oldClient := gh32.NewClient(c.Client())
 	repoClient := githubrepo.CreateGithubRepoClient(ctx, oldClient)
