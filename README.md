@@ -1,3 +1,39 @@
+## Overview 
+
+-  [What Is Allstar?](#link)
+
+## Disabling Unwanted Issues
+
+-  [Help! I'm getting issues created by Allstar and I don't want them!](#link) 
+
+## Getting Started 
+
+-  [Background](#link) 
+-  [Pre-Installation Decisions](#link) 
+-  [Installation Options](#link)
+    - [Quickstart Installation](#link)
+    - [Manual Installation](#link)
+   
+________
+________
+
+## Overview 
+### What is Allstar?
+
+## Disabling Unwanted Issues
+
+## Getting Started
+### Background
+
+### Pre-Installation Decisions
+
+### Installation Options
+
+#### Quickstart Installation
+
+#### Manual Installation
+
+
 # **Allstar**
 
 Allstar is a GitHub App installed on organizations or repositories to set and
