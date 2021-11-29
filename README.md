@@ -144,6 +144,9 @@ configured at the org level. </td>
 
 ### Installation Options
 
+Both the Quickstart and Manual installation options involve installing the Allstar appp. You may review the permissions requested. The app asks for read access to most settings and file contents to detect security compliance. It requests write access to issues to
+create issues, and to checks to allow the `block` action.
+
 #### Quickstart option 
 This installation option will enable Allstar using the
 Opt Out strategy on all repositories in your  organization. All current policies
@@ -178,18 +181,6 @@ Repositories" under Repository Access,  even if you don't plan to use Allstar on
 all your repositories)  
 2) create org-level Allstar config file  
 3) create individual policy files
-
-## **Quick start**
-
-[Install Allstar GitHub App](https://github.com/apps/allstar-app) on your
-organizations and repositories. When installing Allstar, you may review the
-permissions requested. Allstar asks for read access to most settings and file
-contents to detect security compliance. It requests write access to issues to
-create issues, and to checks to allow the `block` action.
-
-Follow the [quick start instructions](quick-start.md) to setup the configuration
-files needed to enable Allstar on your repositories. For more details on
-advanced configuration, see below.
 
 ## **Enable Configuration**
 
