@@ -1,3 +1,5 @@
+# **Allstar**
+
 ## Overview 
 
 -  [What Is Allstar?](#link)
@@ -18,23 +20,8 @@ ________
 ________
 
 ## Overview 
+
 ### What is Allstar?
-
-## Disabling Unwanted Issues
-
-## Getting Started
-### Background
-
-### Pre-Installation Decisions
-
-### Installation Options
-
-#### Quickstart Installation
-
-#### Manual Installation
-
-
-# **Allstar**
 
 Allstar is a GitHub App installed on organizations or repositories to set and
 enforce security policies. Its goal is to be able to continuously monitor and
@@ -54,6 +41,144 @@ Group](https://github.com/ossf/wg-securing-critical-projects). The OpenSSF runs
 install and use on their GitHub organizations. However, Allstar can be run by
 anyone if need be, see [the operator docs](operator.md) for more details.
 
+## Disabling Unwanted Issues
+If you're getting unwanted issues created by Allstar, follow the directions [here](opt-out.md) to opt out. 
+
+## Getting Started
+
+### Background
+
+Allstar is highly configurable. There are three main levels of controls: 
+
+- **Org level**: Organization administrators can choose to enable Allstar on: 
+   -  all repositories in the org; 
+   -  most repositories, except some that are opted out; 
+   -  just a few repositories that are opted in. 
+
+These configurations are done in the organization's .`allstar` repository.
+
+- **Repo level:** Repository maintainers in an organization that uses
+   Allstar can choose to opt their repository in or out of organization-level
+   enforcements. Note: these repo-level controls are only functional when "repo
+   override" is allowed in the org-level settings. These configurations are
+   done in the repository's `.allstar` directory.
+
+- **Policy level:** Administrators or maintainers can choose which policies
+   are enabled on specific repos and which actions Allstar takes when a policy
+   is violated. These configurations are done in a policy yaml file in either
+   the organization's `.allstar` repository (admins), or the repository's
+   `.allstar` directory (maintainers). 
+
+### Pre-Installation Decisions
+
+Before installing Allstar, you should decide approximately how many repositories
+you want Allstar to run on. This will help you choose between the Opt-In and
+Opt-Out strategies. 
+
+-  The Opt In strategy allows you to manually add the repositories you'd
+   like Allstar to run on. If you do not specify any repositories, Allstar will
+   not run despite being installed. Choose the Opt In strategy if you want to enforce
+   policies on only a small number of your total repositories, or want to try
+   out Allstar on a single repository before enabling it on more. 
+
+-  The Opt Out strategy (recommended) enables Allstar on all repositories
+   and allows you to manually select the repositories to opt out of Allstar
+   enforcements. You can also choose to opt out all public repos, or all
+   private repos. Choose this option if you want to run Allstar on all
+   repositories in an organization, or want to opt out only a small number of
+   repositories or specific type (i.e., public vs. private) of repository.
+
+<table>
+<thead>
+<tr>
+<th></th>
+<th><strong>Opt Out (Recommended)</strong><br>
+<strong>optOutStrategy = true</strong></th>
+<th><strong>Opt In</strong><br>
+<strong>optOutStrategy = false</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Default behavior </td>
+<td>All repos are enabled</td>
+<td>No repos are enabled </td>
+</tr>
+<tr>
+<td>Manually adding repositories</td>
+<td>Manually adding repos disables Allstar on those repos</td>
+<td>Manually adding repos enables Allstar on those repos</td>
+</tr>
+<tr>
+<td>Additional configurations</td>
+<td>optOutRepos: Allstar will be disabled on the listed repos<br>
+<br>
+optOutPrivateRepos: if true, Allstar will be disabled on all private repos
+<br>
+<br>
+optOutPublicRepos: if true, Allstar will be disabled on all public
+repos<br>
+<br>
+(optInRepos: this setting will be ignored)</td>
+<td>optInRepos: Allstar will be enabled on the listed repos <br>
+<br>
+(optOutRepos: this setting will be ignored)</td>
+</tr>
+<tr>
+<td>Repo Override </td>
+<td>If true: Repos can opt out of their organization's Allstar enforcements
+using the settings in their own repo file. Org level opt-in settings that
+apply to that repository are ignored. <br>
+<br>
+If false: repos cannot opt out of Allstar enforcements as configured at the
+org level. </td>
+<td>If true: Repos can opt in to their organization's Allstar enforcements even
+if they are not configured for the repo at the org level. Org level opt-out
+settings that apply to that repository are ignored.<br>
+<br>
+If false: Repos cannot opt into Allstar enforcements if they are not
+configured at the org level. </td>
+</tr>
+</tbody>
+</table>
+
+### Installation Options
+
+#### Quickstart option 
+This installation option will enable Allstar using the
+Opt Out strategy on all repositories in your  organization. All current policies
+will be enabled, and Allstar will alert you of
+policy violations by filing an issue. This is the quickest and easiest way to start using Allstar, and you can still change any configurations later. 
+
+Effort: very easy 
+
+Steps:   
+1) Install the [Allstar app](https://github.com/apps/allstar-app) (choose "All
+Repositories" under Repository Access, even if you plan to disable Allstar on some repositories later)  
+2) fork the [sample repository
+](https://github.com/jeffmendoza/dot-allstar-quickstart)
+
+That's it! All current Allstar policies [TODO: link]  are now enabled on all
+your repositories. Allstar will create an issue if a policy is violated. 
+
+To change any configurations (such as opting out of specific repositories,
+disabling particular enforcements, or changing the actions taken in response to
+policy violations), see directions on how to [enable configurations](#enable-configuration). 
+
+#### Manual option
+This installation option will walk you through creating
+configuration files according to either the Opt In or Opt Out strategy. This
+option provides more granular control over configurations right from the start.
+
+Effort: moderate
+
+Steps:   
+1) install the [Allstar app](https://github.com/apps/allstar-app) (choose "All
+Repositories" under Repository Access,  even if you don't plan to use Allstar on
+all your repositories)  
+2) create org-level Allstar config file  
+3) create individual policy files
+
 ## **Quick start**
 
 [Install Allstar GitHub App](https://github.com/apps/allstar-app) on your
@@ -65,8 +190,6 @@ create issues, and to checks to allow the `block` action.
 Follow the [quick start instructions](quick-start.md) to setup the configuration
 files needed to enable Allstar on your repositories. For more details on
 advanced configuration, see below.
-
-### [Help! I'm getting issues created by Allstar and I don't want them.](opt-out.md)
 
 ## **Enable Configuration**
 
