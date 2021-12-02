@@ -10,12 +10,13 @@
 
 ## Getting Started 
 
--  [Background](#link) 
--  [Pre-Installation Decisions](#link) 
--  [Installation Options](#link)
-    - [Quickstart Installation](#link)
-    - [Manual Installation](#link)
-   
+-  [Background](#background) 
+-  [Pre-Installation Decisions](#pre-installation-decisions) 
+-  [Installation Options](#installation-options)
+    - [Quickstart Installation](#quickstart-installation)
+    - [Manual Installation](#manual-installation)
+ 
+[TODO: finish Table of Contents]   
 ________
 ________
 
@@ -147,7 +148,7 @@ configured at the org level. </td>
 Both the Quickstart and Manual Installation options involve installing the Allstar app. You may review the permissions requested. The app asks for read access to most settings and file contents to detect security compliance. It requests write access to issues to
 create issues, and to checks to allow the `block` action.
 
-#### Quickstart option 
+#### Quickstart Installation 
 This installation option will enable Allstar using the
 Opt Out strategy on all repositories in your  organization. All current policies
 will be enabled, and Allstar will alert you of
@@ -168,7 +169,7 @@ To change any configurations (such as opting out of specific repositories,
 disabling particular enforcements, or changing the actions taken in response to
 policy violations), see directions on how to [enable configurations](#enable-configuration). 
 
-#### Manual option
+#### Manual Installation
 This installation option will walk you through creating
 configuration files according to either the Opt In or Opt Out strategy. This
 option provides more granular control over configurations right from the start.
