@@ -182,56 +182,6 @@ all your repositories)
 2) Follow the [manual installation directions](manual-install.md) to create org-level or 
 repository-level Allstar config files and individual policy files.  
 
-## **Enable Configuration**
-
-Allstar can be enabled on individual repositories at the app level, with
-the option of enabling or disabling each security policy individually. For
-organization-level configuration, create a repository named `.allstar` in your
-organization. Then create a file called `allstar.yaml` in that
-repository.
-
-Allstar can either be set to an opt-in or opt-out strategy. In opt-in, only
-those repositories explicitly listed are enabled. In opt-out, all repositories
-are enabled, and repositories would need to be explicitly added to
-opt-out. Allstar is set to opt-in by default, and therefore is not enabled on
-any repository immediately after installation. To continue with the default
-opt-in strategy, list the repositories for Allstar to be enabled on in your
-organization like so:
-
-```
-optConfig:
-  optInRepos:
-  - repo-one
-  - repo-two
-```
-
-To switch to the opt-out strategy (recommended), set that option to true:
-
-```
-optConfig:
-  optOutStrategy: true
-```
-
-If you wish to enable Allstar on all but a few repositories, you may use opt-out
-and list the repositories to disable:
-
-```
-optConfig:
-  optOutStrategy: true
-  optOutRepos:
-  - repo-one
-  - repo-two
-```
-
-To opt-out all private/public repositories, add `optOutPrivateRepos` or `optOutPublicRepos`. ex:
-
-```
-optConfig:
-  optOutStrategy: true
-  optOutPrivateRepos: true
-  optOutPublicRepos: false
-```
-
 ### Secondary Org-Level configuration location
 
 By default, org-level configuration files, such as the `allstar.yaml` file
