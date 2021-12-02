@@ -1,9 +1,14 @@
 # **Manual Installation**
 
-> Ok, I have installed Allstar on my account/organization, now what?
+These directions walk you through manually installing Allstar on your organization or repository. 
+For a faster setup that installs Allstar on all your repositories, see the Quickstart[TODO: link].
+[TODO: finish intro]
 
-By default, Allstar installed on your organization will not take any actions. To
-quickly enable Allstar on all of your repositories:
+[TODO: insert decision tree]
+
+[TODO: insert links to three different Install Options below]
+
+## Install Allstar on your Organization, **Opt Out Strategy** (Recommended)
 
 1. Create a repository named `.allstar`.
 1. Create a file named `allstar.yaml` with the contents:
@@ -11,59 +16,112 @@ quickly enable Allstar on all of your repositories:
    optConfig:
      optOutStrategy: true
    ```
-1. Create four files with the names `branch_protection.yaml`,
-   `binary_artifacts.yaml`, `outside.yaml`, and `security.yaml` with the
-   contents:
+   
+1. To opt some repositories out, change `allstar.yaml` to look like this:
+   ```
+   optConfig:
+     optOutRepos:
+     - repo-one
+     - repo-two
+   ```
 
+To opt-out all private/public repositories, add `optOutPrivateRepos` or `optOutPublicRepos`. For example:
    ```
    optConfig:
      optOutStrategy: true
+     optOutPrivateRepos: true
+     optOutPublicRepos: false
+   ```
+1. To enable your policies, create four files with the names:
+- `branch_protection.yaml`
+- `binary_artifacts.yaml` 
+- `outside.yaml`
+- `security.yaml` 
+
+In each of these four files, add the following contents:
+   ```
+   optConfig:
+     optOutStrategy: true
+   action: [choose action]
+   ```
+You will need to choose the action you would like Allstar to take when a policy is violated: `log`, `issue`, or `fix`. See [Actions](readme.md#actions) for more information about each policy. If you are unsure, we suggest using `issue` as a sensible default that can be changed later. For example:
+   ```
+   optConfig:
+     optOut: true
    action: issue
    ```
-This will enable Allstar and all the policies on all repositories with the
-default settings. The `issue` action will create GitHub issues in each repository for
-violations of the security policy.
+## Install Allstar on your Organization, **Opt In Strategy**
 
-If you want to only enable a few repositories in the organization, change
-`allstar.yaml` to look like this:
+1. Create a repository named `.allstar`.
+1. Create a file named `allstar.yaml` with the contents:
+   ```
+   optConfig:
+     optOutStrategy: false
+   ```
+1. Required: Add repositories to be opted in (Allstar will not run on any repositories if you do not specify which ones to opt in.)
+To opt in some repositories, change `allstar.yaml` to look like this:
+   ```
+   optConfig:
+    optOutRepos:
+    - repo-one
+    - repo-two
+    ```
 
-```
-optConfig:
-  optInRepos:
-  - repo-one
-  - repo-two
-```
+1. To enable your policies, create four files with the names:
+- `branch_protection.yaml`
+- `binary_artifacts.yaml` 
+- `outside.yaml`
+- `security.yaml` 
 
-You can leave the other files the same as those policies will run only on the
-repositories that Allstar is enabled on in the top level config above.
-
+In each of these four files, add the following contents:
+   ```
+   optConfig:
+     optOutStrategy: false
+   action: [choose action]
+   ```
+You will need to choose the action you would like Allstar to take when a policy is violated: `log`, `issue`, or `fix`. See [Actions](readme.md#actions) for more information about each policy. If you are unsure, we suggest using `issue` as a sensible default that can be changed later. For example:
+   ```
+   optConfig:
+     optOut: false
+   action: issue
+   ```
 ## Repository level
 
 If you don't wish to create an org-level `.allstar` repository, Allstar can still be
 used. All the defaults at the org-level config will be assumed. One of those is
 the `disableRepoOverride` setting, which will be `false`. This allows individual
-repositories to opt-in when the org-level setting is at the default opt-in strategy. To
-enable Allstar on a single repository:
+repositories to opt-in when the org-level setting is at the default opt-in strategy. 
 
-1. Create a directory named `.allstar/`.
+To enable Allstar on a single repository:
+
+1. In the repository, create a directory named `.allstar/`.
 1. Create a file named `allstar.yaml` with the contents:
    ```
    optConfig:
      optIn: true
    ```
-1. Create four files with the names `branch_protection.yaml`,
-   `binary_artifacts.yaml`, `outside.yaml`, and `security.yaml` with the
-   contents:
+1. To enable your policies, create four files with the names:
+- `branch_protection.yaml`
+- `binary_artifacts.yaml` 
+- `outside.yaml`
+- `security.yaml` 
 
+In each of these four files, add the following contents:
    ```
    optConfig:
-     optIn: true
+     optOutStrategy: false
+   action: [choose action]
+   ```
+You will need to choose the action you would like Allstar to take when a policy is violated: `log`, `issue`, or `fix`. See [Actions](readme.md#actions) for more information about each policy. If you are unsure, we suggest using `issue` as a sensible default that can be changed later. For example:
+   ```
+   optConfig:
+     optOut: false
    action: issue
    ```
-## More details
+## More Options
 
-See the [main README](README.md) for more details on all the configuration
-options available.
+See [Policies](README.md#policies) for more details on all the additional configuration
+options available for each policy.
 
 ## Example Config Repository
 
