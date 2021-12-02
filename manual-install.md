@@ -1,4 +1,4 @@
-# **Quick Start**
+# **Manual Installation**
 
 > Ok, I have installed Allstar on my account/organization, now what?
 
