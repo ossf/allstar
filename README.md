@@ -179,7 +179,7 @@ Steps:
 1) install the [Allstar app](https://github.com/apps/allstar-app) (choose "All
 Repositories" under Repository Access,  even if you don't plan to use Allstar on
 all your repositories)  
-2) Follow the [manual installation directions](manual-install.md] to create org-level or 
+2) Follow the [manual installation directions](manual-install.md) to create org-level or 
 repository-level Allstar config files and individual policy files.  
 
 ## **Enable Configuration**
