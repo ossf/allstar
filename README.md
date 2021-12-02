@@ -167,7 +167,7 @@ your repositories. Allstar will create an issue if a policy is violated.
 
 To change any configurations (such as opting out of specific repositories,
 disabling particular enforcements, or changing the actions taken in response to
-policy violations), see directions on how to [enable configurations](#enable-configuration). 
+policy violations), see directions [TODO:add].
 
 #### Manual Installation
 This installation option will walk you through creating
