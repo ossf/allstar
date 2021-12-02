@@ -42,7 +42,7 @@ install and use on their GitHub organizations. However, Allstar can be run by
 anyone if need be, see [the operator docs](operator.md) for more details.
 
 ## Disabling Unwanted Issues
-If you're getting unwanted issues created by Allstar, follow the directions [here](opt-out.md) to opt out. 
+If you're getting unwanted issues created by Allstar, follow [these directions](opt-out.md) to opt out. 
 
 ## Getting Started
 
@@ -179,8 +179,8 @@ Steps:
 1) install the [Allstar app](https://github.com/apps/allstar-app) (choose "All
 Repositories" under Repository Access,  even if you don't plan to use Allstar on
 all your repositories)  
-2) create org-level Allstar config file  
-3) create individual policy files
+2) Follow the [manual installation directions](manual-install.md] to create org-level or 
+repository-level Allstar config files and individual policy files.  
 
 ## **Enable Configuration**
 
