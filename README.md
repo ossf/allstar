@@ -2,11 +2,11 @@
 
 ## Overview 
 
--  [What Is Allstar?](#link)
+-  [What Is Allstar?](#what-is-allstar)
 
 ## Disabling Unwanted Issues
 
--  [Help! I'm getting issues created by Allstar and I don't want them!](#link) 
+-  [Help! I'm getting issues created by Allstar and I don't want them!](#disabling-unwanted-issues) 
 
 ## Getting Started 
 
