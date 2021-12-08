@@ -11,13 +11,14 @@ For a faster setup that installs Allstar on all your repositories, see the Quick
 ## Install Allstar on your Organization, **Opt Out Strategy** (Recommended)
 
 1. Create a repository named `.allstar`.
-1. Create a file named `allstar.yaml` with the contents:
+2. Create a file named `allstar.yaml` with the contents:
    ```
    optConfig:
      optOutStrategy: true
    ```
    
-1. To opt some repositories out, change `allstar.yaml` to look like this:
+3. Optional: Opt Out Repositories 
+To opt some repositories out, change `allstar.yaml` to look like this:
    ```
    optConfig:
      optOutRepos:
@@ -32,7 +33,17 @@ To opt-out all private/public repositories, add `optOutPrivateRepos` or `optOutP
      optOutPrivateRepos: true
      optOutPublicRepos: false
    ```
-1. To enable your policies, create four files with the names:
+4. Optional: Disable Resitory Override 
+
+The repository override setting gives repositories the ability to opt themselves in or out of Allstar settings independent of configurations at the org level. 
+If you prefer to strictly enforce your org-level settings on your repositories, you can disable repository override. Repositories will not be able to change Allstar settings that affect them without filing a PR to request org-level changes. 
+To disable repository override, add the following to `allstar.yaml`:
+   ```
+   optConfig:
+     disableRepoOverride: true
+   ```
+
+5. Required: To enable your policies, create four files with the names:
 - `branch_protection.yaml`
 - `binary_artifacts.yaml` 
 - `outside.yaml`
@@ -53,12 +64,12 @@ You will need to choose the action you would like Allstar to take when a policy 
 ## Install Allstar on your Organization, **Opt In Strategy**
 
 1. Create a repository named `.allstar`.
-1. Create a file named `allstar.yaml` with the contents:
+2. Create a file named `allstar.yaml` with the contents:
    ```
    optConfig:
      optOutStrategy: false
    ```
-1. Required: Add repositories to be opted in (Allstar will not run on any repositories if you do not specify which ones to opt in.)
+3. Required: Add repositories to be opted in (Allstar will not run on any repositories if you do not specify which ones to opt in.)
 To opt in some repositories, change `allstar.yaml` to look like this:
    ```
    optConfig:
@@ -67,7 +78,17 @@ To opt in some repositories, change `allstar.yaml` to look like this:
     - repo-two
     ```
 
-1. To enable your policies, create four files with the names:
+4. Optional: Disable Resitory Override 
+
+The repository override setting gives repositories the ability to opt themselves in or out of Allstar settings independent of configurations at the org level. 
+If you prefer to strictly enforce your org-level settings on your repositories, you can disable repository override. Repositories will not be able to change Allstar settings that affect them without filing a PR to request org-level changes. 
+To disable repository override, add the following to `allstar.yaml`:
+   ```
+   optConfig:
+     disableRepoOverride: true
+   ```
+   
+5. Required: To enable your policies, create four files with the names:
 - `branch_protection.yaml`
 - `binary_artifacts.yaml` 
 - `outside.yaml`
@@ -95,12 +116,12 @@ repositories to opt-in when the org-level setting is at the default opt-in strat
 To enable Allstar on a single repository:
 
 1. In the repository, create a directory named `.allstar/`.
-1. Create a file named `allstar.yaml` with the contents:
+2. Create a file named `allstar.yaml` with the contents:
    ```
    optConfig:
      optIn: true
    ```
-1. To enable your policies, create four files with the names:
+3. To enable your policies, create four files with the names:
 - `branch_protection.yaml`
 - `binary_artifacts.yaml` 
 - `outside.yaml`
