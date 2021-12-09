@@ -2,13 +2,20 @@
 
 These directions walk you through manually installing Allstar on your organization or repository. 
 For a faster setup that installs Allstar on all your repositories, see the Quickstart[TODO: link].
-[TODO: finish intro]
+
+To choose the installation strategy that's best for your situation, consult the decision tree and then follow the appropriate link below:
 
 [TODO: insert decision tree]
 
-[TODO: insert links to three different Install Options below]
 
-## Install Allstar on your Organization, **Opt Out Strategy** (Recommended)
+[Opt Out Strategy Installation Directions](Opt-Out-Strategy-Installation-Directions)
+
+[Opt In Strategy Installation Directions](Opt-In-Strategy-Installation-Directions)
+
+[Repository Installation Directions](Repository-Installation-Directions)
+
+## Opt Out Strategy Installation Directions
+To install Allstar on your Organization using the **Opt Out Strategy** (Recommended):
 
 1. Create a repository named `.allstar`.
 2. Create a file named `allstar.yaml` with the contents:
@@ -61,7 +68,12 @@ You will need to choose the action you would like Allstar to take when a policy 
      optOut: true
    action: issue
    ```
-## Install Allstar on your Organization, **Opt In Strategy**
+Allstar is now configured on your repository! See [Policies](README.md#policies) for more details on all the additional configuration
+options available for each policy. 
+
+## Opt In Strategy Installation Directions
+
+To install Allstar on your Organization using the **Opt In Strategy**:
 
 1. Create a repository named `.allstar`.
 2. Create a file named `allstar.yaml` with the contents:
@@ -106,7 +118,10 @@ You will need to choose the action you would like Allstar to take when a policy 
      optOut: false
    action: issue
    ```
-## Repository level
+Allstar is now configured on your organization! See [Policies](README.md#policies) for more details on all the additional configuration
+options available for each policy. 
+
+## Repository Installation Directions 
 
 If you don't wish to create an org-level `.allstar` repository, Allstar can still be
 used. All the defaults at the org-level config will be assumed. One of those is
@@ -139,12 +154,6 @@ You will need to choose the action you would like Allstar to take when a policy 
      optOut: false
    action: issue
    ```
-## More Options
 
-See [Policies](README.md#policies) for more details on all the additional configuration
-options available for each policy.
-
-## Example Config Repository
-
-See [this repo](https://github.com/GoogleContainerTools/.allstar) as an example
-of Allstar config being used.
+Allstar is now configured on your repository! See [Policies](README.md#policies) for more details on all the additional configuration
+options available for each policy. 
