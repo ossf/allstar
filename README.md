@@ -172,12 +172,10 @@ Repositories" under Repository Access, even if you plan to disable Allstar on so
 2) fork the [sample repository
 ](https://github.com/jeffmendoza/dot-allstar-quickstart)
 
-That's it! All current Allstar policies [TODO: link]  are now enabled on all
+That's it! All current Allstar [policies](#policies) are now enabled on all
 your repositories. Allstar will create an issue if a policy is violated. 
 
-To change any configurations (such as opting out of specific repositories,
-disabling particular enforcements, or changing the actions taken in response to
-policy violations), see directions [TODO:add].
+To change any configurations, see the [manual installation directions](manual-install.md).
 
 #### Manual Installation
 This installation option will walk you through creating
