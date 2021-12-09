@@ -1,11 +1,11 @@
 # **Manual Installation**
 
 These directions walk you through manually installing Allstar on your organization or repository. 
-For a faster setup that installs Allstar on all your repositories, see the Quickstart[TODO: link].
+For a faster setup that installs Allstar on all your repositories, see the [Quickstart Installation](/readme.md/quickstart-installation).
 
 To choose the installation strategy that's best for your situation, consult the decision tree and then follow the appropriate link below:
 
-[TODO: insert decision tree]
+![Installation Decision Tree](/install-decision.jpg)
 
 
 [Opt Out Strategy Installation Directions](Opt-Out-Strategy-Installation-Directions)
