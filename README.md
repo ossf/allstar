@@ -18,7 +18,13 @@
     - [Quickstart Installation](#quickstart-installation)
     - [Manual Installation](#manual-installation)
  
-[TODO: finish Table of Contents]   
+## Policies and Actions
+- [Actions](#actions)
+- [Policies](#policies)
+
+## Advanced
+- [Contribute Policies](#contribute-policies)
+- [Example Configurations](#example-config-repository)
 ________
 ________
 
@@ -185,61 +191,7 @@ all your repositories)
 2) Follow the [manual installation directions](manual-install.md) to create org-level or 
 repository-level Allstar config files and individual policy files.  
 
-### Secondary Org-Level configuration location
-
-By default, org-level configuration files, such as the `allstar.yaml` file
-above, are expected to be in a `.allstar` repository. If this repository does
-not exist, then the `.github` repository `allstar` directory is used as a
-secondary location. To clarify, for `allstar.yaml`:
-
-| Prescedence | Repository | Path |
-| - | - | - |
-| Primary | `.allstar` | `allstar.yaml` |
-| Secondary | `.github` | `allstar/allstar.yaml` |
-
-This is also true for the org-level configuration files for the individual
-policies, as described below.
-
-### Repository Override
-
-Individual repositories can also opt in or out using configuration files inside
-those repositories. For example, if the organization is configured with the
-opt-out strategy, a repository may opt itself out by including the file
-`.allstar/allstar.yaml` with the contents:
-
-```
-optConfig:
-  optOut: true
-```
-
-Conversely, this allows repositories to opt-in and enable Allstar when the
-organization is configured with the opt-in strategy. Because opt-in is the
-default strategy, this is how Allstar works if the `.allstar` repository doesn't
-exist.
-
-At the organization-level `allstar.yaml`, repository override may be disabled
-with the setting:
-
-```
-optConfig:
-  disableRepoOverride: true
-```
-
-This allows an organization-owner to have a central point of approval for
-repositories to request an opt-out through a GitHub PR. Understandably, Allstar
-or individual policies may not make sense for all repositories.
-
-### Policy Enable
-
-Each individual policy configuration file (see below) also contains the exact
-same `optConfig` configuration object. This allows granularity to enable
-policies on individual repositories. A policy will not take action unless
-it is enabled **and** Allstar is enabled as a whole.
-
-### Definition
-
-- [Organization level enable configuration](https://pkg.go.dev/github.com/ossf/allstar@v0.0.0-20210728182754-005854d69ba7/pkg/config#OrgOptConfig)
-- [Repository Override enable configuration]( https://pkg.go.dev/github.com/ossf/allstar@v0.0.0-20210728182754-005854d69ba7/pkg/config#RepoOptConfig)
+## Policies and Actions
 
 ## **Actions**
 
@@ -357,6 +309,21 @@ See [this repo](https://github.com/GoogleContainerTools/.allstar) as an example
 of Allstar config being used. As the organization administrator, consider a
 README.md with some information on how Allstar is being used in your
 organization.
+
+### Secondary Org-Level configuration location
+
+By default, org-level configuration files, such as the `allstar.yaml` file
+above, are expected to be in a `.allstar` repository. If this repository does
+not exist, then the `.github` repository `allstar` directory is used as a
+secondary location. To clarify, for `allstar.yaml`:
+
+| Prescedence | Repository | Path |
+| - | - | - |
+| Primary | `.allstar` | `allstar.yaml` |
+| Secondary | `.github` | `allstar/allstar.yaml` |
+
+This is also true for the org-level configuration files for the individual
+policies, as described below.
 
 ## **Contribute Policies**
 
