@@ -1,3 +1,5 @@
+<img align="right" src="artwork/openssf_allstar_alt.png" width="300" height="400">
+
 # **Allstar**
 
 ## Overview 
