@@ -169,7 +169,7 @@ Effort: very easy
 Steps:   
 1) Install the [Allstar app](https://github.com/apps/allstar-app) (choose "All
 Repositories" under Repository Access, even if you plan to disable Allstar on some repositories later)  
-2) fork the [sample repository
+2) Fork the [sample repository
 ](https://github.com/jeffmendoza/dot-allstar-quickstart)
 
 That's it! All current Allstar [policies](#policies) are now enabled on all
@@ -185,7 +185,7 @@ option provides more granular control over configurations right from the start.
 Effort: moderate
 
 Steps:   
-1) install the [Allstar app](https://github.com/apps/allstar-app) (choose "All
+1) Install the [Allstar app](https://github.com/apps/allstar-app) (choose "All
 Repositories" under Repository Access,  even if you don't plan to use Allstar on
 all your repositories)  
 2) Follow the [manual installation directions](manual-install.md) to create org-level or 
