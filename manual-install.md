@@ -8,11 +8,11 @@ To choose the installation strategy that's best for your situation, consult the 
 ![Installation Decision Tree](/install-decision.jpg)
 
 
-[Opt Out Strategy Installation Directions](#Opt-Out-Strategy-Installation-Directions)
+[Opt Out Strategy Installation Directions](#opt-out-strategy-installation-directions)
 
-[Opt In Strategy Installation Directions](#Opt-In-Strategy-Installation-Directions)
+[Opt In Strategy Installation Directions](#opt-in-strategy-installation-directions)
 
-[Repository Installation Directions](#Repository-Installation-Directions)
+[Repository Installation Directions](#repository-installation-directions)
 
 ## Opt Out Strategy Installation Directions
 To install Allstar on your Organization using the **Opt Out Strategy** (Recommended):
@@ -92,7 +92,7 @@ To opt in repositories, change `allstar.yaml` to look like this:
     optOutRepos:
     - repo-one
     - repo-two
-    ```
+   ```
 
 4. Optional: Disable Resitory Override 
 
@@ -140,6 +140,7 @@ To enable Allstar on a single repository:
    optConfig:
      optIn: true
    ```
+   
 3. To enable your policies, create four files with the names:
 - `branch_protection.yaml`
 - `binary_artifacts.yaml` 
