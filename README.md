@@ -156,8 +156,7 @@ configured at the org level. </td>
 
 ### Installation Options
 
-Both the Quickstart and Manual Installation options involve installing the Allstar app. You may review the permissions requested. The app asks for read access to most settings and file contents to detect security compliance. It requests write access to issues to
-create issues, and to checks to allow the `block` action.
+Both the Quickstart and Manual Installation options involve installing the Allstar app. You may review the permissions requested. The app asks for read access to most settings and file contents to detect security compliance. It requests write access to issues and checks so that it can create issues and allow the `block` action.
 
 #### Quickstart Installation 
 This installation option will enable Allstar using the
