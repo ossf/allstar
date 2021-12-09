@@ -25,6 +25,7 @@ To install Allstar on your Organization using the **Opt Out Strategy** (Recommen
    ```
    
 3. Optional: Opt Out Repositories 
+
 To opt some repositories out, change `allstar.yaml` to look like this:
    ```
    optConfig:
@@ -68,7 +69,7 @@ You will need to choose the action you would like Allstar to take when a policy 
      optOut: true
    action: issue
    ```
-Allstar is now configured on your repository! See [Policies](README.md#policies) for more details on all the additional configuration
+Allstar is now configured on your organization. See [Policies](README.md#policies) for more details on all the additional configuration
 options available for each policy. 
 
 ## Opt In Strategy Installation Directions
@@ -81,8 +82,11 @@ To install Allstar on your Organization using the **Opt In Strategy**:
    optConfig:
      optOutStrategy: false
    ```
-3. Required: Add repositories to be opted in (Allstar will not run on any repositories if you do not specify which ones to opt in.)
-To opt in some repositories, change `allstar.yaml` to look like this:
+3. Required: Opt In Repositories 
+
+Important! Allstar will not run on any repositories if you do not complete this step. You must add the repositories you want to run Allstar enforcements on.
+
+To opt in repositories, change `allstar.yaml` to look like this:
    ```
    optConfig:
     optOutRepos:
@@ -118,7 +122,7 @@ You will need to choose the action you would like Allstar to take when a policy 
      optOut: false
    action: issue
    ```
-Allstar is now configured on your organization! See [Policies](README.md#policies) for more details on all the additional configuration
+Allstar is now configured on your organization. See [Policies](README.md#policies) for more details on all the additional configuration
 options available for each policy. 
 
 ## Repository Installation Directions 
@@ -155,5 +159,5 @@ You will need to choose the action you would like Allstar to take when a policy 
    action: issue
    ```
 
-Allstar is now configured on your repository! See [Policies](README.md#policies) for more details on all the additional configuration
+Allstar is now configured on your repository. See [Policies](README.md#policies) for more details on all the additional configuration
 options available for each policy. 
