@@ -23,8 +23,11 @@
 - [Policies](#policies)
 
 ## Advanced
-- [Contribute Policies](#contribute-policies)
+- [Configuration Definitions](#configuration-definitions)
 - [Example Configurations](#example-config-repository)
+
+## Contribute
+- [Contribute Policies](#contribute-policies)
 ________
 ________
 
@@ -309,6 +312,13 @@ See [this repo](https://github.com/GoogleContainerTools/.allstar) as an example
 of Allstar config being used. As the organization administrator, consider a
 README.md with some information on how Allstar is being used in your
 organization.
+
+## Advanced
+
+### Configuration Definitions
+
+- [Organization level enable configuration](https://pkg.go.dev/github.com/ossf/allstar@v0.0.0-20210728182754-005854d69ba7/pkg/config#OrgOptConfig)
+- [Repository Override enable configuration]( https://pkg.go.dev/github.com/ossf/allstar@v0.0.0-20210728182754-005854d69ba7/pkg/config#RepoOptConfig)
 
 ### Secondary Org-Level configuration location
 
