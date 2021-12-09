@@ -8,11 +8,11 @@ To choose the installation strategy that's best for your situation, consult the 
 ![Installation Decision Tree](/install-decision.jpg)
 
 
-[Opt Out Strategy Installation Directions](Opt-Out-Strategy-Installation-Directions)
+[Opt Out Strategy Installation Directions](#Opt-Out-Strategy-Installation-Directions)
 
-[Opt In Strategy Installation Directions](Opt-In-Strategy-Installation-Directions)
+[Opt In Strategy Installation Directions](#Opt-In-Strategy-Installation-Directions)
 
-[Repository Installation Directions](Repository-Installation-Directions)
+[Repository Installation Directions](#Repository-Installation-Directions)
 
 ## Opt Out Strategy Installation Directions
 To install Allstar on your Organization using the **Opt Out Strategy** (Recommended):
