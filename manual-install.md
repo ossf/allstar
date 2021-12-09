@@ -1,7 +1,7 @@
 # **Manual Installation**
 
 These directions walk you through manually installing Allstar on your organization or repository. 
-For a faster setup that installs Allstar on all your repositories, see the [Quickstart Installation](/readme.md/quickstart-installation).
+For a faster setup that installs Allstar on all your repositories, see the [Quickstart Installation](/README.md#quickstart-installation).
 
 To choose the installation strategy that's best for your situation, consult the decision tree and then follow the appropriate link below:
 
