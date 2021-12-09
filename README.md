@@ -8,7 +8,7 @@
 
 ## Disabling Unwanted Issues
 
--  [Help! I'm getting issues created by Allstar and I don't want them!](#disabling-unwanted-issues) 
+-  [Help! I'm getting issues created by Allstar and I don't want them!](#disabling-unwanted-issues-1) 
 
 ## Getting Started 
 
