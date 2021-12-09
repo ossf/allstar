@@ -13,7 +13,7 @@
 ## Getting Started 
 
 -  [Background](#background) 
--  [Pre-Installation Decisions](#pre-installation-decisions) 
+-  [Org-Level Options](#org-level-options) 
 -  [Installation Options](#installation-options)
     - [Quickstart Installation](#quickstart-installation)
     - [Manual Installation](#manual-installation)
@@ -81,9 +81,9 @@ These configurations are done in the organization's .`allstar` repository.
    the organization's `.allstar` repository (admins), or the repository's
    `.allstar` directory (maintainers). 
 
-### Pre-Installation Decisions
+### Org-Level Options 
 
-Before installing Allstar, you should decide approximately how many repositories
+Before installing Allstar at the org level, you should decide approximately how many repositories
 you want Allstar to run on. This will help you choose between the Opt-In and
 Opt-Out strategies. 
 
