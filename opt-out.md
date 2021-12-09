@@ -1,27 +1,8 @@
 # How to opt-out
 > Help! I'm getting issues created by Allstar and I don't want them.
 
-To discontinue receiving issues created by Allstar, first determine whether there is a repo named `.allstar` in your organization.
-
-If there is no `.allstar` repo in your org, then Allstar is configured at the repository level. Look for a file in your repo named `.allstar/allstar.yaml` with contents such as:
-```
-    optConfig:
-      optIn: true
-```
-Simply remove the `.allstar/allstar.yaml`  file to disable Allstar on you repository.
-
-
-## Org Level Configurations
-If there is a repo named .allstar in your org, you will need to dig a little to determine your org's settings. 
-
-In the organization's repo named `.allstar`, look for a file named `allstar.yaml`. In this file, find the following optConfig settings to determine whether Allstar is configured in the Opt Out or Opt In strategy:
-
-
-    optConfig:
-      optOutStrategy: true/false
-
 ## Allstar is configured in the opt-out strategy
-If the setting is set to true, your org is using the Opt Out strategy.
+To determine if Allstar is configured in the opt-out strategy, there will be a repo named `.allstar` in your organization, with a file named `allstar.yaml`. In that file will be the setting:
 
     optConfig:
       optOutStrategy: true
@@ -43,7 +24,7 @@ If that org-level `allstar.yaml` config has the line `disableRepoOverride: false
 > If you see `disableRepoOverride: true` in the top-level config, this will not work.
 
 ## Allstar is configured in the opt-in strategy
-If the setting is set to false, your repo is using the Opt In strategy.
+To determine if Allstar is configured in the opt-in strategy, there may be a repo named `.allstar` in your organization, with a file named `allstar.yaml`. In that file may be the setting:
 
     optConfig:
       optOutStrategy: false
@@ -59,3 +40,9 @@ Opt-in is the default strategy, so if that repo, file, or setting is missing: Al
 
 Sumit a PR to the `.allstar` repo removing your repo name from that list.
 
+Another way your repo may be opted-in is a file in your repo named `.allstar/allstar.yaml` with contents such as:
+
+    optConfig:
+      optIn: true
+
+Removing that file will disable Allstar.
