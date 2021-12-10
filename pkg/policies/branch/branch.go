@@ -76,7 +76,7 @@ type RepoConfig struct {
 	EnforceBranches []string `yaml:"enforceBranches"`
 
 	// RequireApproval overrides the same setting in org-level, only if present.
-	RequireApproval *bool `yaml:"requireAppproval"`
+	RequireApproval *bool `yaml:"requireApproval"`
 
 	// ApprovalCount overrides the same setting in org-level, only if present.
 	ApprovalCount *int `yaml:"approvalCount"`
