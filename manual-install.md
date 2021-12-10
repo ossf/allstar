@@ -1,11 +1,11 @@
 # **Manual Installation**
 
 These directions walk you through manually installing Allstar on your organization or repository. 
-For a faster setup that installs Allstar on all your repositories, see the [Quickstart Installation](/README.md#quickstart-installation).
+For a faster setup that installs Allstar on all your repositories, see the [Quickstart Installation](README.md#quickstart-installation).
 
 To choose the installation strategy that's best for your situation, consult the decision tree and then follow the appropriate link below:
 
-![Installation Decision Tree](/install-decision.jpg)
+![Installation Decision Tree](install-decision.jpg)
 
 
 [Opt Out Strategy Installation Directions](#opt-out-strategy-installation-directions)
@@ -29,6 +29,7 @@ To install Allstar on your Organization using the **Opt Out Strategy** (Recommen
 To opt some repositories out, change `allstar.yaml` to look like this:
    ```
    optConfig:
+     optOutStrategy: true
      optOutRepos:
      - repo-one
      - repo-two
@@ -63,10 +64,10 @@ In each of these four files, add the following contents:
      optOutStrategy: true
    action: [choose action]
    ```
-You will need to choose the action you would like Allstar to take when a policy is violated: `log`, `issue`, or `fix`. See [Actions](readme.md#actions) for more information about each policy. If you are unsure, we suggest using `issue` as a sensible default that can be changed later. For example:
+You will need to choose the action you would like Allstar to take when a policy is violated: `log`, `issue`, or `fix`. See [Actions](README.md#actions) for more information about each policy. If you are unsure, we suggest using `issue` as a sensible default that can be changed later. For example:
    ```
    optConfig:
-     optOut: true
+     optOutStrategy: true
    action: issue
    ```
 Allstar is now configured on your organization. See [Policies](README.md#policies) for more details on all the additional configuration
@@ -89,7 +90,7 @@ Important! Allstar will not run on any repositories if you do not complete this 
 To opt in repositories, change `allstar.yaml` to look like this:
    ```
    optConfig:
-    optOutRepos:
+    optInRepos:
     - repo-one
     - repo-two
    ```
@@ -113,13 +114,13 @@ To disable repository override, add the following to `allstar.yaml`:
 In each of these four files, add the following contents:
    ```
    optConfig:
-     optOutStrategy: false
+     optOutStrategy: true
    action: [choose action]
    ```
-You will need to choose the action you would like Allstar to take when a policy is violated: `log`, `issue`, or `fix`. See [Actions](readme.md#actions) for more information about each policy. If you are unsure, we suggest using `issue` as a sensible default that can be changed later. For example:
+You will need to choose the action you would like Allstar to take when a policy is violated: `log`, `issue`, or `fix`. See [Actions](README.md#actions) for more information about each policy. If you are unsure, we suggest using `issue` as a sensible default that can be changed later. For example:
    ```
    optConfig:
-     optOut: false
+     optOutStrategy: true
    action: issue
    ```
 Allstar is now configured on your organization. See [Policies](README.md#policies) for more details on all the additional configuration
@@ -150,13 +151,13 @@ To enable Allstar on a single repository:
 In each of these four files, add the following contents:
    ```
    optConfig:
-     optOutStrategy: false
+     optIn: true
    action: [choose action]
    ```
-You will need to choose the action you would like Allstar to take when a policy is violated: `log`, `issue`, or `fix`. See [Actions](readme.md#actions) for more information about each policy. If you are unsure, we suggest using `issue` as a sensible default that can be changed later. For example:
+You will need to choose the action you would like Allstar to take when a policy is violated: `log`, `issue`, or `fix`. See [Actions](README.md#actions) for more information about each policy. If you are unsure, we suggest using `issue` as a sensible default that can be changed later. For example:
    ```
    optConfig:
-     optOut: false
+     optIn: true
    action: issue
    ```
 
