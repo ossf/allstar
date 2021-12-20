@@ -32,6 +32,8 @@ var listBranches func(context.Context, string, string,
 	*github.BranchListOptions) ([]*github.Branch, *github.Response, error)
 var getBranchProtection func(context.Context, string, string, string) (
 	*github.Protection, *github.Response, error)
+var updateBranchProtection func(context.Context, string, string, string,
+	*github.ProtectionRequest) (*github.Protection, *github.Response, error)
 
 type mockRepos struct{}
 
@@ -48,6 +50,12 @@ func (m mockRepos) ListBranches(ctx context.Context, o string, r string,
 func (m mockRepos) GetBranchProtection(ctx context.Context, o string, r string,
 	b string) (*github.Protection, *github.Response, error) {
 	return getBranchProtection(ctx, o, r, b)
+}
+
+func (m mockRepos) UpdateBranchProtection(ctx context.Context, owner, repo,
+	branch string, preq *github.ProtectionRequest) (*github.Protection,
+	*github.Response, error) {
+	return updateBranchProtection(ctx, owner, repo, branch, preq)
 }
 
 func TestCheck(t *testing.T) {
@@ -359,4 +367,225 @@ func TestCheck(t *testing.T) {
 			t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 		}
 	})
+}
+
+func TestFix(t *testing.T) {
+	flse := false
+	tests := []struct {
+		Name         string
+		Org          OrgConfig
+		Repo         RepoConfig
+		Prot         map[string]github.Protection
+		cofigEnabled bool
+		Exp          map[string]github.ProtectionRequest
+	}{
+		{
+			Name: "NoChange",
+			Org: OrgConfig{
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   2,
+				DismissStale:    true,
+				BlockForce:      true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					EnforceAdmins: &github.AdminEnforcement{
+						Enabled: false,
+					},
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 2,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp:          map[string]github.ProtectionRequest{},
+		},
+		{
+			Name: "AddProtection",
+			Org: OrgConfig{
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   2,
+				DismissStale:    true,
+				BlockForce:      true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					EnforceAdmins: &github.AdminEnforcement{
+						Enabled: false,
+					},
+					RequiredPullRequestReviews: nil,
+				},
+			},
+			cofigEnabled: true,
+			Exp: map[string]github.ProtectionRequest{
+				"main": github.ProtectionRequest{
+					AllowForcePushes: &flse,
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 2,
+					},
+				},
+			},
+		},
+		{
+			Name: "NotEnabled",
+			Org: OrgConfig{
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   2,
+				DismissStale:    true,
+				BlockForce:      true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					EnforceAdmins: &github.AdminEnforcement{
+						Enabled: false,
+					},
+					RequiredPullRequestReviews: nil,
+				},
+			},
+			cofigEnabled: false,
+			Exp:          map[string]github.ProtectionRequest{},
+		},
+		{
+			Name: "IncreaseCountAndBlockForce",
+			Org: OrgConfig{
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   2,
+				DismissStale:    true,
+				BlockForce:      true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: true,
+					},
+					EnforceAdmins: &github.AdminEnforcement{
+						Enabled: false,
+					},
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 1,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: map[string]github.ProtectionRequest{
+				"main": github.ProtectionRequest{
+					AllowForcePushes: &flse,
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 2,
+					},
+				},
+			},
+		},
+		{
+			Name: "BlockForceOnly",
+			Org: OrgConfig{
+				EnforceDefault: true,
+				BlockForce:     true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: true,
+					},
+					EnforceAdmins: &github.AdminEnforcement{
+						Enabled: false,
+					},
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						RequiredApprovingReviewCount: 0,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: map[string]github.ProtectionRequest{
+				"main": github.ProtectionRequest{
+					AllowForcePushes: &flse,
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
+						RequiredApprovingReviewCount: 0,
+					},
+				},
+			},
+		},
+	}
+	get = func(context.Context, string, string) (*github.Repository,
+		*github.Response, error) {
+		b := "main"
+		return &github.Repository{
+			DefaultBranch: &b,
+		}, nil, nil
+	}
+	listBranches = func(context.Context, string, string,
+		*github.BranchListOptions) ([]*github.Branch, *github.Response, error) {
+		return []*github.Branch{
+			&github.Branch{},
+		}, &github.Response{NextPage: 0}, nil
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			got := make(map[string]github.ProtectionRequest)
+			updateBranchProtection = func(ctx context.Context, owner, repo,
+				branch string, preq *github.ProtectionRequest) (*github.Protection,
+				*github.Response, error) {
+				got[branch] = *preq
+				return nil, nil, nil
+			}
+			configFetchConfig = func(ctx context.Context, c *github.Client,
+				owner string, repo string, path string, ol bool, out interface{}) error {
+				if repo == "thisrepo" {
+					rc := out.(*RepoConfig)
+					*rc = test.Repo
+				} else {
+					oc := out.(*OrgConfig)
+					*oc = test.Org
+				}
+				return nil
+			}
+			getBranchProtection = func(ctx context.Context, o string, r string,
+				b string) (*github.Protection, *github.Response, error) {
+				p, ok := test.Prot[b]
+				if ok {
+					return &p, nil, nil
+				} else {
+					return nil, &github.Response{
+						Response: &http.Response{
+							StatusCode: http.StatusNotFound,
+						},
+					}, errors.New("404")
+				}
+			}
+			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, r config.RepoOptConfig,
+				c *github.Client, owner, repo string) (bool, error) {
+				return test.cofigEnabled, nil
+			}
+			if err := fix(context.Background(), mockRepos{}, nil, "", "thisrepo"); err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if diff := cmp.Diff(test.Exp, got); diff != "" {
+				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+			}
+		})
+	}
+
 }
