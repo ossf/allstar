@@ -32,14 +32,15 @@ const polName = "Branch Protection"
 
 // OrgConfig is the org-level config definition for Branch Protection.
 type OrgConfig struct {
-	// OptConfig is the standard org-level opt in/out config, RepoOverride applies to all
-	// BP config.
+	// OptConfig is the standard org-level opt in/out config, RepoOverride
+	// applies to all BP config.
 	OptConfig config.OrgOptConfig `yaml:"optConfig"`
 
 	// Action defines which action to take, default log, other: issue...
 	Action string `yaml:"action"`
 
-	// EnforceDefault : set to true to enforce policy on default branch, default true.
+	// EnforceDefault : set to true to enforce policy on default branch, default
+	// true.
 	EnforceDefault bool `yaml:"enforceDefault"`
 
 	// EnforceBranches is a map of repos and branches. These are other
@@ -53,7 +54,8 @@ type OrgConfig struct {
 	// ApprovalCount is the number of required PR approvals, default 1.
 	ApprovalCount int `yaml:"approvalCount"`
 
-	// DismissStale : set to true to require PR approvalse be dismissed when a PR is updated, default true.
+	// DismissStale : set to true to require PR approvalse be dismissed when a PR
+	// is updated, default true.
 	DismissStale bool `yaml:"dismissStale"`
 
 	// BlockForce : set to true to block force pushes, default true.
@@ -105,9 +107,10 @@ type details struct {
 	BlockForce   bool
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string, bool, interface{}) error
-
-var configIsEnabled func(ctx context.Context, o config.OrgOptConfig, r config.RepoOptConfig, c *github.Client, owner, repo string) (bool, error)
+var configFetchConfig func(context.Context, *github.Client, string, string,
+	string, bool, interface{}) error
+var configIsEnabled func(ctx context.Context, o config.OrgOptConfig,
+	r config.RepoOptConfig, c *github.Client, owner, repo string) (bool, error)
 
 func init() {
 	configFetchConfig = config.FetchConfig
@@ -135,6 +138,8 @@ type repositories interface {
 		[]*github.Branch, *github.Response, error)
 	GetBranchProtection(context.Context, string, string, string) (
 		*github.Protection, *github.Response, error)
+	UpdateBranchProtection(context.Context, string, string, string,
+		*github.ProtectionRequest) (*github.Protection, *github.Response, error)
 }
 
 // Check performs the polcy check for Branch Protection based on the
@@ -273,14 +278,137 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	}, nil
 }
 
-// Fix implementing policydef.Policy.Fix(). Currently not supported. BP plans
-// to support this TODO.
+// Fix implementing policydef.Policy.Fix().
 func (b Branch) Fix(ctx context.Context, c *github.Client, owner, repo string) error {
-	log.Warn().
-		Str("org", owner).
-		Str("repo", repo).
-		Str("area", polName).
-		Msg("Action fix is configured, but not implemented.")
+	return fix(ctx, c.Repositories, c, owner, repo)
+}
+
+func fix(ctx context.Context, rep repositories, c *github.Client,
+	owner, repo string) error {
+	oc, rc := getConfig(ctx, c, owner, repo)
+	enabled, err := configIsEnabled(ctx, oc.OptConfig, rc.OptConfig, c, owner, repo)
+	if err != nil {
+		return err
+	}
+	if enabled == false {
+		return nil
+	}
+	mc := mergeConfig(oc, rc, repo)
+
+	r, _, err := rep.Get(ctx, owner, repo)
+	if err != nil {
+		return err
+	}
+	allBranches := mc.EnforceBranches
+	if mc.EnforceDefault {
+		allBranches = append(mc.EnforceBranches, r.GetDefaultBranch())
+	}
+	for _, b := range allBranches {
+		p, rsp, err := rep.GetBranchProtection(ctx, owner, repo, b)
+		if err != nil {
+			if rsp != nil && rsp.StatusCode == http.StatusNotFound {
+				// No existing protection, create from config.
+				afp := !mc.BlockForce
+				pr := &github.ProtectionRequest{
+					AllowForcePushes: &afp,
+				}
+				if mc.RequireApproval {
+					rq := &github.PullRequestReviewsEnforcementRequest{
+						DismissStaleReviews:          mc.DismissStale,
+						RequiredApprovingReviewCount: mc.ApprovalCount,
+					}
+					pr.RequiredPullRequestReviews = rq
+				}
+				_, _, err := rep.UpdateBranchProtection(ctx, owner, repo, b, pr)
+				if err != nil {
+					return err
+				}
+				continue
+			}
+			if rsp != nil && rsp.StatusCode == http.StatusForbidden {
+				log.Warn().
+					Str("org", owner).
+					Str("repo", repo).
+					Str("area", polName).
+					Msg("Fix action selected, but repo does not support Branch Proteciton.")
+				// no sense to continue, just return
+				return nil
+			}
+			return err
+		}
+		// Got existing protection, modify from existing
+		update := false
+		pr := &github.ProtectionRequest{
+			RequiredStatusChecks: p.RequiredStatusChecks,
+			EnforceAdmins:        p.EnforceAdmins.Enabled,
+			AllowForcePushes:     &p.AllowForcePushes.Enabled,
+		}
+		if p.RequiredPullRequestReviews != nil {
+			prr := &github.PullRequestReviewsEnforcementRequest{
+				DismissStaleReviews:          p.RequiredPullRequestReviews.DismissStaleReviews,
+				RequireCodeOwnerReviews:      p.RequiredPullRequestReviews.RequireCodeOwnerReviews,
+				RequiredApprovingReviewCount: p.RequiredPullRequestReviews.RequiredApprovingReviewCount,
+			}
+			pr.RequiredPullRequestReviews = prr
+		}
+		if p.Restrictions != nil {
+			rr := &github.BranchRestrictionsRequest{
+				Users: make([]string, 0),
+				Teams: make([]string, 0),
+			}
+			if p.Restrictions.Users != nil {
+				for _, u := range p.Restrictions.Users {
+					rr.Users = append(rr.Users, *u.Login)
+				}
+			}
+			if p.Restrictions.Teams != nil {
+				for _, t := range p.Restrictions.Teams {
+					rr.Teams = append(rr.Teams, *t.Slug)
+				}
+			}
+			if p.Restrictions.Apps != nil {
+				rr.Apps = make([]string, 0)
+				for _, a := range p.Restrictions.Apps {
+					rr.Apps = append(rr.Apps, *a.Slug)
+				}
+			}
+			pr.Restrictions = rr
+		}
+		if *pr.AllowForcePushes == true && mc.BlockForce {
+			f := false
+			pr.AllowForcePushes = &f
+			update = true
+		}
+		if pr.RequiredPullRequestReviews == nil && mc.RequireApproval {
+			rq := &github.PullRequestReviewsEnforcementRequest{
+				DismissStaleReviews:          mc.DismissStale,
+				RequiredApprovingReviewCount: mc.ApprovalCount,
+			}
+			pr.RequiredPullRequestReviews = rq
+			update = true
+		}
+		if mc.RequireApproval {
+			if mc.DismissStale && !pr.RequiredPullRequestReviews.DismissStaleReviews {
+				pr.RequiredPullRequestReviews.DismissStaleReviews = true
+				update = true
+			}
+			if mc.ApprovalCount > pr.RequiredPullRequestReviews.RequiredApprovingReviewCount {
+				pr.RequiredPullRequestReviews.RequiredApprovingReviewCount = mc.ApprovalCount
+				update = true
+			}
+		}
+		if update {
+			_, _, err := rep.UpdateBranchProtection(ctx, owner, repo, b, pr)
+			if err != nil {
+				return err
+			}
+			log.Info().
+				Str("org", owner).
+				Str("repo", repo).
+				Str("area", polName).
+				Msg("Updated with Fix aciton.")
+		}
+	}
 	return nil
 }
 
