@@ -26,12 +26,18 @@ import (
 
 var listCollaborators func(context.Context, string, string,
 	*github.ListCollaboratorsOptions) ([]*github.User, *github.Response, error)
+var listTeams func(context.Context, string, string, *github.ListOptions) (
+	[]*github.Team, *github.Response, error)
 
 type mockRepos struct{}
 
 func (m mockRepos) ListCollaborators(ctx context.Context, o, r string,
 	op *github.ListCollaboratorsOptions) ([]*github.User, *github.Response, error) {
 	return listCollaborators(ctx, o, r, op)
+}
+
+func (m mockRepos) ListTeams(ctx context.Context, owner string, repo string, opts *github.ListOptions) ([]*github.Team, *github.Response, error) {
+	return listTeams(ctx, owner, repo, opts)
 }
 
 func TestCheck(t *testing.T) {
@@ -44,11 +50,13 @@ func TestCheck(t *testing.T) {
 		Users        []*github.User
 		cofigEnabled bool
 		Exp          policydef.Result
+		Teams        []*github.Team
 	}{
 		{
 			Name: "NotEnabled",
 			Org: OrgConfig{
-				PushAllowed: true,
+				PushAllowed:      true,
+				OwnerlessAllowed: true,
 			},
 			Repo:         RepoConfig{},
 			Users:        nil,
@@ -66,7 +74,8 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				PushAllowed: true,
+				PushAllowed:      true,
+				OwnerlessAllowed: true,
 			},
 			Repo:         RepoConfig{},
 			Users:        nil,
@@ -84,7 +93,8 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				PushAllowed: true,
+				PushAllowed:      true,
+				OwnerlessAllowed: true,
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
@@ -118,7 +128,8 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				PushAllowed: true,
+				PushAllowed:      true,
+				OwnerlessAllowed: true,
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
@@ -149,6 +160,140 @@ func TestCheck(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name: "Both blocked",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				PushAllowed:      false,
+				AdminAllowed:     false,
+				OwnerlessAllowed: true,
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Found 2 outside collaborators with push access.\nFound 1 outside collaborators with admin access.\nThis policy requires all users with this access to be members of the organisation",
+				Details: details{
+					OutsidePushCount:  2,
+					OutsidePushers:    []string{"alice", "bob"},
+					OutsideAdminCount: 1,
+					OutsideAdmins:     []string{"bob"},
+				},
+			},
+		},
+		{
+			Name: "Ownerless blocked",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				PushAllowed:      true,
+				AdminAllowed:     true,
+				OwnerlessAllowed: false,
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Did not find any owners of this repository\nThis policy requires all repositories to have an organization member or team assigned as an administrator",
+				Details: details{
+					OutsidePushCount:  2,
+					OutsidePushers:    []string{"alice", "bob"},
+					OutsideAdminCount: 1,
+					OutsideAdmins:     []string{"bob"},
+				},
+			},
+		},
+		{
+			Name: "Ownerless OK",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				PushAllowed:      true,
+				AdminAllowed:     true,
+				OwnerlessAllowed: false,
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			Teams: []*github.Team{
+				&github.Team{
+					Slug: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.Team{
+					Slug: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					OutsidePushCount:  2,
+					OutsidePushers:    []string{"alice", "bob"},
+					OutsideAdminCount: 1,
+					OutsideAdmins:     []string{"bob"},
+					OwnerCount:        1,
+					TeamAdmins:        []string{"bob"},
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -171,6 +316,9 @@ func TestCheck(t *testing.T) {
 			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, r config.RepoOptConfig,
 				c *github.Client, owner, repo string) (bool, error) {
 				return test.cofigEnabled, nil
+			}
+			listTeams = func(ctx context.Context, owner string, repo string, opts *github.ListOptions) ([]*github.Team, *github.Response, error) {
+				return test.Teams, &github.Response{NextPage: 0}, nil
 			}
 			res, err := check(context.Background(), mockRepos{}, nil, "", "thisrepo")
 			if err != nil {

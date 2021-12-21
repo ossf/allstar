@@ -29,8 +29,9 @@ import (
 const configFile = "outside.yaml"
 const polName = "Outside Collaborators"
 
-const notifyText = `Found %v outside collaborators with %v access.
-This policy requires all users with %v access to be members of the organisation. That way you can easily audit who has access to your repo, and if an account is compromised it can quickly be denied access to organization resources. To fix this you should either remove the user from repository-based access, or add them to the organization. 
+const accessText = "Found %v outside collaborators with %v access.\n"
+
+const accessExp = `This policy requires all users with this access to be members of the organisation. That way you can easily audit who has access to your repo, and if an account is compromised it can quickly be denied access to organization resources. To fix this you should either remove the user from repository-based access, or add them to the organization. 
 
 * Remove the user from the repository-based access. From the main page of the repository, go to Settings -> Manage Access. 
 (For more information, see https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-user-account/managing-access-to-your-personal-repositories/removing-a-collaborator-from-a-personal-repository)
@@ -39,7 +40,17 @@ OR
 
 * Invite the user to join your organisation. Click your profile photo and choose “Your Organization” → choose the org name → “People” → “Invite Member.” (For more information, see https://docs.github.com/en/organizations/managing-membership-in-your-organization/inviting-users-to-join-your-organization)
 
-If you don't see the Settings tab you probably don't have administrative access. Reach out to the administrators of the organisation to fix this issue.`
+If you don't see the Settings tab you probably don't have administrative access. Reach out to the administrators of the organisation to fix this issue.
+`
+
+const ownerlessText = `Did not find any owners of this repository
+This policy requires all repositories to have an organization member or team assigned as an administrator. Either there are no administrators, or all administrators are outside collaborators. A responsible party is required by organization policy to respond to security events and organization requests.
+
+To add an administrator From the main page of the repository, go to Settings -> Manage Access.
+(For more information, see https://docs.github.com/en/organizations/managing-access-to-your-organizations-repositories)
+
+Alternately, if this repository does not have any maintainers, archive or delete it.
+`
 
 // OrgConfig is the org-level config definition for Outside Collaborators
 // security policy.
@@ -58,6 +69,10 @@ type OrgConfig struct {
 	// AdminAllowed defined if outside collaboraters are allowed to have admin
 	// access, default false.
 	AdminAllowed bool `yaml:"adminAllowed"`
+
+	// OwnerlessAllowed defined if repositories are allowed to have no
+	// administrators, default false.
+	OwnerlessAllowed bool `yaml:"ownerlessAllowed"`
 }
 
 // RepoConfig is the repo-level config for Outside Collaborators security
@@ -74,12 +89,16 @@ type RepoConfig struct {
 
 	// AdminAllowed overrides the same setting in org-level, only if present.
 	AdminAllowed *bool `yaml:"adminAllowed"`
+
+	// OwnerlessAllowed overrides the same setting in org-level, only if present.
+	OwnerlessAllowed *bool `yaml:"ownerlessAllowed"`
 }
 
 type mergedConfig struct {
-	Action       string
-	PushAllowed  bool
-	AdminAllowed bool
+	Action           string
+	PushAllowed      bool
+	AdminAllowed     bool
+	OwnerlessAllowed bool
 }
 
 type details struct {
@@ -87,6 +106,9 @@ type details struct {
 	OutsidePushers    []string
 	OutsideAdminCount int
 	OutsideAdmins     []string
+	OwnerCount        int
+	DirectOrgAdmins   []string
+	TeamAdmins        []string
 }
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, bool, interface{}) error
@@ -115,7 +137,11 @@ func (o Outside) Name() string {
 type repositories interface {
 	ListCollaborators(context.Context, string, string,
 		*github.ListCollaboratorsOptions) ([]*github.User, *github.Response, error)
+	ListTeams(context.Context, string, string, *github.ListOptions) (
+		[]*github.Team, *github.Response, error)
 }
+
+//func (s *RepositoriesService) ListTeams(ctx context.Context, owner string, repo string, opts *ListOptions) ([]*Team, *Response, error) {
 
 // Check performs the polcy check for Outside Collaborators based on the
 // configuration stored in the org/repo, implementing policydef.Policy.Check()
@@ -139,15 +165,107 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		Msg("Check repo enabled")
 	mc := mergeConfig(oc, rc, repo)
 
+	var d details
+	outAdmins, err := getUsers(ctx, rep, owner, repo, "admin", "outside")
+	if err != nil {
+		return nil, err
+	}
+	outPushers, err := getUsers(ctx, rep, owner, repo, "push", "outside")
+	if err != nil {
+		return nil, err
+	}
+	d.OutsideAdminCount = len(outAdmins)
+	d.OutsideAdmins = outAdmins
+	d.OutsidePushCount = len(outPushers)
+	d.OutsidePushers = outPushers
+
+	directAdmins, err := getUsers(ctx, rep, owner, repo, "admin", "direct")
+	if err != nil {
+		return nil, err
+	}
+	var directOrgAdmins []string
+	for _, a := range directAdmins {
+		if !in(a, outAdmins) {
+			directOrgAdmins = append(directOrgAdmins, a)
+		}
+	}
+	d.OwnerCount = d.OwnerCount + len(directOrgAdmins)
+	d.DirectOrgAdmins = directOrgAdmins
+
+	opt := &github.ListOptions{
+		PerPage: 100,
+	}
+	var teams []*github.Team
+	for {
+		ts, resp, err := rep.ListTeams(ctx, owner, repo, opt)
+		if err != nil {
+			return nil, err
+		}
+		teams = append(teams, ts...)
+		if resp.NextPage == 0 {
+			break
+		}
+		opt.Page = resp.NextPage
+	}
+	var teamAdmins []string
+	for _, t := range teams {
+		if t.GetPermissions()["admin"] {
+			teamAdmins = append(teamAdmins, t.GetSlug())
+		}
+	}
+	d.OwnerCount = d.OwnerCount + len(teamAdmins)
+	d.TeamAdmins = teamAdmins
+
+	rv := &policydef.Result{
+		Enabled: enabled,
+		Pass:    true,
+		Details: d,
+	}
+
+	if d.OwnerCount == 0 && !mc.OwnerlessAllowed {
+		rv.Pass = false
+		rv.NotifyText = rv.NotifyText + ownerlessText
+	}
+
+	exp := false
+	if d.OutsidePushCount > 0 && !mc.PushAllowed {
+		rv.Pass = false
+		rv.NotifyText = rv.NotifyText +
+			fmt.Sprintf(accessText, d.OutsidePushCount, "push")
+		exp = true
+	}
+	if d.OutsideAdminCount > 0 && !mc.AdminAllowed {
+		rv.Pass = false
+		rv.NotifyText = rv.NotifyText +
+			fmt.Sprintf(accessText, d.OutsideAdminCount, "admin")
+		exp = true
+	}
+	if exp {
+		rv.NotifyText = rv.NotifyText + accessExp
+	}
+	return rv, nil
+}
+
+func in(name string, list []string) bool {
+	for _, v := range list {
+		if v == name {
+			return true
+		}
+	}
+	return false
+}
+
+func getUsers(ctx context.Context, r repositories, owner, repo, perm,
+	aff string) ([]string, error) {
 	opt := &github.ListCollaboratorsOptions{
 		ListOptions: github.ListOptions{
 			PerPage: 100,
 		},
-		Affiliation: "outside",
+		Affiliation: aff,
 	}
 	var users []*github.User
 	for {
-		us, resp, err := rep.ListCollaborators(ctx, owner, repo, opt)
+		us, resp, err := r.ListCollaborators(ctx, owner, repo, opt)
 		if err != nil {
 			return nil, err
 		}
@@ -158,40 +276,13 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		opt.Page = resp.NextPage
 	}
 
-	var d details
+	var rv []string
 	for _, u := range users {
-		if u.GetPermissions()["push"] {
-			d.OutsidePushCount = d.OutsidePushCount + 1
-			d.OutsidePushers = append(d.OutsidePushers, u.GetLogin())
-		}
-		if u.GetPermissions()["admin"] {
-			d.OutsideAdminCount = d.OutsideAdminCount + 1
-			d.OutsideAdmins = append(d.OutsideAdmins, u.GetLogin())
+		if u.GetPermissions()[perm] {
+			rv = append(rv, u.GetLogin())
 		}
 	}
-
-	if d.OutsidePushCount > 0 && !mc.PushAllowed {
-		return &policydef.Result{
-			Enabled:    enabled,
-			Pass:       false,
-			NotifyText: fmt.Sprintf(notifyText, d.OutsidePushCount, "push", "push"),
-			Details:    d,
-		}, nil
-	}
-	if d.OutsideAdminCount > 0 && !mc.AdminAllowed {
-		return &policydef.Result{
-			Enabled:    enabled,
-			Pass:       false,
-			NotifyText: fmt.Sprintf(notifyText, d.OutsideAdminCount, "admin", "admin"),
-			Details:    d,
-		}, nil
-	}
-	return &policydef.Result{
-		Enabled:    enabled,
-		Pass:       true,
-		NotifyText: "",
-		Details:    d,
-	}, nil
+	return rv, nil
 }
 
 // Fix implementing policydef.Policy.Fix(). Currently not supported. Plan
@@ -245,9 +336,10 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 
 func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 	mc := &mergedConfig{
-		Action:       oc.Action,
-		PushAllowed:  oc.PushAllowed,
-		AdminAllowed: oc.AdminAllowed,
+		Action:           oc.Action,
+		PushAllowed:      oc.PushAllowed,
+		AdminAllowed:     oc.AdminAllowed,
+		OwnerlessAllowed: oc.OwnerlessAllowed,
 	}
 
 	if !oc.OptConfig.DisableRepoOverride {
@@ -259,6 +351,9 @@ func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 		}
 		if rc.AdminAllowed != nil {
 			mc.AdminAllowed = *rc.AdminAllowed
+		}
+		if rc.OwnerlessAllowed != nil {
+			mc.OwnerlessAllowed = *rc.OwnerlessAllowed
 		}
 	}
 	return mc
