@@ -290,7 +290,7 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 	if err != nil {
 		return err
 	}
-	if enabled == false {
+	if !enabled {
 		return nil
 	}
 	mc := mergeConfig(oc, rc, repo)
@@ -374,7 +374,7 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 			}
 			pr.Restrictions = rr
 		}
-		if *pr.AllowForcePushes == true && mc.BlockForce {
+		if *pr.AllowForcePushes && mc.BlockForce {
 			f := false
 			pr.AllowForcePushes = &f
 			update = true

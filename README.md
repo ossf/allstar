@@ -190,8 +190,7 @@ optConfig:
 action: issue
 ```
 
-The `fix` action is not implemented in any policy yet, but will be implemented
-in those policies where it is applicable soon.
+The details of how the `fix` action works for each policy is detailed below. If omitted below, the `fix` action is not applicable.
 
 ### Branch Protection
 
@@ -205,6 +204,8 @@ are setup correctly according to the specified configuration. The issue text
 will describe which setting is incorrect. See [GitHub's
 documentation](https://docs.github.com/en/github/administering-a-repository/defining-the-mergeability-of-pull-requests/about-protected-branches)
 for correcting settings.
+
+The `fix` action will change the branch protection settings to be in compliance with the specified policy configuration.
 
 ### Binary Artifacts
 
