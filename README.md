@@ -285,6 +285,7 @@ Collaborators](https://docs.github.com/en/organizations/managing-access-to-your-
 have either administrator(default) or push(optional) access to the
 repository. Only organization members should have this access, as otherwise
 untrusted members can change admin level settings and commit malicious code.
+Also, by default, all repositories must have an organization user or group assigned as an Administrator.
 
 ### SECURITY.md
 
