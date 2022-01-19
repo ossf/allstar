@@ -251,7 +251,7 @@ The details of how the `fix` action works for each policy is detailed below. If 
 
 This policy's config file is named `branch_protection.yaml`, and the [config
 definitions are
-here](https://pkg.go.dev/github.com/ossf/allstar@v0.0.0-20210728182754-005854d69ba7/pkg/policies/branch#OrgConfig).
+here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/branch#OrgConfig).
 
 The branch protection policy checks that GitHub's [branch protection
 settings](https://docs.github.com/en/github/administering-a-repository/defining-the-mergeability-of-pull-requests/about-protected-branches)
@@ -266,7 +266,7 @@ The `fix` action will change the branch protection settings to be in compliance 
 
 This policy's config file is named `binary_artifacts.yaml`, and the [config
 definitions are
-here](https://pkg.go.dev/github.com/ossf/allstar@v0.0.0-20210728182754-005854d69ba7/pkg/policies/binary#OrgConfig).
+here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/binary#OrgConfig).
 
 This policy incorporates the [check from
 scorecard](https://github.com/ossf/scorecard/#scorecard-checks). Remove the
@@ -278,7 +278,7 @@ itself](https://github.com/ossf/scorecard) to see all the detailed information.
 
 This policy's config file is named `outside.yaml`, and the [config definitions
 are
-here](https://pkg.go.dev/github.com/ossf/allstar@v0.0.0-20210728182754-005854d69ba7/pkg/policies/outside#OrgConfig).
+here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/outside#OrgConfig).
 
 This policy checks if any [Outside
 Collaborators](https://docs.github.com/en/organizations/managing-access-to-your-organizations-repositories/adding-outside-collaborators-to-repositories-in-your-organization)
@@ -291,7 +291,7 @@ Also, by default, all repositories must have an organization user or group assig
 
 This policy's config file is named `security.yaml`, and the [config definitions
 are
-here](https://pkg.go.dev/github.com/ossf/allstar@v0.0.0-20210728182754-005854d69ba7/pkg/policies/security#OrgConfig).
+here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/security#OrgConfig).
 
 This policy checks that the repository has a security policy file in
 `SECURITY.md` and that it is not empty. The created issue will have a link to
@@ -316,8 +316,8 @@ organization.
 
 ### Configuration Definitions
 
-- [Organization level enable configuration](https://pkg.go.dev/github.com/ossf/allstar@v0.0.0-20210728182754-005854d69ba7/pkg/config#OrgOptConfig)
-- [Repository Override enable configuration]( https://pkg.go.dev/github.com/ossf/allstar@v0.0.0-20210728182754-005854d69ba7/pkg/config#RepoOptConfig)
+- [Organization level enable configuration](https://pkg.go.dev/github.com/ossf/allstar/pkg/config#OrgOptConfig)
+- [Repository Override enable configuration]( https://pkg.go.dev/github.com/ossf/allstar/pkg/config#RepoOptConfig)
 
 ### Secondary Org-Level configuration location
 
