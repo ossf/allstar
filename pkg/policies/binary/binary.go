@@ -86,17 +86,41 @@ type logger struct {
 }
 
 func (l *logger) Info(desc string, args ...interface{}) {
-	cd := checker.CheckDetail{Type: checker.DetailInfo, Msg: fmt.Sprintf(desc, args...)}
+	cd := checker.CheckDetail{
+		Type: checker.DetailInfo,
+		// TODO(log): Consider encapsulating more information with
+		//            `checker.LogMessage` fields
+		Msg: checker.LogMessage{
+			Text: fmt.Sprintf(desc, args...),
+		},
+	}
+
 	l.Messages2 = append(l.Messages2, cd)
 }
 
 func (l *logger) Warn(desc string, args ...interface{}) {
-	cd := checker.CheckDetail{Type: checker.DetailWarn, Msg: fmt.Sprintf(desc, args...)}
+	cd := checker.CheckDetail{
+		Type: checker.DetailInfo,
+		// TODO(log): Consider encapsulating more information with
+		//            `checker.LogMessage` fields
+		Msg: checker.LogMessage{
+			Text: fmt.Sprintf(desc, args...),
+		},
+	}
+
 	l.Messages2 = append(l.Messages2, cd)
 }
 
 func (l *logger) Debug(desc string, args ...interface{}) {
-	cd := checker.CheckDetail{Type: checker.DetailDebug, Msg: fmt.Sprintf(desc, args...)}
+	cd := checker.CheckDetail{
+		Type: checker.DetailInfo,
+		// TODO(log): Consider encapsulating more information with
+		//            `checker.LogMessage` fields
+		Msg: checker.LogMessage{
+			Text: fmt.Sprintf(desc, args...),
+		},
+	}
+
 	l.Messages2 = append(l.Messages2, cd)
 }
 
