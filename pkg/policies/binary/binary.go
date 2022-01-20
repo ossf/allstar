@@ -22,12 +22,11 @@ import (
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
-
-	gh32 "github.com/google/go-github/v32/github"
-	"github.com/google/go-github/v39/github"
 	"github.com/ossf/scorecard/v4/checker"
 	"github.com/ossf/scorecard/v4/checks"
 	"github.com/ossf/scorecard/v4/clients/githubrepo"
+
+	"github.com/google/go-github/v39/github"
 	"github.com/rs/zerolog/log"
 )
 
@@ -151,7 +150,6 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		}, nil
 	}
 
-	oldClient := gh32.NewClient(c.Client())
 	repoClient := githubrepo.CreateGithubRepoClient(ctx, oldClient)
 	if err := repoClient.InitRepo(owner, repo); err != nil {
 		return nil, err
@@ -159,14 +157,10 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 	defer repoClient.Close()
 	l := logger{}
 	cr := &checker.CheckRequest{
-		Ctx:         ctx,
-		Client:      oldClient,
-		RepoClient:  repoClient,
-		HTTPClient:  nil,
-		Owner:       owner,
-		Repo:        repo,
-		GraphClient: nil,
-		Dlogger:     &l,
+		Ctx:        ctx,
+		RepoClient: repoClient,
+		Repo:       repo,
+		Dlogger:    &l,
 	}
 	// TODO, likely this should be a "scorecard" policy that runs multiple checks
 	// here, and uses config to enable/disable checks.
