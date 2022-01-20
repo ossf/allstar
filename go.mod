@@ -5,7 +5,7 @@ go 1.16
 require (
 	github.com/bradleyfalzon/ghinstallation/v2 v2.0.4
 	github.com/golang-jwt/jwt/v4 v4.1.0 // indirect
-	github.com/google/go-cmp v0.5.6
+	github.com/google/go-cmp v0.5.7
 	github.com/google/go-github/v32 v32.1.0
 	github.com/google/go-github/v39 v39.2.0
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79
