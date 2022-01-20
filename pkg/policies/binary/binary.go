@@ -25,10 +25,10 @@ import (
 	"github.com/ossf/scorecard/v4/checker"
 	"github.com/ossf/scorecard/v4/checks"
 	"github.com/ossf/scorecard/v4/clients/githubrepo"
+	sclog "github.com/ossf/scorecard/v4/log"
 
 	"github.com/google/go-github/v39/github"
 	"github.com/rs/zerolog/log"
-	"go.uber.org/zap/zapcore"
 )
 
 const configFile = "binary_artifacts.yaml"
@@ -163,9 +163,9 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		}, nil
 	}
 
-	// TODO(log): Remove once https://github.com/ossf/scorecard/issues/1273
+	// TODO(log): Refactor once https://github.com/ossf/scorecard/issues/1273
 	//            is resolved
-	repoLogger, err := githubrepo.NewLogger(zapcore.InfoLevel)
+	repoLogger, err := githubrepo.NewLogger(sclog.InfoLevel)
 	if err != nil {
 		return nil, err
 	}
