@@ -22,13 +22,13 @@ import (
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
-	"github.com/ossf/scorecard/v4/checker"
-	"github.com/ossf/scorecard/v4/checks"
-	"github.com/ossf/scorecard/v4/clients/githubrepo"
 
+	gh32 "github.com/google/go-github/v32/github"
 	"github.com/google/go-github/v39/github"
+	"github.com/ossf/scorecard/checker"
+	"github.com/ossf/scorecard/checks"
+	"github.com/ossf/scorecard/clients/githubrepo"
 	"github.com/rs/zerolog/log"
-	"go.uber.org/zap/zapcore"
 )
 
 const configFile = "binary_artifacts.yaml"
@@ -86,54 +86,18 @@ type logger struct {
 }
 
 func (l *logger) Info(desc string, args ...interface{}) {
-	cd := checker.CheckDetail{
-		Type: checker.DetailInfo,
-		// TODO(log): Consider encapsulating more information with
-		//            `checker.LogMessage` fields
-		Msg: checker.LogMessage{
-			Text: fmt.Sprintf(desc, args...),
-		},
-	}
-
+	cd := checker.CheckDetail{Type: checker.DetailInfo, Msg: fmt.Sprintf(desc, args...)}
 	l.Messages2 = append(l.Messages2, cd)
 }
 
 func (l *logger) Warn(desc string, args ...interface{}) {
-	cd := checker.CheckDetail{
-		Type: checker.DetailInfo,
-		// TODO(log): Consider encapsulating more information with
-		//            `checker.LogMessage` fields
-		Msg: checker.LogMessage{
-			Text: fmt.Sprintf(desc, args...),
-		},
-	}
-
+	cd := checker.CheckDetail{Type: checker.DetailWarn, Msg: fmt.Sprintf(desc, args...)}
 	l.Messages2 = append(l.Messages2, cd)
 }
 
 func (l *logger) Debug(desc string, args ...interface{}) {
-	cd := checker.CheckDetail{
-		Type: checker.DetailInfo,
-		// TODO(log): Consider encapsulating more information with
-		//            `checker.LogMessage` fields
-		Msg: checker.LogMessage{
-			Text: fmt.Sprintf(desc, args...),
-		},
-	}
-
+	cd := checker.CheckDetail{Type: checker.DetailDebug, Msg: fmt.Sprintf(desc, args...)}
 	l.Messages2 = append(l.Messages2, cd)
-}
-
-func (l *logger) Info3(msg *checker.LogMessage) {
-	// TODO(log): Implement SARIF formatted log
-}
-
-func (l *logger) Warn3(msg *checker.LogMessage) {
-	// TODO(log): Implement SARIF formatted log
-}
-
-func (l *logger) Debug3(msg *checker.LogMessage) {
-	// TODO(log): Implement SARIF formatted log
 }
 
 // Check performs the polcy check for this policy based on the
@@ -163,32 +127,23 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		}, nil
 	}
 
-	// TODO(log): Remove once https://github.com/ossf/scorecard/issues/1273
-	//            is resolved
-	repoLogger, err := githubrepo.NewLogger(zapcore.InfoLevel)
-	if err != nil {
-		return nil, err
-	}
-
-	scRepoArg := fmt.Sprintf("%s/%s", owner, repo)
-	scRepo, err := githubrepo.MakeGithubRepo(scRepoArg)
-	if err != nil {
-		return nil, err
-	}
-
-	repoClient := githubrepo.CreateGithubRepoClient(ctx, repoLogger)
-	if err := repoClient.InitRepo(scRepo); err != nil {
+	oldClient := gh32.NewClient(c.Client())
+	repoClient := githubrepo.CreateGithubRepoClient(ctx, oldClient)
+	if err := repoClient.InitRepo(owner, repo); err != nil {
 		return nil, err
 	}
 	defer repoClient.Close()
 	l := logger{}
 	cr := &checker.CheckRequest{
-		Ctx:        ctx,
-		RepoClient: repoClient,
-		Repo:       scRepo,
-		Dlogger:    &l,
+		Ctx:         ctx,
+		Client:      oldClient,
+		RepoClient:  repoClient,
+		HTTPClient:  nil,
+		Owner:       owner,
+		Repo:        repo,
+		GraphClient: nil,
+		Dlogger:     &l,
 	}
-
 	// TODO, likely this should be a "scorecard" policy that runs multiple checks
 	// here, and uses config to enable/disable checks.
 	res := checks.BinaryArtifacts(cr)
