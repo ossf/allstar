@@ -25,9 +25,9 @@ import (
 
 	gh32 "github.com/google/go-github/v32/github"
 	"github.com/google/go-github/v39/github"
-	"github.com/ossf/scorecard/checker"
-	"github.com/ossf/scorecard/checks"
-	"github.com/ossf/scorecard/clients/githubrepo"
+	"github.com/ossf/scorecard/v4/checker"
+	"github.com/ossf/scorecard/v4/checks"
+	"github.com/ossf/scorecard/v4/clients/githubrepo"
 	"github.com/rs/zerolog/log"
 )
 
