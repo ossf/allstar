@@ -28,6 +28,7 @@ import (
 
 	"github.com/google/go-github/v39/github"
 	"github.com/rs/zerolog/log"
+	"go.uber.org/zap/zapcore"
 )
 
 const configFile = "binary_artifacts.yaml"
@@ -162,7 +163,14 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		}, nil
 	}
 
-	repoClient := githubrepo.CreateGithubRepoClient(ctx, oldClient)
+	// TODO(log): Remove once https://github.com/ossf/scorecard/issues/1273
+	//            is resolved
+	repoLogger, err := githubrepo.NewLogger(zapcore.InfoLevel)
+	if err != nil {
+		return nil, err
+	}
+
+	repoClient := githubrepo.CreateGithubRepoClient(ctx, repoLogger)
 	if err := repoClient.InitRepo(owner, repo); err != nil {
 		return nil, err
 	}
