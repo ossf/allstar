@@ -170,8 +170,14 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		return nil, err
 	}
 
+	scRepoArg := fmt.Sprintf("%s/%s", owner, repo)
+	scRepo, err := githubrepo.MakeGithubRepo(scRepoArg)
+	if err != nil {
+		return nil, err
+	}
+
 	repoClient := githubrepo.CreateGithubRepoClient(ctx, repoLogger)
-	if err := repoClient.InitRepo(owner, repo); err != nil {
+	if err := repoClient.InitRepo(scRepo); err != nil {
 		return nil, err
 	}
 	defer repoClient.Close()
@@ -179,7 +185,7 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 	cr := &checker.CheckRequest{
 		Ctx:        ctx,
 		RepoClient: repoClient,
-		Repo:       repo,
+		Repo:       scRepo,
 		Dlogger:    &l,
 	}
 
