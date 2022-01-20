@@ -123,6 +123,18 @@ func (l *logger) Debug(desc string, args ...interface{}) {
 	l.Messages2 = append(l.Messages2, cd)
 }
 
+func (l *logger) Info3(msg *checker.LogMessage) {
+	// TODO(log): Implement SARIF formatted log
+}
+
+func (l *logger) Warn3(msg *checker.LogMessage) {
+	// TODO(log): Implement SARIF formatted log
+}
+
+func (l *logger) Debug3(msg *checker.LogMessage) {
+	// TODO(log): Implement SARIF formatted log
+}
+
 // Check performs the polcy check for this policy based on the
 // configuration stored in the org/repo, implementing policydef.Policy.Check()
 func (b Binary) Check(ctx context.Context, c *github.Client, owner,
@@ -162,6 +174,7 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		Repo:       repo,
 		Dlogger:    &l,
 	}
+
 	// TODO, likely this should be a "scorecard" policy that runs multiple checks
 	// here, and uses config to enable/disable checks.
 	res := checks.BinaryArtifacts(cr)
