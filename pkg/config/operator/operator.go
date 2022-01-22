@@ -15,17 +15,25 @@
 // Package operator contains config to be set by the GitHub App operator
 package operator
 
-import "time"
+import (
+	"os"
+	"strconv"
+	"time"
+)
 
 // AppID should be set to the application ID of the created GitHub App. See:
 // https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps#authenticating-as-a-github-app
-const AppID = 119816
+const setAppID = 119816
+
+var AppID int64
 
 // KeySecret should be set to the name of a secret containing a private key for
 // the App. See:
 // https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps#generating-a-private-key
 // The secret is retrieved with gocloud.dev/runtimevar.
-const KeySecret = "gcpsecretmanager://projects/allstar-ossf/secrets/allstar-private-key?decoder=bytes"
+const setKeySecret = "gcpsecretmanager://projects/allstar-ossf/secrets/allstar-private-key?decoder=bytes"
+
+var KeySecret string
 
 // OrgConfigRepo is the name of the expected org-level repo to contain config.
 const OrgConfigRepo = ".allstar"
@@ -53,3 +61,27 @@ Issue created by Allstar. See https://github.com/ossf/allstar/ for more informat
 // NoticePingDuration is the duration to wait between pinging notice actions,
 // such as updating a GitHub issue.
 const NoticePingDuration = (24 * time.Hour)
+
+var osGetenv func(string) string
+
+func init() {
+	osGetenv = os.Getenv
+	setVars()
+}
+
+func setVars() {
+	appIDs := osGetenv("APP_ID")
+	appID, err := strconv.ParseInt(appIDs, 10, 64)
+	if err == nil {
+		AppID = appID
+	} else {
+		AppID = setAppID
+	}
+
+	keySecret := osGetenv("KEY_SECRET")
+	if keySecret != "" {
+		KeySecret = keySecret
+	} else {
+		KeySecret = setKeySecret
+	}
+}

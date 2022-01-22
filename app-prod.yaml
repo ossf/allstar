@@ -1,0 +1,11 @@
+runtime: custom
+env: flex
+manual_scaling:
+  instances: 1
+resources:
+  cpu: 2
+  memory_gb: 12
+  disk_size_gb: 100
+env_variables:
+  APP_ID: 119816
+  KEY_SECRET: "gcpsecretmanager://projects/allstar-ossf/secrets/allstar-private-key?decoder=bytes"
