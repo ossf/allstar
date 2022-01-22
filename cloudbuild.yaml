@@ -7,7 +7,8 @@ steps:
   args: ['-c', 'KO_DOCKER_REPO="gcr.io/allstar-ossf" /go/bin/ko publish ./cmd/allstar > container']
 - name: gcr.io/google.com/cloudsdktool/cloud-sdk
   entrypoint: bash
-  args: ['-c', 'gcloud app deploy --project=allstar-ossf --image-url $(cat container)']
+  args: ['-c', 'gcloud app deploy --appyaml=app-staging.yaml --project=allstar-ossf --image-url $(cat container)']
+timeout: 900s
 options:
   volumes:
   - name: go-modules
