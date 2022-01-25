@@ -222,10 +222,11 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		Details: d,
 	}
 
-	if d.OwnerCount == 0 && !mc.OwnerlessAllowed {
-		rv.Pass = false
-		rv.NotifyText = rv.NotifyText + ownerlessText
-	}
+	// FIXME Ownerless not working due to bug in List Teams GitHub API
+	// if d.OwnerCount == 0 && !mc.OwnerlessAllowed {
+	// 	rv.Pass = false
+	// 	rv.NotifyText = rv.NotifyText + ownerlessText
+	// }
 
 	exp := false
 	if d.OutsidePushCount > 0 && !mc.PushAllowed {
