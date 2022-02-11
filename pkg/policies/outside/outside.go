@@ -70,9 +70,9 @@ type OrgConfig struct {
 	// access, default false.
 	AdminAllowed bool `yaml:"adminAllowed"`
 
-	// OwnerlessAllowed defined if repositories are allowed to have no
+	// TestingOwnerlessAllowed defined if repositories are allowed to have no
 	// administrators, default false.
-	OwnerlessAllowed bool `yaml:"ownerlessAllowed"`
+	TestingOwnerlessAllowed bool `yaml:"testingOwnerlessAllowed"`
 }
 
 // RepoConfig is the repo-level config for Outside Collaborators security
@@ -90,15 +90,15 @@ type RepoConfig struct {
 	// AdminAllowed overrides the same setting in org-level, only if present.
 	AdminAllowed *bool `yaml:"adminAllowed"`
 
-	// OwnerlessAllowed overrides the same setting in org-level, only if present.
-	OwnerlessAllowed *bool `yaml:"ownerlessAllowed"`
+	// TestingOwnerlessAllowed overrides the same setting in org-level, only if present.
+	TestingOwnerlessAllowed *bool `yaml:"testingOwnerlessAllowed"`
 }
 
 type mergedConfig struct {
-	Action           string
-	PushAllowed      bool
-	AdminAllowed     bool
-	OwnerlessAllowed bool
+	Action                  string
+	PushAllowed             bool
+	AdminAllowed            bool
+	TestingOwnerlessAllowed bool
 }
 
 type details struct {
@@ -140,8 +140,6 @@ type repositories interface {
 	ListTeams(context.Context, string, string, *github.ListOptions) (
 		[]*github.Team, *github.Response, error)
 }
-
-//func (s *RepositoriesService) ListTeams(ctx context.Context, owner string, repo string, opts *ListOptions) ([]*Team, *Response, error) {
 
 // Check performs the polcy check for Outside Collaborators based on the
 // configuration stored in the org/repo, implementing policydef.Policy.Check()
@@ -223,10 +221,10 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	}
 
 	// FIXME Ownerless not working due to bug in List Teams GitHub API
-	// if d.OwnerCount == 0 && !mc.OwnerlessAllowed {
-	// 	rv.Pass = false
-	// 	rv.NotifyText = rv.NotifyText + ownerlessText
-	// }
+	if d.OwnerCount == 0 && !mc.TestingOwnerlessAllowed {
+		rv.Pass = false
+		rv.NotifyText = rv.NotifyText + ownerlessText
+	}
 
 	exp := false
 	if d.OutsidePushCount > 0 && !mc.PushAllowed {
@@ -308,8 +306,9 @@ func (o Outside) GetAction(ctx context.Context, c *github.Client, owner, repo st
 
 func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgConfig, *RepoConfig) {
 	oc := &OrgConfig{ // Fill out non-zero defaults
-		Action:      "log",
-		PushAllowed: true,
+		Action:                  "log",
+		PushAllowed:             true,
+		TestingOwnerlessAllowed: true,
 	}
 	if err := configFetchConfig(ctx, c, owner, "", configFile, true, oc); err != nil {
 		log.Error().
@@ -337,10 +336,10 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 
 func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 	mc := &mergedConfig{
-		Action:           oc.Action,
-		PushAllowed:      oc.PushAllowed,
-		AdminAllowed:     oc.AdminAllowed,
-		OwnerlessAllowed: oc.OwnerlessAllowed,
+		Action:                  oc.Action,
+		PushAllowed:             oc.PushAllowed,
+		AdminAllowed:            oc.AdminAllowed,
+		TestingOwnerlessAllowed: oc.TestingOwnerlessAllowed,
 	}
 
 	if !oc.OptConfig.DisableRepoOverride {
@@ -353,8 +352,8 @@ func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 		if rc.AdminAllowed != nil {
 			mc.AdminAllowed = *rc.AdminAllowed
 		}
-		if rc.OwnerlessAllowed != nil {
-			mc.OwnerlessAllowed = *rc.OwnerlessAllowed
+		if rc.TestingOwnerlessAllowed != nil {
+			mc.TestingOwnerlessAllowed = *rc.TestingOwnerlessAllowed
 		}
 	}
 	return mc

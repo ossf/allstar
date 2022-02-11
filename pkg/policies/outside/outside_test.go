@@ -55,8 +55,8 @@ func TestCheck(t *testing.T) {
 		{
 			Name: "NotEnabled",
 			Org: OrgConfig{
-				PushAllowed:      true,
-				OwnerlessAllowed: true,
+				PushAllowed:             true,
+				TestingOwnerlessAllowed: true,
 			},
 			Repo:         RepoConfig{},
 			Users:        nil,
@@ -74,8 +74,8 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				PushAllowed:      true,
-				OwnerlessAllowed: true,
+				PushAllowed:             true,
+				TestingOwnerlessAllowed: true,
 			},
 			Repo:         RepoConfig{},
 			Users:        nil,
@@ -93,8 +93,8 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				PushAllowed:      true,
-				OwnerlessAllowed: true,
+				PushAllowed:             true,
+				TestingOwnerlessAllowed: true,
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
@@ -128,8 +128,8 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				PushAllowed:      true,
-				OwnerlessAllowed: true,
+				PushAllowed:             true,
+				TestingOwnerlessAllowed: true,
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
@@ -166,9 +166,9 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				PushAllowed:      false,
-				AdminAllowed:     false,
-				OwnerlessAllowed: true,
+				PushAllowed:             false,
+				AdminAllowed:            false,
+				TestingOwnerlessAllowed: true,
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
@@ -199,54 +199,54 @@ func TestCheck(t *testing.T) {
 				},
 			},
 		},
-		// {
-		// 	Name: "Ownerless blocked",
-		// 	Org: OrgConfig{
-		// 		OptConfig: config.OrgOptConfig{
-		// 			OptOutStrategy: true,
-		// 		},
-		// 		PushAllowed:      true,
-		// 		AdminAllowed:     true,
-		// 		OwnerlessAllowed: false,
-		// 	},
-		// 	Repo: RepoConfig{},
-		// 	Users: []*github.User{
-		// 		&github.User{
-		// 			Login: &alice,
-		// 			Permissions: map[string]bool{
-		// 				"push": true,
-		// 			},
-		// 		},
-		// 		&github.User{
-		// 			Login: &bob,
-		// 			Permissions: map[string]bool{
-		// 				"push":  true,
-		// 				"admin": true,
-		// 			},
-		// 		},
-		// 	},
-		// 	cofigEnabled: true,
-		// 	Exp: policydef.Result{
-		// 		Enabled:    true,
-		// 		Pass:       false,
-		// 		NotifyText: "Did not find any owners of this repository\nThis policy requires all repositories to have an organization member or team assigned as an administrator",
-		// 		Details: details{
-		// 			OutsidePushCount:  2,
-		// 			OutsidePushers:    []string{"alice", "bob"},
-		// 			OutsideAdminCount: 1,
-		// 			OutsideAdmins:     []string{"bob"},
-		// 		},
-		// 	},
-		// },
+		{
+			Name: "Ownerless blocked",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				PushAllowed:             true,
+				AdminAllowed:            true,
+				TestingOwnerlessAllowed: false,
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Did not find any owners of this repository\nThis policy requires all repositories to have an organization member or team assigned as an administrator",
+				Details: details{
+					OutsidePushCount:  2,
+					OutsidePushers:    []string{"alice", "bob"},
+					OutsideAdminCount: 1,
+					OutsideAdmins:     []string{"bob"},
+				},
+			},
+		},
 		{
 			Name: "Ownerless OK",
 			Org: OrgConfig{
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				PushAllowed:      true,
-				AdminAllowed:     true,
-				OwnerlessAllowed: false,
+				PushAllowed:             true,
+				AdminAllowed:            true,
+				TestingOwnerlessAllowed: false,
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
