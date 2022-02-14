@@ -33,6 +33,7 @@ import (
 
 const configFile = "binary_artifacts.yaml"
 const polName = "Binary Artifacts"
+const defaultGitRef = "HEAD"
 
 // OrgConfig is the org-level config definition for this policy.
 type OrgConfig struct {
@@ -136,7 +137,7 @@ func (l *logger) Debug3(msg *checker.LogMessage) {
 	// TODO(log): Implement SARIF formatted log
 }
 
-// Check performs the polcy check for this policy based on the
+// Check performs the policy check for this policy based on the
 // configuration stored in the org/repo, implementing policydef.Policy.Check()
 func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
@@ -177,7 +178,7 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 	}
 
 	repoClient := githubrepo.CreateGithubRepoClient(ctx, repoLogger)
-	if err := repoClient.InitRepo(scRepo); err != nil {
+	if err := repoClient.InitRepo(scRepo, defaultGitRef); err != nil {
 		return nil, err
 	}
 	defer repoClient.Close()
