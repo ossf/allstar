@@ -12,6 +12,7 @@ require (
 	github.com/ossf/scorecard v1.2.1-0.20210722153731-89c8e2af3131
 	github.com/rs/zerolog v1.26.1
 	github.com/shurcooL/githubv4 v0.0.0-20210725200734-83ba7b4c9228
+	go.uber.org/zap v1.19.0
 	gocloud.dev v0.24.0
 	gopkg.in/yaml.v2 v2.4.0
 )

@@ -16,25 +16,36 @@ package main
 
 import (
 	"context"
-	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
 
-	"github.com/ossf/allstar/pkg/enforce"
-	"github.com/ossf/allstar/pkg/ghclients"
-
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"go.uber.org/zap"
+
+	"github.com/ossf/allstar/pkg/enforce"
+	"github.com/ossf/allstar/pkg/ghclients"
+	"github.com/ossf/scorecard/roundtripper"
 )
 
 func main() {
 	setupLog()
 	ctx, cf := context.WithCancel(context.Background())
 
-	ghc, err := ghclients.NewGHClients(ctx, http.DefaultTransport)
+	// TODO(log): Remove once we update to scorecard/v4
+	zapLog, err := zap.NewProduction()
+	if err != nil {
+		log.Fatal().
+			Err(err).
+			Msg("Could not init zap logger, shutting down")
+	}
+	rtLog := zapLog.Sugar()
+
+	roundTripper := roundtripper.NewTransport(ctx, rtLog)
+	ghc, err := ghclients.NewGHClients(ctx, roundTripper)
 	if err != nil {
 		log.Fatal().
 			Err(err).
