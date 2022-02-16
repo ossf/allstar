@@ -81,59 +81,41 @@ func (b Binary) Name() string {
 	return polName
 }
 
+// TODO(log): Replace once scorecard supports a constructor for new loggers.
+//            This is a copy of the `DetailLogger` implementation at:
+//            https://github.com/ossf/scorecard/blob/ba503c3bee014d97c38f3f5caaeb6977935a9272/checker/detail_logger_impl.go
 type logger struct {
-	Messages2 []checker.CheckDetail
+	logs []checker.CheckDetail
 }
 
-func (l *logger) Info(desc string, args ...interface{}) {
+func (l *logger) Info(msg *checker.LogMessage) {
 	cd := checker.CheckDetail{
 		Type: checker.DetailInfo,
-		// TODO(log): Consider encapsulating more information with
-		//            `checker.LogMessage` fields
-		Msg: checker.LogMessage{
-			Text: fmt.Sprintf(desc, args...),
-		},
+		Msg:  *msg,
 	}
-
-	l.Messages2 = append(l.Messages2, cd)
+	l.logs = append(l.logs, cd)
 }
 
-func (l *logger) Warn(desc string, args ...interface{}) {
+func (l *logger) Warn(msg *checker.LogMessage) {
 	cd := checker.CheckDetail{
-		Type: checker.DetailInfo,
-		// TODO(log): Consider encapsulating more information with
-		//            `checker.LogMessage` fields
-		Msg: checker.LogMessage{
-			Text: fmt.Sprintf(desc, args...),
-		},
+		Type: checker.DetailWarn,
+		Msg:  *msg,
 	}
-
-	l.Messages2 = append(l.Messages2, cd)
+	l.logs = append(l.logs, cd)
 }
 
-func (l *logger) Debug(desc string, args ...interface{}) {
+func (l *logger) Debug(msg *checker.LogMessage) {
 	cd := checker.CheckDetail{
-		Type: checker.DetailInfo,
-		// TODO(log): Consider encapsulating more information with
-		//            `checker.LogMessage` fields
-		Msg: checker.LogMessage{
-			Text: fmt.Sprintf(desc, args...),
-		},
+		Type: checker.DetailDebug,
+		Msg:  *msg,
 	}
-
-	l.Messages2 = append(l.Messages2, cd)
+	l.logs = append(l.logs, cd)
 }
 
-func (l *logger) Info3(msg *checker.LogMessage) {
-	// TODO(log): Implement SARIF formatted log
-}
-
-func (l *logger) Warn3(msg *checker.LogMessage) {
-	// TODO(log): Implement SARIF formatted log
-}
-
-func (l *logger) Debug3(msg *checker.LogMessage) {
-	// TODO(log): Implement SARIF formatted log
+func (l *logger) Flush() []checker.CheckDetail {
+	ret := l.logs
+	l.logs = nil
+	return ret
 }
 
 // Check performs the policy check for this policy based on the
@@ -202,7 +184,7 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		Pass:       res.Score >= checker.MaxResultScore,
 		NotifyText: notify,
 		Details: details{
-			Messages: l.Messages2,
+			Messages: l.logs,
 		},
 	}, nil
 }
