@@ -18,15 +18,25 @@ package scorecard
 import (
 	"context"
 	"fmt"
+	"os"
+	"sort"
+	"strings"
+
+	"github.com/google/go-github/v39/github"
+	"github.com/rs/zerolog/log"
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
 	"github.com/ossf/scorecard/v4/checker"
 	"github.com/ossf/scorecard/v4/checks"
-	"github.com/ossf/scorecard/v4/clients/githubrepo"
-
-	"github.com/google/go-github/v39/github"
-	"github.com/rs/zerolog/log"
+	"github.com/ossf/scorecard/v4/clients"
+	screpo "github.com/ossf/scorecard/v4/clients/githubrepo"
+	docs "github.com/ossf/scorecard/v4/docs/checks"
+	"github.com/ossf/scorecard/v4/format"
+	sclog "github.com/ossf/scorecard/v4/log"
+	"github.com/ossf/scorecard/v4/options"
+	"github.com/ossf/scorecard/v4/pkg"
+	"github.com/ossf/scorecard/v4/policy"
 )
 
 const configFile = "scorecard.yaml"
@@ -107,18 +117,88 @@ func (sc Scorecard) Check(ctx context.Context, c *github.Client, owner,
 		}, nil
 	}
 
-	scRepoArg := fmt.Sprintf("%s/%s", owner, repo)
-	scRepo, err := githubrepo.MakeGithubRepo(scRepoArg)
+	// TODO(scorecard): Configure options
+	scOpts := options.New()
+	scOpts.Repo = fmt.Sprintf("%s/%s", owner, repo)
+
+	// TODO(scorecard): Read policy
+	pol, err := policy.ParseFromFile(scOpts.PolicyFile)
+	if err != nil {
+		return nil, fmt.Errorf("readPolicy: %v", err)
+	}
+
+	logger := sclog.NewLogger(sclog.Level(scOpts.LogLevel))
+
+	// TODO(scorecard): Plumb roundtripper into clients
+	//roundTripper := c.Client().Transport
+
+	// TODO(scorecard): Fix ciiClient, vulnsClient
+	scRepo, repoClient, ossFuzzRepoClient, ciiClient, vulnsClient, err := screpo.GetClients(
+		ctx, scOpts.Repo, scOpts.Local, logger)
+	if err != nil {
+		return nil, err
+	}
+	defer repoClient.Close()
+	if ossFuzzRepoClient != nil {
+		defer ossFuzzRepoClient.Close()
+	}
+
+	// TODO(scorecard): Read docs
+	checkDocs, err := docs.Read()
+	if err != nil {
+		return nil, fmt.Errorf("cannot read yaml file: %v", err)
+	}
+
+	// TODO(scorecard)
+	var requiredRequestTypes []checker.RequestType
+	if scOpts.Local != "" {
+		requiredRequestTypes = append(requiredRequestTypes, checker.FileBased)
+	}
+	if !strings.EqualFold(scOpts.Commit, clients.HeadSHA) {
+		requiredRequestTypes = append(requiredRequestTypes, checker.CommitBased)
+	}
+	enabledChecks, err := policy.GetEnabled(pol, scOpts.ChecksToRun, requiredRequestTypes)
 	if err != nil {
 		return nil, err
 	}
 
-	roundTripper := c.Client().Transport
-	repoClient := githubrepo.CreateGithubRepoClientWithTransport(ctx, roundTripper)
-	if err := repoClient.InitRepo(scRepo, defaultGitRef); err != nil {
+	if scOpts.Format == options.FormatDefault {
+		for checkName := range enabledChecks {
+			fmt.Fprintf(os.Stderr, "Starting [%s]\n", checkName)
+		}
+	}
+
+	repoResult, err := pkg.RunScorecards(ctx, scRepo, scOpts.Commit, scOpts.Format == options.FormatRaw, enabledChecks, repoClient,
+		ossFuzzRepoClient, ciiClient, vulnsClient)
+	if err != nil {
 		return nil, err
 	}
-	defer repoClient.Close()
+	repoResult.Metadata = append(repoResult.Metadata, scOpts.Metadata...)
+
+	// Sort them by name
+	sort.Slice(repoResult.Checks, func(i, j int) bool {
+		return repoResult.Checks[i].Name < repoResult.Checks[j].Name
+	})
+
+	if scOpts.Format == options.FormatDefault {
+		for checkName := range enabledChecks {
+			fmt.Fprintf(os.Stderr, "Finished [%s]\n", checkName)
+		}
+		fmt.Println("\nRESULTS\n-------")
+	}
+
+	resultsErr := format.FormatResults(
+		scOpts,
+		repoResult,
+		checkDocs,
+		pol,
+	)
+	if resultsErr != nil {
+		return nil, fmt.Errorf("failed to format results: %v", err)
+	}
+
+	// TODO(scorecard): Refactor below here
+
 	l := checker.NewLogger()
 	cr := &checker.CheckRequest{
 		Ctx:        ctx,

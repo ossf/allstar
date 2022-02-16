@@ -12,6 +12,7 @@ require (
 	github.com/ossf/scorecard/v4 v4.1.1-0.20220227152949-d71866ca16b4
 	github.com/rs/zerolog v1.26.1
 	github.com/shurcooL/githubv4 v0.0.0-20210725200734-83ba7b4c9228
+	github.com/spf13/cobra v1.3.0
 	gocloud.dev v0.24.0
 	gopkg.in/yaml.v2 v2.4.0
 )
