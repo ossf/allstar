@@ -81,43 +81,6 @@ func (b Binary) Name() string {
 	return polName
 }
 
-// TODO(log): Replace once scorecard supports a constructor for new loggers.
-//            This is a copy of the `DetailLogger` implementation at:
-//            https://github.com/ossf/scorecard/blob/ba503c3bee014d97c38f3f5caaeb6977935a9272/checker/detail_logger_impl.go
-type logger struct {
-	logs []checker.CheckDetail
-}
-
-func (l *logger) Info(msg *checker.LogMessage) {
-	cd := checker.CheckDetail{
-		Type: checker.DetailInfo,
-		Msg:  *msg,
-	}
-	l.logs = append(l.logs, cd)
-}
-
-func (l *logger) Warn(msg *checker.LogMessage) {
-	cd := checker.CheckDetail{
-		Type: checker.DetailWarn,
-		Msg:  *msg,
-	}
-	l.logs = append(l.logs, cd)
-}
-
-func (l *logger) Debug(msg *checker.LogMessage) {
-	cd := checker.CheckDetail{
-		Type: checker.DetailDebug,
-		Msg:  *msg,
-	}
-	l.logs = append(l.logs, cd)
-}
-
-func (l *logger) Flush() []checker.CheckDetail {
-	ret := l.logs
-	l.logs = nil
-	return ret
-}
-
 // Check performs the policy check for this policy based on the
 // configuration stored in the org/repo, implementing policydef.Policy.Check()
 func (b Binary) Check(ctx context.Context, c *github.Client, owner,
@@ -157,15 +120,15 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		return nil, err
 	}
 	defer repoClient.Close()
-	l := logger{}
+	l := checker.NewLogger()
 	cr := &checker.CheckRequest{
 		Ctx:        ctx,
 		RepoClient: repoClient,
 		Repo:       scRepo,
-		Dlogger:    &l,
+		Dlogger:    l,
 	}
 
-	// TODO, likely this should be a "scorecard" policy that runs multiple checks
+	// TODO(scorecard): Likely this should be a "scorecard" policy that runs multiple checks
 	// here, and uses config to enable/disable checks.
 	res := checks.BinaryArtifacts(cr)
 	if res.Error2 != nil {
@@ -184,7 +147,7 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		Pass:       res.Score >= checker.MaxResultScore,
 		NotifyText: notify,
 		Details: details{
-			Messages: l.logs,
+			Messages: l.Logs(),
 		},
 	}, nil
 }
