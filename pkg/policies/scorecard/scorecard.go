@@ -30,9 +30,7 @@ import (
 	"github.com/ossf/scorecard/v4/checker"
 	"github.com/ossf/scorecard/v4/checks"
 	"github.com/ossf/scorecard/v4/clients"
-	screpo "github.com/ossf/scorecard/v4/clients/githubrepo"
 	docs "github.com/ossf/scorecard/v4/docs/checks"
-	"github.com/ossf/scorecard/v4/format"
 	sclog "github.com/ossf/scorecard/v4/log"
 	"github.com/ossf/scorecard/v4/options"
 	"github.com/ossf/scorecard/v4/pkg"
@@ -133,7 +131,7 @@ func (sc Scorecard) Check(ctx context.Context, c *github.Client, owner,
 	//roundTripper := c.Client().Transport
 
 	// TODO(scorecard): Fix ciiClient, vulnsClient
-	scRepo, repoClient, ossFuzzRepoClient, ciiClient, vulnsClient, err := screpo.GetClients(
+	scRepo, repoClient, ossFuzzRepoClient, ciiClient, vulnsClient, err := checker.GetClients(
 		ctx, scOpts.Repo, scOpts.Local, logger)
 	if err != nil {
 		return nil, err
@@ -187,9 +185,9 @@ func (sc Scorecard) Check(ctx context.Context, c *github.Client, owner,
 		fmt.Println("\nRESULTS\n-------")
 	}
 
-	resultsErr := format.FormatResults(
+	resultsErr := pkg.FormatResults(
 		scOpts,
-		repoResult,
+		&repoResult,
 		checkDocs,
 		pol,
 	)
