@@ -35,11 +35,15 @@ ________
 
 ### What is Allstar?
 
-Allstar is a GitHub App that continuously monitors GitHub organizations or repositories for adherence to security best practices. If Allstar detects a security policy violation, it creates an issue to alert the repository or organization owner. Future versions of Allstar will be able to automatically revert certain project settings to conform with the expected security best practice.
+Allstar is a GitHub App that continuously monitors GitHub organizations or repositories for adherence to security best practices. 
+If Allstar detects a security policy violation, it creates an issue to alert the repository or organization owner. 
+Future versions of Allstar will be able to automatically revert certain project settings to conform with the expected security best practice.
 
-Allstar is highly configurable: owners can choose which security policies to monitor at both the organization and repository level, and how to handle policy violations. Users can also develop or contribute new policies. 
+Allstar’s goal is to give you finely tuned control over the settings and files that affect the security of your projects.
+You can choose which security policies to monitor at both the organization and repository level, and how to handle policy violations. 
+You can also develop or contribute new policies. 
 
-Allstar’s goal is to give its users finely tuned control over the settings and files that affect the security of their projects. It is developed under the [OpenSSF](https://openssf.org/) organization, as
+Allstar is developed under the [OpenSSF](https://openssf.org/) organization, as
 a part of the [Securing Critical Projects Working
 Group](https://github.com/ossf/wg-securing-critical-projects). 
 
