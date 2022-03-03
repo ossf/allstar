@@ -35,23 +35,13 @@ ________
 
 ### What is Allstar?
 
-Allstar is a GitHub App installed on organizations or repositories to set and
-enforce security policies. Its goal is to be able to continuously monitor and
-detect any GitHub setting or repository file contents that may be risky or do
-not follow security best practices. If Allstar finds a repository to be out of
-compliance, it will take an action such as create an issue or restore security
-settings.
+Allstar is a GitHub App that continuously monitors GitHub organizations or repositories for adherence to security best practices. If Allstar detects a security policy violation, it creates an issue to alert the repository or organization owner. Future versions of Allstar will be able to automatically revert certain project settings to conform with the expected security best practice.
 
-The specific policies are intended to be highly configurable, to try to meet the
-needs of different project communities and organizations. Also, developing and
-contributing new policies is intended to be easy.
+Allstar is highly configurable: owners can choose which security policies to monitor at both the organization and repository level, and how to handle policy violations. Users can also develop or contribute new policies. 
 
-Allstar is developed under the [OpenSSF](https://openssf.org/) organization, as
+Allstar’s goal is to give its users finely tuned control over the settings and files that affect the security of their projects. It is developed under the [OpenSSF](https://openssf.org/) organization, as
 a part of the [Securing Critical Projects Working
-Group](https://github.com/ossf/wg-securing-critical-projects). The OpenSSF runs
-[an instance of Allstar here](https://github.com/apps/allstar-app) for anyone to
-install and use on their GitHub organizations. However, Allstar can be run by
-anyone if need be, see [the operator docs](operator.md) for more details.
+Group](https://github.com/ossf/wg-securing-critical-projects). 
 
 ## Disabling Unwanted Issues
 If you're getting unwanted issues created by Allstar, follow [these directions](opt-out.md) to opt out. 
