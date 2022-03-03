@@ -25,6 +25,7 @@
 ## Advanced
 - [Configuration Definitions](#configuration-definitions)
 - [Example Configurations](#example-config-repository)
+- [RunYour Own Instance of Allstar](#operator.md)
 
 ## Contribute
 - [Contribute Policies](#contribute-policies)
