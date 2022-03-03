@@ -165,7 +165,7 @@ Steps:
 1) Install the [Allstar app](https://github.com/apps/allstar-app) (choose "All
 Repositories" under Repository Access, even if you plan to disable Allstar on some repositories later)  
 2) Fork the [sample repository
-](https://github.com/jeffmendoza/dot-allstar-quickstart)
+](https://github.com/jeffmendoza/dot-allstar-quickstart) (simply click "Fork" button in the top right corner of the linked page) 
 
 That's it! All current Allstar [policies](#policies) are now enabled on all
 your repositories. Allstar will create an issue if a policy is violated. 
