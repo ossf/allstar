@@ -112,6 +112,16 @@ issueRepo: testrepository
 			Got: &OrgConfig{},
 		},
 		{
+			Name: "IssueFooter",
+			Input: `
+issueFooter: testfooter
+`,
+			Expect: &OrgConfig{
+				IssueFooter: "testfooter",
+			},
+			Got: &OrgConfig{},
+		},
+		{
 			Name: "OptOutRepo",
 			Input: `
 optConfig:

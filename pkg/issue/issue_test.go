@@ -63,6 +63,7 @@ func TestEnsure(t *testing.T) {
 	issueTitle := "Security Policy violation thispolicy"
 	closed := "closed"
 	open := "open"
+	body := "Allstar has detected that this repository’s thispolicy security policy is out of compliance. Status:\nStatus text\n\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
 	configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig) {
 		return &config.OrgConfig{}, &config.RepoConfig{}
 	}
@@ -79,6 +80,43 @@ func TestEnsure(t *testing.T) {
 			}
 			if (*issue.Labels)[0] != operator.GitHubIssueLabel {
 				t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
+			}
+			if *issue.Body != body {
+				t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), body)
+			}
+			createCalled = true
+			return nil, nil, nil
+		}
+		edit = nil
+		createComment = nil
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if createCalled != true {
+			t.Error("Expected issue to be created")
+		}
+	})
+	t.Run("NoIssueWithFooter", func(t *testing.T) {
+		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig) {
+			return &config.OrgConfig{IssueFooter: "CustomFooter"}, &config.RepoConfig{}
+		}
+		bodyWithFooter := "Allstar has detected that this repository’s thispolicy security policy is out of compliance. Status:\nStatus text\n\nCustomFooter\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
+		listByRepo = func(ctx context.Context, owner string, repo string,
+			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
+		}
+		createCalled := false
+		create = func(ctx context.Context, owner string, repo string,
+			issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+			if *issue.Title != issueTitle {
+				t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
+			}
+			if (*issue.Labels)[0] != operator.GitHubIssueLabel {
+				t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
+			}
+			if *issue.Body != bodyWithFooter {
+				t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), bodyWithFooter)
 			}
 			createCalled = true
 			return nil, nil, nil

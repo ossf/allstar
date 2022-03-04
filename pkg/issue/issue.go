@@ -91,8 +91,15 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		return err
 	}
 	if issue == nil {
+		oc, _ := configGetAppConfigs(ctx, c, owner, repo)
+		var footer string
+		if oc.IssueFooter == "" {
+			footer = operator.GitHubIssueFooter
+		} else {
+			footer = fmt.Sprintf("%v\n%v", oc.IssueFooter, operator.GitHubIssueFooter)
+		}
 		body := fmt.Sprintf("Allstar has detected that this repository’s %v security policy is out of compliance. Status:\n%v\n\n%v",
-			policy, text, operator.GitHubIssueFooter)
+			policy, text, footer)
 		new := &github.IssueRequest{
 			Title:  &title,
 			Body:   &body,
