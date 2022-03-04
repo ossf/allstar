@@ -19,6 +19,7 @@ package binary
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
@@ -58,7 +59,7 @@ type mergedConfig struct {
 }
 
 type details struct {
-	Messages []checker.CheckDetail
+	Artifacts []string
 }
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, bool, interface{}) error
@@ -172,21 +173,41 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		return nil, res.Error2
 	}
 
+	logs := convertLogs(l.logs)
+	pass := res.Score >= checker.MaxResultScore
 	var notify string
-	if res.Score < checker.MaxResultScore {
-		notify = fmt.Sprintf("Scorecard Check Binary Artifacts failed: %v\n"+
-			"Please run scorecard directly for details: https://github.com/ossf/scorecard\n",
+	if !pass {
+		notify = fmt.Sprintf(
+			"Scorecard Check Binary Artifacts failed: %v\n"+
+				"Binary Artifacts are an increased security risk in your repository. Binary artifacts cannot be reviewed, allowing possible obsolete or maliciously subverted executables.\n"+
+				"To remediate, remove the generated executable artifacts from the repository. Build from source where possible.\n"+
+				"For more information see https://github.com/ossf/scorecard/blob/main/docs/checks.md#binary-artifacts. Also, you may run scorecard directly on this repository for more details.\n",
 			res.Reason)
+		if len(logs) > 10 {
+			notify += fmt.Sprintf(
+				"First 10 artifacts found:\n%vRun scorecards to see full list.\n",
+				strings.Join(logs[:10], "\n"))
+		} else {
+			notify += fmt.Sprintf("Artifacts found:\n%v", strings.Join(logs, "\n"))
+		}
 	}
 
 	return &policydef.Result{
 		Enabled:    enabled,
-		Pass:       res.Score >= checker.MaxResultScore,
+		Pass:       pass,
 		NotifyText: notify,
 		Details: details{
-			Messages: l.logs,
+			Artifacts: logs,
 		},
 	}, nil
+}
+
+func convertLogs(logs []checker.CheckDetail) []string {
+	var s []string
+	for _, l := range logs {
+		s = append(s, fmt.Sprintf("%v\t: %v", l.Msg.Path, l.Msg.Text))
+	}
+	return s
 }
 
 // Fix implementing policydef.Policy.Fix(). Scorecard checks will not have a Fix option.
