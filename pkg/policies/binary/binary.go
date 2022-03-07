@@ -179,9 +179,9 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 	if !pass {
 		notify = fmt.Sprintf(
 			"Scorecard Check Binary Artifacts failed: %v\n"+
-				"Binary Artifacts are an increased security risk in your repository. Binary artifacts cannot be reviewed, allowing possible obsolete or maliciously subverted executables.\n"+
+				"Binary Artifacts are an increased security risk in your repository. Binary artifacts cannot be reviewed, allowing the introduction of possibly obsolete or maliciously subverted executables.\n"+
 				"To remediate, remove the generated executable artifacts from the repository. Build from source where possible.\n"+
-				"For more information see https://github.com/ossf/scorecard/blob/main/docs/checks.md#binary-artifacts. Also, you may run scorecard directly on this repository for more details.\n",
+				"For more information see https://github.com/ossf/scorecard/blob/main/docs/checks.md#binary-artifacts. Also, you may run [Security Scorecards](https://github.com/ossf/scorecard/) directly on this repository for more details.\n",
 			res.Reason)
 		if len(logs) > 10 {
 			notify += fmt.Sprintf(
