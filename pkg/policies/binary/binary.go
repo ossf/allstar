@@ -19,7 +19,6 @@ package binary
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
@@ -177,19 +176,26 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 	pass := res.Score >= checker.MaxResultScore
 	var notify string
 	if !pass {
-		notify = fmt.Sprintf(
-			"Scorecard Check Binary Artifacts failed: %v\n"+
-				"Binary Artifacts are an increased security risk in your repository. Binary artifacts cannot be reviewed, allowing the introduction of possibly obsolete or maliciously subverted executables.\n"+
-				"To remediate, remove the generated executable artifacts from the repository. Build from source where possible.\n"+
-				"For more information see https://github.com/ossf/scorecard/blob/main/docs/checks.md#binary-artifacts. Also, you may run [Security Scorecards](https://github.com/ossf/scorecard/) directly on this repository for more details.\n",
+		notify = fmt.Sprintf(`Project is out of compliance with Binary Artifacts policy: %v
+
+**Rule Description**
+Binary Artifacts are an increased security risk in your repository. Binary artifacts cannot be reviewed, allowing the introduction of possibly obsolete or maliciously subverted executables. For more information see the [Security Scorecards Documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md#binary-artifacts) for Binary Artifacts.
+
+**Remediation Steps**
+To remediate, remove the generated executable artifacts from the repository.
+
+`,
 			res.Reason)
 		if len(logs) > 10 {
 			notify += fmt.Sprintf(
-				"First 10 artifacts found:\n%vRun scorecards to see full list.\n",
-				strings.Join(logs[:10], "\n"))
+				"**First 10 Artifacts Found**\n\n%v"+
+					"- Run a Scorecards scan to see full list.\n\n",
+				listJoin(logs[:10]))
 		} else {
-			notify += fmt.Sprintf("Artifacts found:\n%v", strings.Join(logs, "\n"))
+			notify += fmt.Sprintf("**Artifacts Found**\n\n%v\n", listJoin(logs))
 		}
+		notify += `**Additional Information**
+This policy is drawn from [Security Scorecards](https://github.com/ossf/scorecard/), which is a tool that scores a project's adherence to security best practices. You may wish to run a Scorecards scan directly on this repository for more details.`
 	}
 
 	return &policydef.Result{
@@ -202,10 +208,18 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 	}, nil
 }
 
+func listJoin(list []string) string {
+	var s string
+	for _, l := range list {
+		s += fmt.Sprintf("- %v\n", l)
+	}
+	return s
+}
+
 func convertLogs(logs []checker.CheckDetail) []string {
 	var s []string
 	for _, l := range logs {
-		s = append(s, fmt.Sprintf("%v\t: %v", l.Msg.Path, l.Msg.Text))
+		s = append(s, l.Msg.Path)
 	}
 	return s
 }
