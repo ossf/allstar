@@ -42,7 +42,7 @@ To opt-out all private/public repositories, add `optOutPrivateRepos` or `optOutP
      optOutPrivateRepos: true
      optOutPublicRepos: false
    ```
-4. Optional: Disable Resitory Override 
+4. Optional: Disable Repository Override 
 
 The repository override setting gives repositories the ability to opt themselves in or out of Allstar settings independent of configurations at the org level. 
 If you prefer to strictly enforce your org-level settings on your repositories, you can disable repository override. Repositories will not be able to change Allstar settings that affect them without filing a PR to request org-level changes. 
