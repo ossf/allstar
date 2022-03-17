@@ -7,7 +7,7 @@ To determine if Allstar is configured in the opt-out strategy, there will be a r
     optConfig:
       optOutStrategy: true
 
-To opt-out, submit a PR to that `.allstar` repo, and add the name of your repository to the opt-out list. ex:
+To opt-out, submit a PR to that `.allstar` repo, and add the name of your repository to the opt-out list. i.e.:
 
     optConfig:
       optOutStrategy: true
@@ -38,7 +38,7 @@ Opt-in is the default strategy, so if that repo, file, or setting is missing: Al
       - my-repo-name-here
       - yet-another-repo
 
-Sumit a PR to the `.allstar` repo removing your repo name from that list.
+Submit a PR to the `.allstar` repo removing your repo name from that list.
 
 Another way your repo may be opted-in is a file in your repo named `.allstar/allstar.yaml` with contents such as:
 

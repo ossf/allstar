@@ -322,7 +322,7 @@ above, are expected to be in a `.allstar` repository. If this repository does
 not exist, then the `.github` repository `allstar` directory is used as a
 secondary location. To clarify, for `allstar.yaml`:
 
-| Prescedence | Repository | Path |
+| Precedence | Repository | Path |
 | - | - | - |
 | Primary | `.allstar` | `allstar.yaml` |
 | Secondary | `.github` | `allstar/allstar.yaml` |
