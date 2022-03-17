@@ -36,10 +36,10 @@ find out how Allstar is configured on your organization or repository.
 
 1. In that file, look for a setting that says:
 
-    `optConfig:`
-
 ```
-      optOutStrategy: [true or false]
+    optConfig:
+
+      optOutStrategy: 
 ```
 
 -  If `optOutStrategy` is set to `true`, Allstar is configured in the
@@ -50,9 +50,7 @@ find out how Allstar is configured on your organization or repository.
     opt-in strategy. Follow the [opt-in strategy
     instructions](#heading=h.ewhi4ihr9ws9).
 
-If this setting, file, or repository does not exist, it means Allstar is
-configured in the opt-in strategy (the default). You will have to figure out
-where your repository has been opted-in. 
+If this setting, file, or repository does not exist, it means that your project has been opted-in elsewhere and you will need to determine where:
 
 Check the org-level `allstar.yaml` file for your repo. It may look like this:
 
@@ -66,14 +64,16 @@ optConfig:
 ```
 
 If your repository is on the `optInRepos` list, follow the [opt-in strategy
-instructions](#heading=h.ewhi4ihr9ws9).  
+instructions](#disable-allstar-org-level-opt-in-strategy).  
+    
 If your repository is not listed in the allstar.yaml file, it means Allstar is
-configured directly on your repository. Follow the [Repository Opt-Out
-Instructions](#heading=h.d65tdvdalj48).
+configured directly on your repository. Follow the [repository-level instuctions](#disable-allstar-repository-level).
 </details>
 
 ## Disable Allstar, org-level opt-out strategy
-    
+
+These instuctions disable Allstar on a repository when Allstar is configured at the org-level using the opt-out strategy. 
+   
 In the `.allstar` repository in your organization, open the file named
 `allstar.yaml`.   
 
