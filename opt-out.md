@@ -17,9 +17,9 @@ follow the instructions for the appropriate configuration:
 
 If you did not install Allstar yourself and do not know which instructions to
 follow, you should contact your administrator to find out how Allstar is
-configured.
+configured on your organization.
 
-If you are unable to contact the administrator, you can still opt out of
+If you are unable to contact the administrator, you can still disable of
 Allstar, but it will take a little more work. Follow [these instructions
 ](#determine-how-allstar-is-configured)to figure out how Allstar is configured on your project. 
 
@@ -30,11 +30,11 @@ Allstar, but it will take a little more work. Follow [these instructions
 Follow these instructions if you are unable to contact your administrator to
 find out how Allstar is configured on your organization or repository.
 
-1. In your organization, find the repository named `.allstar`. 
+In your organization, find the repository named `.allstar`. 
 
-1. In the `.allstar` repository, find the file named `allstar.yaml.`
+In the `.allstar` repository, find the file named `allstar.yaml.`
 
-1. In that file, look for a setting that says:
+In that file, look for a setting that says:
 
 ```
     optConfig:
@@ -42,13 +42,11 @@ find out how Allstar is configured on your organization or repository.
       optOutStrategy: 
 ```
 
--  If `optOutStrategy` is set to `true`, Allstar is configured in the
-    opt-out strategy. Follow the [opt-out strategy
-    instructions](#heading=h.gnsv0s5t81xz).
+-  If `optOutStrategy` is set to `true`, follow the [opt-out strategy
+    instructions](#disable-allstar-org-level-opt-out-strategy).
 
--  If `optOutStrategy` is set to `false`, Allstar is configured in the
-    opt-in strategy. Follow the [opt-in strategy
-    instructions](#heading=h.ewhi4ihr9ws9).
+-  If `optOutStrategy` is set to `false`, follow the [opt-in strategy
+    instructions](#disable-allstar-org-level-opt-in-strategy).
 
 If this setting, file, or repository does not exist, it means that your project has been opted-in elsewhere and you will need to determine where:
 
@@ -139,7 +137,8 @@ optConfig:
 ```
 
 Submit a PR to the `.allstar` repo that removes your repo name from that list.  
-When the PR is merged, Allstar will be disabled on your repository. 
+
+When the PR is merged, Allstar should be disabled on your repository. If you still continue to receive issues, though, it means your project was also opted-in at the repository level. You must also follow the [repository-level instructions](disable-allstar-repository-level). 
 
 ## Disable Allstar, repository level
 These instuctions uninstall Allstar when it is configured directly on your repository (not at the organization level). 
