@@ -70,7 +70,7 @@ configured directly on your repository. Follow the [repository-level instuctions
 
 ## Disable Allstar, org-level opt-out strategy
 
-These instuctions disable Allstar on a repository when Allstar is configured at the org-level using the opt-out strategy. 
+These instuctions disable Allstar on a repository when Allstar is configured at the organization level using the opt-out strategy. 
    
 In the `.allstar` repository in your organization, open the file named
 `allstar.yaml`.   
@@ -92,20 +92,20 @@ optConfig:
   - my-repo-name-here
 ```
 
-Allstar will be disabled on your repository when the PR is merged. 
+Allstar will be disabled on your repository when the pull request is merged. 
 
 ### Alternative option: with repo-override
 
 This alternative option uses the `repo-override` setting to avoid the need to
-send a PR to the org-level .`allstar` repo, but works only if:
+submit a pull request to the organization's `.allstar` repo, but works only if:
 
 -  the org-level `allstar.yaml` config has the line `disableRepoOverride:
     false` 
 
 or 
 
--  the org-level `allstar.yaml` config file does not include
-    `disableRepoOverride` (since the default is `false`).
+-  the org-level `allstar.yaml` config file does not the include
+    `disableRepoOverride` setting (which defaults to `false`).
 
 If `disableRepoOverride` is set to `true`, the following instructions will not
 work.  
@@ -122,7 +122,7 @@ Merge this file to disable Allstar on your repository.
 
 ## Disable Allstar, org-level opt-in strategy
 
-These instuctions disable Allstar on a repository when Allstar is configured at the org-level using the opt-in strategy. 
+These instuctions disable Allstar on a repository when Allstar is configured at the organization level using the opt-in strategy. 
 
 In the org-level .allstar repository, open the `allstar.yaml` file. Find the
 `optInRepos` setting:
@@ -136,12 +136,13 @@ optConfig:
   - yet-another-repo
 ```
 
-Submit a PR to the `.allstar` repo that removes your repo name from that list.  
+Submit a pull request to the `.allstar` repo that removes your repo name from that list.  
 
-When the PR is merged, Allstar should be disabled on your repository. If you still continue to receive issues, though, it means your project was also opted-in at the repository level. You must also follow the [repository-level instructions](disable-allstar-repository-level). 
+When the pull request is merged, Allstar should be disabled on your repository. If you still continue to receive issues, though, it means your project was also opted-in at the repository level. You must also follow the [repository-level instructions](disable-allstar-repository-level). 
 
 ## Disable Allstar, repository level
-These instuctions uninstall Allstar when it is configured directly on your repository (not at the organization level). 
+
+These instuctions disable Allstar when it is configured directly on your repository (not at the organization level). 
 
 Look in your repository for a file named `.allstar/allstar.yaml`. It
     should contain this setting:
@@ -152,4 +153,4 @@ optConfig:
 ```
 
 Remove the `.allstar/allstar.yaml` file from your repository to
-    uninstall Allstar.
+    disable Allstar.
