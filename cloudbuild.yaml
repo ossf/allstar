@@ -1,14 +1,14 @@
 steps:
-- name: golang
+- name: golang:1.17
   entrypoint: go
-  args: ['install', 'github.com/google/ko@v0.9.3']
-- name: golang
+  args: ['install', 'github.com/google/ko@v0.10.0']
+- name: golang:1.17
   entrypoint: bash
   args: ['-c', 'KO_DOCKER_REPO="gcr.io/allstar-ossf" /go/bin/ko publish ./cmd/allstar > container']
 - name: gcr.io/google.com/cloudsdktool/cloud-sdk
   entrypoint: bash
   args: ['-c', 'gcloud app deploy --appyaml=app-staging.yaml --project=allstar-ossf --image-url $(cat container)']
-timeout: 900s
+timeout: 1200s
 options:
   volumes:
   - name: go-modules
