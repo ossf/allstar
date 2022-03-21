@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sort"
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
@@ -60,6 +61,14 @@ type OrgConfig struct {
 
 	// BlockForce : set to true to block force pushes, default true.
 	BlockForce bool `yaml:"blockForce"`
+
+	// RequireUpToDateBranch : set to true to require that branches must be up
+	// to date before merging. Default false.
+	RequireUpToDateBranch bool `yaml:"requireUpToDateBranch"`
+
+	// RequireStatusChecks is a list of status checks (by name) that are required in
+	// order to merge into the protected branch.
+	RequireStatusChecks []string `yaml:"requireStatusChecks"`
 }
 
 // RepoConfig is the repo-level config for Branch Protection
@@ -88,23 +97,35 @@ type RepoConfig struct {
 
 	// BlockForce overrides the same setting in org-level, only if present.
 	BlockForce *bool `yaml:"blockForce"`
+
+	// RequireUpToDateBranch : set to true to require that branches must be up
+	// to date before merging. Default false.
+	RequireUpToDateBranch *bool `yaml:"requireUpToDateBranch"`
+
+	// RequireStatusChecks is a list of status checks (by name) that are required in
+	// order to merge into the protected branch.
+	RequireStatusChecks []string `yaml:"statusChecks"`
 }
 
 type mergedConfig struct {
-	Action          string
-	EnforceDefault  bool
-	EnforceBranches []string
-	RequireApproval bool
-	ApprovalCount   int
-	DismissStale    bool
-	BlockForce      bool
+	Action                string
+	EnforceDefault        bool
+	EnforceBranches       []string
+	RequireApproval       bool
+	ApprovalCount         int
+	DismissStale          bool
+	BlockForce            bool
+	RequireUpToDateBranch bool
+	RequireStatusChecks   []string
 }
 
 type details struct {
-	PRReviews    bool
-	NumReviews   int
-	DismissStale bool
-	BlockForce   bool
+	PRReviews             bool
+	NumReviews            int
+	DismissStale          bool
+	BlockForce            bool
+	RequireUpToDateBranch bool
+	RequireStatusChecks   []string
 }
 
 var configFetchConfig func(context.Context, *github.Client, string, string,
@@ -267,6 +288,42 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 				d.BlockForce = false
 			}
 		}
+		rsc := p.GetRequiredStatusChecks()
+		if rsc != nil {
+			d.RequireUpToDateBranch = rsc.Strict
+			if mc.RequireUpToDateBranch && !rsc.Strict {
+				text = text +
+					fmt.Sprintf("Require up to date branch not configured for branch %v\n",
+						b)
+				pass = false
+			}
+			d.RequireStatusChecks = rsc.Contexts
+			c := make(map[string]struct{}, len(rsc.Contexts))
+			for _, ctx := range rsc.Contexts {
+				c[ctx] = struct{}{}
+			}
+			for _, check := range mc.RequireStatusChecks {
+				if _, ok := c[check]; !ok {
+					text = text +
+						fmt.Sprintf("Status check %v not required for branch %v\n",
+							check, b)
+					pass = false
+				}
+			}
+		} else {
+			d.RequireUpToDateBranch = false
+			if mc.RequireUpToDateBranch {
+				text = text +
+					fmt.Sprintf("Require up to date branch not configured for branch %v\n",
+						b)
+				pass = false
+			}
+			if len(mc.RequireStatusChecks) > 0 {
+				text = text +
+					fmt.Sprintf("No status checks required for branch %v\n", b)
+				pass = false
+			}
+		}
 		ds[b] = d
 	}
 
@@ -318,6 +375,14 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 						RequiredApprovingReviewCount: mc.ApprovalCount,
 					}
 					pr.RequiredPullRequestReviews = rq
+				}
+				if mc.RequireUpToDateBranch || len(mc.RequireStatusChecks) > 0 {
+					rsc := &github.RequiredStatusChecks{
+						Strict: mc.RequireUpToDateBranch,
+						// Can't be set to nil, so force non-nil value.
+						Contexts: append([]string{}, mc.RequireStatusChecks...),
+					}
+					pr.RequiredStatusChecks = rsc
 				}
 				_, _, err := rep.UpdateBranchProtection(ctx, owner, repo, b, pr)
 				if err != nil {
@@ -397,6 +462,35 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 				update = true
 			}
 		}
+		if pr.RequiredStatusChecks == nil && (mc.RequireUpToDateBranch || len(mc.RequireStatusChecks) > 0) {
+			rsc := &github.RequiredStatusChecks{
+				Strict: mc.RequireUpToDateBranch,
+				// Can't be set to nil, so force non-nil value.
+				Contexts: append([]string{}, mc.RequireStatusChecks...),
+			}
+			pr.RequiredStatusChecks = rsc
+			update = true
+		} else if mc.RequireUpToDateBranch || len(mc.RequireStatusChecks) > 0 {
+			if mc.RequireUpToDateBranch && !pr.RequiredStatusChecks.Strict {
+				pr.RequiredStatusChecks.Strict = true
+				update = true
+			}
+			if len(mc.RequireStatusChecks) > 0 {
+				allContexts := make(map[string]struct{}, len(pr.RequiredStatusChecks.Contexts))
+				for _, ctx := range pr.RequiredStatusChecks.Contexts {
+					allContexts[ctx] = struct{}{}
+				}
+				for _, ctx := range mc.RequireStatusChecks {
+					allContexts[ctx] = struct{}{}
+				}
+				pr.RequiredStatusChecks.Contexts = make([]string, 0)
+				for ctx := range allContexts {
+					pr.RequiredStatusChecks.Contexts = append(pr.RequiredStatusChecks.Contexts, ctx)
+				}
+				sort.Strings(pr.RequiredStatusChecks.Contexts)
+				update = true
+			}
+		}
 		if update {
 			_, _, err := rep.UpdateBranchProtection(ctx, owner, repo, b, pr)
 			if err != nil {
@@ -456,15 +550,18 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 
 func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 	mc := &mergedConfig{
-		Action:          oc.Action,
-		EnforceDefault:  oc.EnforceDefault,
-		EnforceBranches: oc.EnforceBranches[repo],
-		RequireApproval: oc.RequireApproval,
-		ApprovalCount:   oc.ApprovalCount,
-		DismissStale:    oc.DismissStale,
-		BlockForce:      oc.BlockForce,
+		Action:                oc.Action,
+		EnforceDefault:        oc.EnforceDefault,
+		EnforceBranches:       oc.EnforceBranches[repo],
+		RequireApproval:       oc.RequireApproval,
+		ApprovalCount:         oc.ApprovalCount,
+		DismissStale:          oc.DismissStale,
+		BlockForce:            oc.BlockForce,
+		RequireUpToDateBranch: oc.RequireUpToDateBranch,
+		RequireStatusChecks:   oc.RequireStatusChecks,
 	}
 	mc.EnforceBranches = append(mc.EnforceBranches, rc.EnforceBranches...)
+	mc.RequireStatusChecks = append(mc.RequireStatusChecks, rc.RequireStatusChecks...)
 
 	if !oc.OptConfig.DisableRepoOverride {
 		if rc.Action != nil {
@@ -484,6 +581,9 @@ func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 		}
 		if rc.BlockForce != nil {
 			mc.BlockForce = *rc.BlockForce
+		}
+		if rc.RequireUpToDateBranch != nil {
+			mc.RequireUpToDateBranch = *rc.RequireUpToDateBranch
 		}
 	}
 	return mc
