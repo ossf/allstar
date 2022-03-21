@@ -180,11 +180,12 @@ optConfig:
 
 func TestIsEnabled(t *testing.T) {
 	tests := []struct {
-		Name          string
-		Org           OrgOptConfig
-		Repo          RepoOptConfig
-		IsPrivateRepo bool
-		Expect        bool
+		Name           string
+		Org            OrgOptConfig
+		Repo           RepoOptConfig
+		IsPrivateRepo  bool
+		IsArchivedRepo bool
+		Expect         bool
 	}{
 		{
 			Name: "OptInOrg",
@@ -266,6 +267,27 @@ func TestIsEnabled(t *testing.T) {
 			Expect:        true,
 		},
 		{
+			Name: "OptOutArchivedRepos",
+			Org: OrgOptConfig{
+				OptOutStrategy:      true,
+				OptOutArchivedRepos: true,
+			},
+			Repo:           RepoOptConfig{},
+			IsPrivateRepo:  true,
+			IsArchivedRepo: true,
+			Expect:         false,
+		},
+		{
+			Name: "NoOptOutArchivedRepos",
+			Org: OrgOptConfig{
+				OptOutStrategy: true,
+			},
+			Repo:           RepoOptConfig{},
+			IsPrivateRepo:  true,
+			IsArchivedRepo: true,
+			Expect:         true,
+		},
+		{
 			Name: "RepoOptIn",
 			Org:  OrgOptConfig{},
 			Repo: RepoOptConfig{
@@ -303,7 +325,8 @@ func TestIsEnabled(t *testing.T) {
 			get = func(context.Context, string, string) (*github.Repository,
 				*github.Response, error) {
 				return &github.Repository{
-					Private: &test.IsPrivateRepo,
+					Private:  &test.IsPrivateRepo,
+					Archived: &test.IsArchivedRepo,
 				}, nil, nil
 			}
 			got, _ := isEnabled(context.Background(), test.Org, test.Repo, mockRepos{}, "thisorg", "thisrepo")
