@@ -187,6 +187,176 @@ func TestCheck(t *testing.T) {
 			},
 		},
 		{
+			Name: "CatchRequireUpToDateBranchNoConfig",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:        true,
+				RequireApproval:       true,
+				ApprovalCount:         1,
+				DismissStale:          true,
+				BlockForce:            true,
+				RequireUpToDateBranch: true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 5,
+					},
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Require up to date branch not configured for branch main\n",
+				Details: map[string]details{
+					"main": details{
+						PRReviews:             true,
+						NumReviews:            5,
+						DismissStale:          true,
+						BlockForce:            true,
+						RequireUpToDateBranch: false,
+					},
+				},
+			},
+		},
+		{
+			Name: "CatchRequireUpToDateBranchStrictFalse",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:        true,
+				RequireApproval:       true,
+				ApprovalCount:         1,
+				DismissStale:          true,
+				BlockForce:            true,
+				RequireUpToDateBranch: true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 5,
+					},
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					RequiredStatusChecks: &github.RequiredStatusChecks{
+						Strict: false,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Require up to date branch not configured for branch main\n",
+				Details: map[string]details{
+					"main": details{
+						PRReviews:             true,
+						NumReviews:            5,
+						DismissStale:          true,
+						BlockForce:            true,
+						RequireUpToDateBranch: false,
+					},
+				},
+			},
+		},
+		{
+			Name: "CatchRequireStatusChecksNoConfig",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:      true,
+				RequireApproval:     true,
+				ApprovalCount:       1,
+				DismissStale:        true,
+				BlockForce:          true,
+				RequireStatusChecks: []string{"mycheck", "theothercheck"},
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 5,
+					},
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "No status checks required for branch main\n",
+				Details: map[string]details{
+					"main": details{
+						PRReviews:    true,
+						NumReviews:   5,
+						DismissStale: true,
+						BlockForce:   true,
+					},
+				},
+			},
+		},
+		{
+			Name: "CatchRequireStatusChecks",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:      true,
+				RequireApproval:     true,
+				ApprovalCount:       1,
+				DismissStale:        true,
+				BlockForce:          true,
+				RequireStatusChecks: []string{"mycheck", "theothercheck"},
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 5,
+					},
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					RequiredStatusChecks: &github.RequiredStatusChecks{
+						Strict:   false,
+						Contexts: []string{"mycheck"},
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Status check theothercheck not required for branch main\n",
+				Details: map[string]details{
+					"main": details{
+						PRReviews:           true,
+						NumReviews:          5,
+						DismissStale:        true,
+						BlockForce:          true,
+						RequireStatusChecks: []string{"mycheck"},
+					},
+				},
+			},
+		},
+		{
 			Name: "RepoOverride",
 			Org: OrgConfig{
 				OptConfig: config.OrgOptConfig{
@@ -523,6 +693,112 @@ func TestFix(t *testing.T) {
 					AllowForcePushes: &flse,
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						RequiredApprovingReviewCount: 0,
+					},
+				},
+			},
+		},
+		{
+			Name: "RequireUpToDateBranchOnly",
+			Org: OrgConfig{
+				EnforceDefault:        true,
+				RequireUpToDateBranch: true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					EnforceAdmins: &github.AdminEnforcement{
+						Enabled: false,
+					},
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						RequiredApprovingReviewCount: 0,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: map[string]github.ProtectionRequest{
+				"main": github.ProtectionRequest{
+					AllowForcePushes: &flse,
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
+						RequiredApprovingReviewCount: 0,
+					},
+					RequiredStatusChecks: &github.RequiredStatusChecks{
+						Strict:   true,
+						Contexts: []string{},
+					},
+				},
+			},
+		},
+		{
+			Name: "RequireStatusChecksOnly",
+			Org: OrgConfig{
+				EnforceDefault:      true,
+				RequireStatusChecks: []string{"mycheck", "theothercheck"},
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					EnforceAdmins: &github.AdminEnforcement{
+						Enabled: false,
+					},
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						RequiredApprovingReviewCount: 0,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: map[string]github.ProtectionRequest{
+				"main": github.ProtectionRequest{
+					AllowForcePushes: &flse,
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
+						RequiredApprovingReviewCount: 0,
+					},
+					RequiredStatusChecks: &github.RequiredStatusChecks{
+						Strict:   false,
+						Contexts: []string{"mycheck", "theothercheck"},
+					},
+				},
+			},
+		},
+		{
+			Name: "MergeRequireStatusChecks",
+			Org: OrgConfig{
+				EnforceDefault:      true,
+				RequireStatusChecks: []string{"mycheck", "theothercheck"},
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					EnforceAdmins: &github.AdminEnforcement{
+						Enabled: false,
+					},
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						RequiredApprovingReviewCount: 0,
+					},
+					RequiredStatusChecks: &github.RequiredStatusChecks{
+						Strict:   false,
+						Contexts: []string{"mycheck", "someothercheck"},
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: map[string]github.ProtectionRequest{
+				"main": github.ProtectionRequest{
+					AllowForcePushes: &flse,
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
+						RequiredApprovingReviewCount: 0,
+					},
+					RequiredStatusChecks: &github.RequiredStatusChecks{
+						Strict:   false,
+						Contexts: []string{"mycheck", "someothercheck", "theothercheck"},
 					},
 				},
 			},
