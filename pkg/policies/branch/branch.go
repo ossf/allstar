@@ -101,8 +101,7 @@ type RepoConfig struct {
 	// RequireUpToDateBranch overrides the same setting in org-level, only if present.
 	RequireUpToDateBranch *bool `yaml:"requireUpToDateBranch"`
 
-	// RequireStatusChecks is a list of status checks (by name) that are required in
-	// order to merge into the protected branch.
+	// RequireStatusChecks overrides the same setting in org-level, only if present.
 	RequireStatusChecks []string `yaml:"statusChecks"`
 }
 
@@ -557,7 +556,6 @@ func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 		RequireStatusChecks:   oc.RequireStatusChecks,
 	}
 	mc.EnforceBranches = append(mc.EnforceBranches, rc.EnforceBranches...)
-	mc.RequireStatusChecks = append(mc.RequireStatusChecks, rc.RequireStatusChecks...)
 
 	if !oc.OptConfig.DisableRepoOverride {
 		if rc.Action != nil {
@@ -580,6 +578,9 @@ func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 		}
 		if rc.RequireUpToDateBranch != nil {
 			mc.RequireUpToDateBranch = *rc.RequireUpToDateBranch
+		}
+		if rc.RequireStatusChecks != nil {
+			mc.RequireStatusChecks = rc.RequireStatusChecks
 		}
 	}
 	return mc
