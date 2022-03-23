@@ -26,7 +26,7 @@ import (
 	"github.com/ossf/allstar/pkg/policies"
 	"github.com/ossf/allstar/pkg/policydef"
 
-	"github.com/google/go-github/v39/github"
+	"github.com/google/go-github/v43/github"
 	"github.com/rs/zerolog/log"
 )
 

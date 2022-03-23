@@ -18,10 +18,11 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"sort"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-github/v39/github"
+	"github.com/google/go-github/v43/github"
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
 )
@@ -252,8 +253,10 @@ func TestCheck(t *testing.T) {
 						Enabled: false,
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
-						Strict:   false,
-						Contexts: []string{"mycheck", "theothercheck"},
+						Strict: false,
+						Checks: []*github.RequiredStatusCheck{
+							{Context: "mycheck"}, {Context: "theothercheck"},
+						},
 					},
 				},
 			},
@@ -338,8 +341,10 @@ func TestCheck(t *testing.T) {
 						Enabled: false,
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
-						Strict:   false,
-						Contexts: []string{"mycheck"},
+						Strict: false,
+						Checks: []*github.RequiredStatusCheck{
+							{Context: "mycheck"},
+						},
 					},
 				},
 			},
@@ -752,8 +757,10 @@ func TestFix(t *testing.T) {
 						RequiredApprovingReviewCount: 0,
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
-						Strict:   true,
-						Contexts: []string{"mycheck", "theothercheck"},
+						Strict: true,
+						Checks: []*github.RequiredStatusCheck{
+							{Context: "mycheck"}, {Context: "theothercheck"},
+						},
 					},
 				},
 			},
@@ -786,8 +793,10 @@ func TestFix(t *testing.T) {
 						RequiredApprovingReviewCount: 0,
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
-						Strict:   false,
-						Contexts: []string{"mycheck", "theothercheck"},
+						Strict: false,
+						Checks: []*github.RequiredStatusCheck{
+							{Context: "mycheck"}, {Context: "theothercheck"},
+						},
 					},
 				},
 			},
@@ -811,8 +820,10 @@ func TestFix(t *testing.T) {
 						RequiredApprovingReviewCount: 0,
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
-						Strict:   false,
-						Contexts: []string{"mycheck", "someothercheck"},
+						Strict: false,
+						Checks: []*github.RequiredStatusCheck{
+							{Context: "mycheck"}, {Context: "someothercheck"},
+						},
 					},
 				},
 			},
@@ -824,8 +835,10 @@ func TestFix(t *testing.T) {
 						RequiredApprovingReviewCount: 0,
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
-						Strict:   false,
-						Contexts: []string{"mycheck", "someothercheck", "theothercheck"},
+						Strict: false,
+						Checks: []*github.RequiredStatusCheck{
+							{Context: "mycheck"}, {Context: "someothercheck"}, {Context: "theothercheck"},
+						},
 					},
 				},
 			},
@@ -849,8 +862,10 @@ func TestFix(t *testing.T) {
 						RequiredApprovingReviewCount: 0,
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
-						Strict:   false,
-						Contexts: []string{"mycheck", "theothercheck"},
+						Strict: false,
+						Checks: []*github.RequiredStatusCheck{
+							{Context: "mycheck"}, {Context: "theothercheck"},
+						},
 					},
 				},
 			},
@@ -912,6 +927,27 @@ func TestFix(t *testing.T) {
 			if err := fix(context.Background(), mockRepos{}, nil, "", "thisrepo"); err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
+
+			// Sort required status checks by context to ensure comparison is consistent.
+			for _, pr := range got {
+				if pr.RequiredStatusChecks != nil {
+					sc := make([]*github.RequiredStatusCheck, 0)
+					cm := make(map[string][]*github.RequiredStatusCheck, 0)
+					for _, check := range pr.RequiredStatusChecks.Checks {
+						cm[check.Context] = append(cm[check.Context], check)
+					}
+					ctx := make([]string, 0)
+					for c := range cm {
+						ctx = append(ctx, c)
+					}
+					sort.Strings(ctx)
+					for _, c := range ctx {
+						sc = append(sc, cm[c]...)
+					}
+					pr.RequiredStatusChecks.Checks = sc
+				}
+			}
+
 			if diff := cmp.Diff(test.Exp, got); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
