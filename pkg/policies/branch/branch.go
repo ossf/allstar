@@ -19,12 +19,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"sort"
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
 
-	"github.com/google/go-github/v39/github"
+	"github.com/google/go-github/v43/github"
 	"github.com/rs/zerolog/log"
 )
 
@@ -296,10 +295,10 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 							b)
 					pass = false
 				}
-				d.RequireStatusChecks = rsc.Contexts
-				c := make(map[string]struct{}, len(rsc.Contexts))
-				for _, ctx := range rsc.Contexts {
-					c[ctx] = struct{}{}
+				c := make(map[string]struct{}, len(rsc.Checks))
+				for _, check := range rsc.Checks {
+					c[check.Context] = struct{}{}
+					d.RequireStatusChecks = append(d.RequireStatusChecks, check.Context)
 				}
 				for _, check := range mc.RequireStatusChecks {
 					if _, ok := c[check]; !ok {
@@ -368,10 +367,15 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 					pr.RequiredPullRequestReviews = rq
 				}
 				if len(mc.RequireStatusChecks) > 0 {
+					checks := make([]*github.RequiredStatusCheck, len(mc.RequireStatusChecks))
+					for i, check := range mc.RequireStatusChecks {
+						checks[i] = &github.RequiredStatusCheck{
+							Context: check,
+						}
+					}
 					rsc := &github.RequiredStatusChecks{
 						Strict: mc.RequireUpToDateBranch,
-						// Can't be set to nil, so force non-nil value.
-						Contexts: append([]string{}, mc.RequireStatusChecks...),
+						Checks: checks,
 					}
 					pr.RequiredStatusChecks = rsc
 				}
@@ -455,10 +459,15 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 		}
 		if len(mc.RequireStatusChecks) > 0 {
 			if pr.RequiredStatusChecks == nil {
+				checks := make([]*github.RequiredStatusCheck, len(mc.RequireStatusChecks))
+				for i, check := range mc.RequireStatusChecks {
+					checks[i] = &github.RequiredStatusCheck{
+						Context: check,
+					}
+				}
 				rsc := &github.RequiredStatusChecks{
 					Strict: mc.RequireUpToDateBranch,
-					// Can't be set to nil, so force non-nil value.
-					Contexts: append([]string{}, mc.RequireStatusChecks...),
+					Checks: checks,
 				}
 				pr.RequiredStatusChecks = rsc
 				update = true
@@ -467,22 +476,23 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 					pr.RequiredStatusChecks.Strict = true
 					update = true
 				}
-				allContexts := make(map[string]struct{}, len(pr.RequiredStatusChecks.Contexts))
-				for _, ctx := range pr.RequiredStatusChecks.Contexts {
-					allContexts[ctx] = struct{}{}
+				allContexts := make(map[string]*github.RequiredStatusCheck, len(pr.RequiredStatusChecks.Checks))
+				for _, check := range pr.RequiredStatusChecks.Checks {
+					allContexts[check.Context] = check
 				}
-				for _, ctx := range mc.RequireStatusChecks {
+				for _, check := range mc.RequireStatusChecks {
 					// Only mark for update if there are status checks required, but not already set.
-					if _, ok := allContexts[ctx]; !ok {
-						allContexts[ctx] = struct{}{}
+					if _, ok := allContexts[check]; !ok {
+						allContexts[check] = &github.RequiredStatusCheck{
+							Context: check,
+						}
 						update = true
 					}
 				}
-				pr.RequiredStatusChecks.Contexts = make([]string, 0)
-				for ctx := range allContexts {
-					pr.RequiredStatusChecks.Contexts = append(pr.RequiredStatusChecks.Contexts, ctx)
+				pr.RequiredStatusChecks.Checks = make([]*github.RequiredStatusCheck, 0)
+				for _, check := range allContexts {
+					pr.RequiredStatusChecks.Checks = append(pr.RequiredStatusChecks.Checks, check)
 				}
-				sort.Strings(pr.RequiredStatusChecks.Contexts)
 			}
 		}
 		if update {

@@ -23,7 +23,7 @@ import (
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/config/operator"
 
-	"github.com/google/go-github/v39/github"
+	"github.com/google/go-github/v43/github"
 )
 
 const issueRepoTitle = "Security Policy violation for repository %q %v"

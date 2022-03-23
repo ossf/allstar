@@ -20,7 +20,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-github/v39/github"
+	"github.com/google/go-github/v43/github"
 )
 
 var getContents func(context.Context, string, string, string,

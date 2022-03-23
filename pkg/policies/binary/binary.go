@@ -26,7 +26,7 @@ import (
 	"github.com/ossf/scorecard/v4/checks"
 	"github.com/ossf/scorecard/v4/clients/githubrepo"
 
-	"github.com/google/go-github/v39/github"
+	"github.com/google/go-github/v43/github"
 	"github.com/rs/zerolog/log"
 )
 
