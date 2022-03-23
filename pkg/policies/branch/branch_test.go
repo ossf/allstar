@@ -214,8 +214,8 @@ func TestCheck(t *testing.T) {
 			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
-				Pass:       false,
-				NotifyText: "Require up to date branch not configured for branch main\n",
+				Pass:       true,
+				NotifyText: "",
 				Details: map[string]details{
 					"main": details{
 						PRReviews:             true,
@@ -239,6 +239,7 @@ func TestCheck(t *testing.T) {
 				DismissStale:          true,
 				BlockForce:            true,
 				RequireUpToDateBranch: true,
+				RequireStatusChecks:   []string{"mycheck", "theothercheck"},
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
@@ -251,7 +252,8 @@ func TestCheck(t *testing.T) {
 						Enabled: false,
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
-						Strict: false,
+						Strict:   false,
+						Contexts: []string{"mycheck", "theothercheck"},
 					},
 				},
 			},
@@ -267,6 +269,7 @@ func TestCheck(t *testing.T) {
 						DismissStale:          true,
 						BlockForce:            true,
 						RequireUpToDateBranch: false,
+						RequireStatusChecks:   []string{"mycheck", "theothercheck"},
 					},
 				},
 			},
@@ -300,7 +303,7 @@ func TestCheck(t *testing.T) {
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
-				NotifyText: "No status checks required for branch main\n",
+				NotifyText: "Status checks required by policy, but none found for branch main\n",
 				Details: map[string]details{
 					"main": details{
 						PRReviews:    true,
@@ -344,7 +347,7 @@ func TestCheck(t *testing.T) {
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
-				NotifyText: "Status check theothercheck not required for branch main\n",
+				NotifyText: "Status check theothercheck not found for branch main\n",
 				Details: map[string]details{
 					"main": details{
 						PRReviews:           true,
@@ -718,6 +721,30 @@ func TestFix(t *testing.T) {
 				},
 			},
 			cofigEnabled: true,
+			Exp:          map[string]github.ProtectionRequest{},
+		},
+		{
+			Name: "RequireUpToDateBranch",
+			Org: OrgConfig{
+				EnforceDefault:        true,
+				RequireUpToDateBranch: true,
+				RequireStatusChecks:   []string{"mycheck", "theothercheck"},
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					EnforceAdmins: &github.AdminEnforcement{
+						Enabled: false,
+					},
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						RequiredApprovingReviewCount: 0,
+					},
+				},
+			},
+			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
 				"main": github.ProtectionRequest{
 					AllowForcePushes: &flse,
@@ -726,7 +753,7 @@ func TestFix(t *testing.T) {
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
 						Strict:   true,
-						Contexts: []string{},
+						Contexts: []string{"mycheck", "theothercheck"},
 					},
 				},
 			},
@@ -802,6 +829,33 @@ func TestFix(t *testing.T) {
 					},
 				},
 			},
+		},
+		{
+			Name: "NoChangeToRequireStatusChecks",
+			Org: OrgConfig{
+				EnforceDefault:      true,
+				RequireStatusChecks: []string{"mycheck", "theothercheck"},
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					EnforceAdmins: &github.AdminEnforcement{
+						Enabled: false,
+					},
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						RequiredApprovingReviewCount: 0,
+					},
+					RequiredStatusChecks: &github.RequiredStatusChecks{
+						Strict:   false,
+						Contexts: []string{"mycheck", "theothercheck"},
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp:          map[string]github.ProtectionRequest{},
 		},
 	}
 	get = func(context.Context, string, string) (*github.Repository,

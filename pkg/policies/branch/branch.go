@@ -63,7 +63,7 @@ type OrgConfig struct {
 	BlockForce bool `yaml:"blockForce"`
 
 	// RequireUpToDateBranch : set to true to require that branches must be up
-	// to date before merging. Default false.
+	// to date before merging. Only used if RequireStatusChecks is set. Default true.
 	RequireUpToDateBranch bool `yaml:"requireUpToDateBranch"`
 
 	// RequireStatusChecks is a list of status checks (by name) that are required in
@@ -98,8 +98,7 @@ type RepoConfig struct {
 	// BlockForce overrides the same setting in org-level, only if present.
 	BlockForce *bool `yaml:"blockForce"`
 
-	// RequireUpToDateBranch : set to true to require that branches must be up
-	// to date before merging. Default false.
+	// RequireUpToDateBranch overrides the same setting in org-level, only if present.
 	RequireUpToDateBranch *bool `yaml:"requireUpToDateBranch"`
 
 	// RequireStatusChecks is a list of status checks (by name) that are required in
@@ -288,39 +287,32 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 				d.BlockForce = false
 			}
 		}
-		rsc := p.GetRequiredStatusChecks()
-		if rsc != nil {
-			d.RequireUpToDateBranch = rsc.Strict
-			if mc.RequireUpToDateBranch && !rsc.Strict {
-				text = text +
-					fmt.Sprintf("Require up to date branch not configured for branch %v\n",
-						b)
-				pass = false
-			}
-			d.RequireStatusChecks = rsc.Contexts
-			c := make(map[string]struct{}, len(rsc.Contexts))
-			for _, ctx := range rsc.Contexts {
-				c[ctx] = struct{}{}
-			}
-			for _, check := range mc.RequireStatusChecks {
-				if _, ok := c[check]; !ok {
+		if len(mc.RequireStatusChecks) > 0 {
+			rsc := p.GetRequiredStatusChecks()
+			if rsc != nil {
+				d.RequireUpToDateBranch = rsc.Strict
+				if mc.RequireUpToDateBranch && !rsc.Strict {
 					text = text +
-						fmt.Sprintf("Status check %v not required for branch %v\n",
-							check, b)
+						fmt.Sprintf("Require up to date branch not configured for branch %v\n",
+							b)
 					pass = false
 				}
-			}
-		} else {
-			d.RequireUpToDateBranch = false
-			if mc.RequireUpToDateBranch {
+				d.RequireStatusChecks = rsc.Contexts
+				c := make(map[string]struct{}, len(rsc.Contexts))
+				for _, ctx := range rsc.Contexts {
+					c[ctx] = struct{}{}
+				}
+				for _, check := range mc.RequireStatusChecks {
+					if _, ok := c[check]; !ok {
+						text = text +
+							fmt.Sprintf("Status check %v not found for branch %v\n",
+								check, b)
+						pass = false
+					}
+				}
+			} else {
 				text = text +
-					fmt.Sprintf("Require up to date branch not configured for branch %v\n",
-						b)
-				pass = false
-			}
-			if len(mc.RequireStatusChecks) > 0 {
-				text = text +
-					fmt.Sprintf("No status checks required for branch %v\n", b)
+					fmt.Sprintf("Status checks required by policy, but none found for branch %v\n", b)
 				pass = false
 			}
 		}
@@ -376,7 +368,7 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 					}
 					pr.RequiredPullRequestReviews = rq
 				}
-				if mc.RequireUpToDateBranch || len(mc.RequireStatusChecks) > 0 {
+				if len(mc.RequireStatusChecks) > 0 {
 					rsc := &github.RequiredStatusChecks{
 						Strict: mc.RequireUpToDateBranch,
 						// Can't be set to nil, so force non-nil value.
@@ -462,33 +454,36 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 				update = true
 			}
 		}
-		if pr.RequiredStatusChecks == nil && (mc.RequireUpToDateBranch || len(mc.RequireStatusChecks) > 0) {
-			rsc := &github.RequiredStatusChecks{
-				Strict: mc.RequireUpToDateBranch,
-				// Can't be set to nil, so force non-nil value.
-				Contexts: append([]string{}, mc.RequireStatusChecks...),
-			}
-			pr.RequiredStatusChecks = rsc
-			update = true
-		} else if mc.RequireUpToDateBranch || len(mc.RequireStatusChecks) > 0 {
-			if mc.RequireUpToDateBranch && !pr.RequiredStatusChecks.Strict {
-				pr.RequiredStatusChecks.Strict = true
+		if len(mc.RequireStatusChecks) > 0 {
+			if pr.RequiredStatusChecks == nil {
+				rsc := &github.RequiredStatusChecks{
+					Strict: mc.RequireUpToDateBranch,
+					// Can't be set to nil, so force non-nil value.
+					Contexts: append([]string{}, mc.RequireStatusChecks...),
+				}
+				pr.RequiredStatusChecks = rsc
 				update = true
-			}
-			if len(mc.RequireStatusChecks) > 0 {
+			} else {
+				if mc.RequireUpToDateBranch && !pr.RequiredStatusChecks.Strict {
+					pr.RequiredStatusChecks.Strict = true
+					update = true
+				}
 				allContexts := make(map[string]struct{}, len(pr.RequiredStatusChecks.Contexts))
 				for _, ctx := range pr.RequiredStatusChecks.Contexts {
 					allContexts[ctx] = struct{}{}
 				}
 				for _, ctx := range mc.RequireStatusChecks {
-					allContexts[ctx] = struct{}{}
+					// Only mark for update if there are status checks required, but not already set.
+					if _, ok := allContexts[ctx]; !ok {
+						allContexts[ctx] = struct{}{}
+						update = true
+					}
 				}
 				pr.RequiredStatusChecks.Contexts = make([]string, 0)
 				for ctx := range allContexts {
 					pr.RequiredStatusChecks.Contexts = append(pr.RequiredStatusChecks.Contexts, ctx)
 				}
 				sort.Strings(pr.RequiredStatusChecks.Contexts)
-				update = true
 			}
 		}
 		if update {
@@ -517,12 +512,13 @@ func (b Branch) GetAction(ctx context.Context, c *github.Client, owner, repo str
 
 func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgConfig, *RepoConfig) {
 	oc := &OrgConfig{ // Fill out non-zero defaults
-		Action:          "log",
-		EnforceDefault:  true,
-		RequireApproval: true,
-		ApprovalCount:   1,
-		DismissStale:    true,
-		BlockForce:      true,
+		Action:                "log",
+		EnforceDefault:        true,
+		RequireApproval:       true,
+		ApprovalCount:         1,
+		DismissStale:          true,
+		BlockForce:            true,
+		RequireUpToDateBranch: true,
 	}
 	if err := configFetchConfig(ctx, c, owner, "", configFile, true, oc); err != nil {
 		log.Error().
