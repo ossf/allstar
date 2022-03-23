@@ -489,6 +489,8 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 						update = true
 					}
 				}
+				// Clear out Contexts, since API populates both, but updates require only one.
+				pr.RequiredStatusChecks.Contexts = nil
 				pr.RequiredStatusChecks.Checks = make([]*github.RequiredStatusCheck, 0)
 				for _, check := range allContexts {
 					pr.RequiredStatusChecks.Checks = append(pr.RequiredStatusChecks.Checks, check)
