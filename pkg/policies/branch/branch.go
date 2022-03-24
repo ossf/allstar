@@ -62,12 +62,14 @@ type OrgConfig struct {
 	BlockForce bool `yaml:"blockForce"`
 
 	// RequireUpToDateBranch : set to true to require that branches must be up
-	// to date before merging. Only used if RequireStatusChecks is set. Default true.
+	// to date before merging. Only used if RequireStatusChecks is set. Default
+	// true.
 	RequireUpToDateBranch bool `yaml:"requireUpToDateBranch"`
 
-	// RequireStatusChecks is a list of status checks (by name) that are required in
-	// order to merge into the protected branch.
-	RequireStatusChecks []string `yaml:"requireStatusChecks"`
+	// RequireStatusChecks is a list of status checks that are required in
+	// order to merge into the protected branch. Each entry must specify
+	// the context, and optionally an appID.
+	RequireStatusChecks []StatusCheck `yaml:"requireStatusChecks"`
 }
 
 // RepoConfig is the repo-level config for Branch Protection
@@ -105,7 +107,19 @@ type RepoConfig struct {
 	// present. Omitting will lead to taking the org-level config as is, but
 	// specifying an empty list (`requireStatusChecks: []`) will override the
 	// setting to be empty.
-	RequireStatusChecks []string `yaml:"requireStatusChecks"`
+	RequireStatusChecks []StatusCheck `yaml:"requireStatusChecks"`
+}
+
+// StatusCheck is the config description for specifying a single required
+// status check in the RequireStatusChecks list.
+type StatusCheck struct {
+	// Context is the status check name that should be required.
+	Context string `yaml:"context"`
+
+	// AppID, when provided, will require that the status check be set by
+	// the GitHub App with the given AppID. When omitted, any app can
+	// provide the required status check.
+	AppID *int64 `yaml:"appID"`
 }
 
 type mergedConfig struct {
@@ -117,7 +131,7 @@ type mergedConfig struct {
 	DismissStale          bool
 	BlockForce            bool
 	RequireUpToDateBranch bool
-	RequireStatusChecks   []string
+	RequireStatusChecks   []StatusCheck
 }
 
 type details struct {
@@ -126,7 +140,7 @@ type details struct {
 	DismissStale          bool
 	BlockForce            bool
 	RequireUpToDateBranch bool
-	RequireStatusChecks   []string
+	RequireStatusChecks   []StatusCheck
 }
 
 var configFetchConfig func(context.Context, *github.Client, string, string,
@@ -299,16 +313,20 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 							b)
 					pass = false
 				}
-				c := make(map[string]struct{}, len(rsc.Checks))
-				for _, check := range rsc.Checks {
-					c[check.Context] = struct{}{}
-					d.RequireStatusChecks = append(d.RequireStatusChecks, check.Context)
+				for _, c := range rsc.Checks {
+					sc := StatusCheck{Context: c.Context, AppID: c.AppID}
+					d.RequireStatusChecks = append(d.RequireStatusChecks, sc)
 				}
-				for _, check := range mc.RequireStatusChecks {
-					if _, ok := c[check]; !ok {
+				lt := makeSCLookupTable(rsc.Checks)
+				for _, c := range mc.RequireStatusChecks {
+					if _, ok := lt[c]; !ok {
+						appIDTxt := "(any app)"
+						if c.AppID != nil {
+							appIDTxt = fmt.Sprintf("(AppID: %v)", *c.AppID)
+						}
 						text = text +
-							fmt.Sprintf("Status check %v not found for branch %v\n",
-								check, b)
+							fmt.Sprintf("Status check %s %s not found for branch %v\n",
+								c.Context, appIDTxt, b)
 						pass = false
 					}
 				}
@@ -374,7 +392,8 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 					checks := make([]*github.RequiredStatusCheck, len(mc.RequireStatusChecks))
 					for i, check := range mc.RequireStatusChecks {
 						checks[i] = &github.RequiredStatusCheck{
-							Context: check,
+							Context: check.Context,
+							AppID:   check.AppID,
 						}
 					}
 					rsc := &github.RequiredStatusChecks{
@@ -466,7 +485,8 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 				checks := make([]*github.RequiredStatusCheck, len(mc.RequireStatusChecks))
 				for i, check := range mc.RequireStatusChecks {
 					checks[i] = &github.RequiredStatusCheck{
-						Context: check,
+						Context: check.Context,
+						AppID:   check.AppID,
 					}
 				}
 				rsc := &github.RequiredStatusChecks{
@@ -480,25 +500,18 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 					pr.RequiredStatusChecks.Strict = true
 					update = true
 				}
-				allContexts := make(map[string]*github.RequiredStatusCheck, len(pr.RequiredStatusChecks.Checks))
-				for _, check := range pr.RequiredStatusChecks.Checks {
-					allContexts[check.Context] = check
-				}
-				for _, check := range mc.RequireStatusChecks {
+				ac := pr.RequiredStatusChecks.Checks
+				lt := makeSCLookupTable(pr.RequiredStatusChecks.Checks)
+				for _, c := range mc.RequireStatusChecks {
 					// Only mark for update if there are status checks required, but not already set.
-					if _, ok := allContexts[check]; !ok {
-						allContexts[check] = &github.RequiredStatusCheck{
-							Context: check,
-						}
+					if _, ok := lt[c]; !ok {
+						ac = append(ac, &github.RequiredStatusCheck{Context: c.Context, AppID: c.AppID})
 						update = true
 					}
 				}
 				// Clear out Contexts, since API populates both, but updates require only one.
 				pr.RequiredStatusChecks.Contexts = nil
-				pr.RequiredStatusChecks.Checks = make([]*github.RequiredStatusCheck, 0)
-				for _, check := range allContexts {
-					pr.RequiredStatusChecks.Checks = append(pr.RequiredStatusChecks.Checks, check)
-				}
+				pr.RequiredStatusChecks.Checks = ac
 			}
 		}
 		if update {
@@ -600,4 +613,17 @@ func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 		}
 	}
 	return mc
+}
+
+func makeSCLookupTable(prrsc []*github.RequiredStatusCheck) map[StatusCheck]struct{} {
+	lt := make(map[StatusCheck]struct{}, len(prrsc))
+	for _, c := range prrsc {
+		// each check can match the context with and without appID
+		sc := StatusCheck{Context: c.Context, AppID: c.AppID}
+		lt[sc] = struct{}{}
+		if c.AppID != nil {
+			lt[StatusCheck{Context: c.Context}] = struct{}{}
+		}
+	}
+	return lt
 }
