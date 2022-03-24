@@ -1,0 +1,27 @@
+on:
+  push:
+    tags:
+      - '*'
+permissions:
+  id-token: write # Undocumented OIDC support.
+  packages: write # To publish container images to GHCR
+  contents: write # To create a release
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-go@v2
+      with:
+        go-version: 1.17
+    - uses: sigstore/cosign-installer@main
+    - run: go install github.com/google/ko@v0.10.0
+    - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.workflow }} --password-stdin
+    - run: KO_DOCKER_REPO=ghcr.io/${{ github.repository_owner }} ko publish -B ./cmd/allstar > container
+    - run: docker pull $(cat container)
+    - run: docker tag $(cat container) ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}
+    - run: docker push ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}
+    - run: COSIGN_EXPERIMENTAL=1 cosign sign -a git_sha=$GITHUB_SHA ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}
+    - run: gh release create ${{ github.ref_name }} --notes "ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}"
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

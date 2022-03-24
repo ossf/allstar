@@ -2,22 +2,26 @@
 
 # **Allstar**
 
-## Overview 
+## Overview
 
 -  [What Is Allstar?](#what-is-allstar)
+
+## What's new with Allstar
+
+- [whats-new.md](whats-new.md)
 
 ## Disabling Unwanted Issues
 
 -  [Help! I'm getting issues created by Allstar and I don't want them!](#disabling-unwanted-issues-1) 
 
-## Getting Started 
+## Getting Started
 
--  [Background](#background) 
--  [Org-Level Options](#org-level-options) 
+-  [Background](#background)
+-  [Org-Level Options](#org-level-options)
 -  [Installation Options](#installation-options)
     - [Quickstart Installation](#quickstart-installation)
     - [Manual Installation](#manual-installation)
- 
+
 ## Policies and Actions
 - [Actions](#actions)
 - [Policies](#policies)
@@ -32,21 +36,27 @@
 ________
 ________
 
-## Overview 
+## Overview
 
 ### What is Allstar?
 
-Allstar is a GitHub App that continuously monitors GitHub organizations or repositories for adherence to security best practices. 
-If Allstar detects a security policy violation, it creates an issue to alert the repository or organization owner. 
-For some security policies, Allstar can also automatically change the project setting that caused the violation, reverting it to the expected state. 
+Allstar is a GitHub App that continuously monitors GitHub organizations or
+repositories for adherence to security best practices.  If Allstar detects a
+security policy violation, it creates an issue to alert the repository or
+organization owner.  For some security policies, Allstar can also automatically
+change the project setting that caused the violation, reverting it to the
+expected state.
 
-Allstar’s goal is to give you finely tuned control over the files and settings that affect the security of your projects.
-You can choose which security policies to monitor at both the organization and repository level, and how to handle policy violations. 
-You can also develop or contribute new policies. 
+Allstar’s goal is to give you finely tuned control over the files and settings
+that affect the security of your projects.  You can choose which security
+policies to monitor at both the organization and repository level, and how to
+handle policy violations.  You can also develop or contribute new policies.
 
 Allstar is developed under the [OpenSSF](https://openssf.org/) organization, as
 a part of the [Securing Critical Projects Working
-Group](https://github.com/ossf/wg-securing-critical-projects). 
+Group](https://github.com/ossf/wg-securing-critical-projects).
+
+## [What's new with Allstar](whats-new.md)
 
 ## Disabling Unwanted Issues
 If you're getting unwanted issues created by Allstar, follow [these directions](opt-out.md) to opt out. 
