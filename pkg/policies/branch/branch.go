@@ -97,11 +97,15 @@ type RepoConfig struct {
 	// BlockForce overrides the same setting in org-level, only if present.
 	BlockForce *bool `yaml:"blockForce"`
 
-	// RequireUpToDateBranch overrides the same setting in org-level, only if present.
+	// RequireUpToDateBranch overrides the same setting in org-level, only if
+	// present.
 	RequireUpToDateBranch *bool `yaml:"requireUpToDateBranch"`
 
-	// RequireStatusChecks overrides the same setting in org-level, only if present.
-	RequireStatusChecks []string `yaml:"statusChecks"`
+	// RequireStatusChecks overrides the same setting in org-level, only if
+	// present. Omitting will lead to taking the org-level config as is, but
+	// specifying an empty list (`requireStatusChecks: []`) will override the
+	// setting to be empty.
+	RequireStatusChecks []string `yaml:"requireStatusChecks"`
 }
 
 type mergedConfig struct {
