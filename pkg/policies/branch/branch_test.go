@@ -240,7 +240,9 @@ func TestCheck(t *testing.T) {
 				DismissStale:          true,
 				BlockForce:            true,
 				RequireUpToDateBranch: true,
-				RequireStatusChecks:   []string{"mycheck", "theothercheck"},
+				RequireStatusChecks: []StatusCheck{
+					{"mycheck", nil}, {"theothercheck", nil},
+				},
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
@@ -272,7 +274,9 @@ func TestCheck(t *testing.T) {
 						DismissStale:          true,
 						BlockForce:            true,
 						RequireUpToDateBranch: false,
-						RequireStatusChecks:   []string{"mycheck", "theothercheck"},
+						RequireStatusChecks: []StatusCheck{
+							{"mycheck", nil}, {"theothercheck", nil},
+						},
 					},
 				},
 			},
@@ -283,12 +287,14 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				EnforceDefault:      true,
-				RequireApproval:     true,
-				ApprovalCount:       1,
-				DismissStale:        true,
-				BlockForce:          true,
-				RequireStatusChecks: []string{"mycheck", "theothercheck"},
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   1,
+				DismissStale:    true,
+				BlockForce:      true,
+				RequireStatusChecks: []StatusCheck{
+					{"mycheck", nil}, {"theothercheck", nil},
+				},
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
@@ -323,12 +329,14 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				EnforceDefault:      true,
-				RequireApproval:     true,
-				ApprovalCount:       1,
-				DismissStale:        true,
-				BlockForce:          true,
-				RequireStatusChecks: []string{"mycheck", "theothercheck"},
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   1,
+				DismissStale:    true,
+				BlockForce:      true,
+				RequireStatusChecks: []StatusCheck{
+					{"mycheck", nil}, {"theothercheck", nil},
+				},
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
@@ -352,14 +360,108 @@ func TestCheck(t *testing.T) {
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
-				NotifyText: "Status check theothercheck not found for branch main\n",
+				NotifyText: "Status check theothercheck (any app) not found for branch main\n",
 				Details: map[string]details{
 					"main": details{
 						PRReviews:           true,
 						NumReviews:          5,
 						DismissStale:        true,
 						BlockForce:          true,
-						RequireStatusChecks: []string{"mycheck"},
+						RequireStatusChecks: []StatusCheck{{"mycheck", nil}},
+					},
+				},
+			},
+		},
+		{
+			Name: "CatchRequireStatusChecksNilAppID",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:      true,
+				RequireApproval:     true,
+				ApprovalCount:       1,
+				DismissStale:        true,
+				BlockForce:          true,
+				RequireStatusChecks: []StatusCheck{{"mycheck", nil}},
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 5,
+					},
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					RequiredStatusChecks: &github.RequiredStatusChecks{
+						Strict: false,
+						Checks: []*github.RequiredStatusCheck{
+							{Context: "mycheck", AppID: github.Int64(123456)},
+						},
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: map[string]details{
+					"main": details{
+						PRReviews:           true,
+						NumReviews:          5,
+						DismissStale:        true,
+						BlockForce:          true,
+						RequireStatusChecks: []StatusCheck{{"mycheck", github.Int64(123456)}},
+					},
+				},
+			},
+		},
+		{
+			Name: "CatchRequireStatusChecksWrongAppID",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:      true,
+				RequireApproval:     true,
+				ApprovalCount:       1,
+				DismissStale:        true,
+				BlockForce:          true,
+				RequireStatusChecks: []StatusCheck{{"mycheck", github.Int64(123456)}},
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 5,
+					},
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					RequiredStatusChecks: &github.RequiredStatusChecks{
+						Strict: false,
+						Checks: []*github.RequiredStatusCheck{
+							{Context: "mycheck", AppID: github.Int64(654321)},
+						},
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Status check mycheck (AppID: 123456) not found for branch main\n",
+				Details: map[string]details{
+					"main": details{
+						PRReviews:           true,
+						NumReviews:          5,
+						DismissStale:        true,
+						BlockForce:          true,
+						RequireStatusChecks: []StatusCheck{{"mycheck", github.Int64(654321)}},
 					},
 				},
 			},
@@ -733,7 +835,9 @@ func TestFix(t *testing.T) {
 			Org: OrgConfig{
 				EnforceDefault:        true,
 				RequireUpToDateBranch: true,
-				RequireStatusChecks:   []string{"mycheck", "theothercheck"},
+				RequireStatusChecks: []StatusCheck{
+					{"mycheck", nil}, {"theothercheck", nil},
+				},
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
@@ -768,8 +872,10 @@ func TestFix(t *testing.T) {
 		{
 			Name: "RequireStatusChecksOnly",
 			Org: OrgConfig{
-				EnforceDefault:      true,
-				RequireStatusChecks: []string{"mycheck", "theothercheck"},
+				EnforceDefault: true,
+				RequireStatusChecks: []StatusCheck{
+					{"mycheck", nil}, {"theothercheck", nil},
+				},
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
@@ -804,8 +910,10 @@ func TestFix(t *testing.T) {
 		{
 			Name: "MergeRequireStatusChecks",
 			Org: OrgConfig{
-				EnforceDefault:      true,
-				RequireStatusChecks: []string{"mycheck", "theothercheck"},
+				EnforceDefault: true,
+				RequireStatusChecks: []StatusCheck{
+					{"mycheck", nil}, {"theothercheck", nil},
+				},
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
@@ -844,10 +952,62 @@ func TestFix(t *testing.T) {
 			},
 		},
 		{
+			Name: "MergeRequireStatusChecksDifferentAppID",
+			Org: OrgConfig{
+				EnforceDefault: true,
+				RequireStatusChecks: []StatusCheck{
+					{"mycheck", github.Int64(123456)}, {"theothercheck", nil},
+					{"someothercheck", github.Int64(654321)},
+				},
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					EnforceAdmins: &github.AdminEnforcement{
+						Enabled: false,
+					},
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						RequiredApprovingReviewCount: 0,
+					},
+					RequiredStatusChecks: &github.RequiredStatusChecks{
+						Strict: false,
+						Checks: []*github.RequiredStatusCheck{
+							{Context: "mycheck"},
+							{Context: "someothercheck", AppID: github.Int64(123456)},
+						},
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: map[string]github.ProtectionRequest{
+				"main": github.ProtectionRequest{
+					AllowForcePushes: &flse,
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
+						RequiredApprovingReviewCount: 0,
+					},
+					RequiredStatusChecks: &github.RequiredStatusChecks{
+						Strict: false,
+						Checks: []*github.RequiredStatusCheck{
+							{Context: "mycheck"},
+							{Context: "mycheck", AppID: github.Int64(123456)},
+							{Context: "someothercheck", AppID: github.Int64(123456)},
+							{Context: "someothercheck", AppID: github.Int64(654321)},
+							{Context: "theothercheck"},
+						},
+					},
+				},
+			},
+		},
+		{
 			Name: "NoChangeToRequireStatusChecks",
 			Org: OrgConfig{
-				EnforceDefault:      true,
-				RequireStatusChecks: []string{"mycheck", "theothercheck"},
+				EnforceDefault: true,
+				RequireStatusChecks: []StatusCheck{
+					{"mycheck", nil}, {"theothercheck", nil},
+				},
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
