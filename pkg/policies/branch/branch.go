@@ -122,6 +122,11 @@ type StatusCheck struct {
 	AppID *int64 `yaml:"appID"`
 }
 
+type statusCheckHash struct {
+	context string
+	appID   int64
+}
+
 type mergedConfig struct {
 	Action                string
 	EnforceDefault        bool
@@ -319,11 +324,13 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 				}
 				lt := makeSCLookupTable(rsc.Checks)
 				for _, c := range mc.RequireStatusChecks {
-					if _, ok := lt[c]; !ok {
-						appIDTxt := "(any app)"
-						if c.AppID != nil {
-							appIDTxt = fmt.Sprintf("(AppID: %v)", *c.AppID)
-						}
+					appIDTxt := "(any app)"
+					sch := statusCheckHash{context: c.Context}
+					if c.AppID != nil {
+						sch.appID = *c.AppID
+						appIDTxt = fmt.Sprintf("(AppID: %v)", *c.AppID)
+					}
+					if _, ok := lt[sch]; !ok {
 						text = text +
 							fmt.Sprintf("Status check %s %s not found for branch %v\n",
 								c.Context, appIDTxt, b)
@@ -504,7 +511,11 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 				lt := makeSCLookupTable(pr.RequiredStatusChecks.Checks)
 				for _, c := range mc.RequireStatusChecks {
 					// Only mark for update if there are status checks required, but not already set.
-					if _, ok := lt[c]; !ok {
+					sch := statusCheckHash{context: c.Context}
+					if c.AppID != nil {
+						sch.appID = *c.AppID
+					}
+					if _, ok := lt[sch]; !ok {
 						ac = append(ac, &github.RequiredStatusCheck{Context: c.Context, AppID: c.AppID})
 						update = true
 					}
@@ -615,14 +626,14 @@ func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 	return mc
 }
 
-func makeSCLookupTable(prrsc []*github.RequiredStatusCheck) map[StatusCheck]struct{} {
-	lt := make(map[StatusCheck]struct{}, len(prrsc))
+func makeSCLookupTable(prrsc []*github.RequiredStatusCheck) map[statusCheckHash]struct{} {
+	lt := make(map[statusCheckHash]struct{}, len(prrsc))
 	for _, c := range prrsc {
 		// each check can match the context with and without appID
-		sc := StatusCheck{Context: c.Context, AppID: c.AppID}
+		sc := statusCheckHash{context: c.Context}
 		lt[sc] = struct{}{}
 		if c.AppID != nil {
-			lt[StatusCheck{Context: c.Context}] = struct{}{}
+			lt[statusCheckHash{context: c.Context, appID: *c.AppID}] = struct{}{}
 		}
 	}
 	return lt
