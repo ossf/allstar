@@ -54,7 +54,7 @@ type OrgConfig struct {
 	// ApprovalCount is the number of required PR approvals, default 1.
 	ApprovalCount int `yaml:"approvalCount"`
 
-	// DismissStale : set to true to require PR approvalse be dismissed when a PR
+	// DismissStale : set to true to require PR approvals be dismissed when a PR
 	// is updated, default true.
 	DismissStale bool `yaml:"dismissStale"`
 
