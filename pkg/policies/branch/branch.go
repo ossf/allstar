@@ -420,7 +420,7 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 					Str("org", owner).
 					Str("repo", repo).
 					Str("area", polName).
-					Msg("Fix action selected, but repo does not support Branch Proteciton.")
+					Msg("Fix action selected, but repo does not support Branch Protection.")
 				// no sense to continue, just return
 				return nil
 			}
@@ -534,7 +534,7 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 				Str("org", owner).
 				Str("repo", repo).
 				Str("area", polName).
-				Msg("Updated with Fix aciton.")
+				Msg("Updated with Fix action.")
 		}
 	}
 	return nil
