@@ -433,6 +433,10 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 			EnforceAdmins:        p.EnforceAdmins.Enabled,
 			AllowForcePushes:     &p.AllowForcePushes.Enabled,
 		}
+		if pr.RequiredStatusChecks != nil {
+			// Clear out Contexts, since API populates both, but updates require only one.
+			pr.RequiredStatusChecks.Contexts = nil
+		}
 		if p.RequiredPullRequestReviews != nil {
 			prr := &github.PullRequestReviewsEnforcementRequest{
 				DismissStaleReviews:          p.RequiredPullRequestReviews.DismissStaleReviews,
@@ -520,8 +524,6 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 						update = true
 					}
 				}
-				// Clear out Contexts, since API populates both, but updates require only one.
-				pr.RequiredStatusChecks.Contexts = nil
 				pr.RequiredStatusChecks.Checks = ac
 			}
 		}
