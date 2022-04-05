@@ -651,6 +651,8 @@ func TestCheck(t *testing.T) {
 
 func TestFix(t *testing.T) {
 	flse := false
+	var appid int64
+	appid = 123
 	tests := []struct {
 		Name         string
 		Org          OrgConfig
@@ -705,6 +707,16 @@ func TestFix(t *testing.T) {
 						Enabled: false,
 					},
 					RequiredPullRequestReviews: nil,
+					RequiredStatusChecks: &github.RequiredStatusChecks{
+						Strict:   true,
+						Contexts: []string{"mycheck"},
+						Checks: []*github.RequiredStatusCheck{
+							&github.RequiredStatusCheck{
+								Context: "mycheck",
+								AppID:   &appid,
+							},
+						},
+					},
 				},
 			},
 			cofigEnabled: true,
@@ -714,6 +726,15 @@ func TestFix(t *testing.T) {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 2,
+					},
+					RequiredStatusChecks: &github.RequiredStatusChecks{
+						Strict: true,
+						Checks: []*github.RequiredStatusCheck{ // No Contexts in request
+							&github.RequiredStatusCheck{
+								Context: "mycheck",
+								AppID:   &appid,
+							},
+						},
 					},
 				},
 			},
