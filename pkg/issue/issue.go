@@ -18,10 +18,12 @@ package issue
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/config/operator"
+	"github.com/rs/zerolog/log"
 
 	"github.com/google/go-github/v43/github"
 )
@@ -107,7 +109,15 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 			Body:   &body,
 			Labels: &[]string{label},
 		}
-		_, _, err := issues.Create(ctx, owner, issueRepo, new)
+		_, rsp, err := issues.Create(ctx, owner, issueRepo, new)
+		if err != nil && rsp != nil && (rsp.StatusCode == http.StatusGone || rsp.StatusCode == http.StatusForbidden) {
+			log.Warn().
+				Str("org", owner).
+				Str("repo", repo).
+				Str("area", policy).
+				Msg("Action set to issue, but issues are disabled.")
+			return nil
+		}
 		return err
 	}
 	if issue.GetState() == "closed" {
@@ -115,7 +125,15 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		update := &github.IssueRequest{
 			State: &state,
 		}
-		if _, _, err := issues.Edit(ctx, owner, issueRepo, issue.GetNumber(), update); err != nil {
+		if _, rsp, err := issues.Edit(ctx, owner, issueRepo, issue.GetNumber(), update); err != nil {
+			if rsp != nil && (rsp.StatusCode == http.StatusGone || rsp.StatusCode == http.StatusForbidden) {
+				log.Warn().
+					Str("org", owner).
+					Str("repo", repo).
+					Str("area", policy).
+					Msg("Action set to issue, but issues are disabled.")
+				return nil
+			}
 			return err
 		}
 		body := "Reopening issue. Status:\n" + text
@@ -130,7 +148,15 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		comment := &github.IssueComment{
 			Body: &body,
 		}
-		_, _, err := issues.CreateComment(ctx, owner, issueRepo, issue.GetNumber(), comment)
+		_, rsp, err := issues.CreateComment(ctx, owner, issueRepo, issue.GetNumber(), comment)
+		if err != nil && rsp != nil && (rsp.StatusCode == http.StatusGone || rsp.StatusCode == http.StatusForbidden) {
+			log.Warn().
+				Str("org", owner).
+				Str("repo", repo).
+				Str("area", policy).
+				Msg("Action set to issue, but issues are disabled.")
+			return nil
+		}
 		return err
 	}
 	return nil
@@ -154,7 +180,15 @@ func closeIssue(ctx context.Context, c *github.Client, issues issues, owner, rep
 		comment := &github.IssueComment{
 			Body: &body,
 		}
-		if _, _, err := issues.CreateComment(ctx, owner, issueRepo, issue.GetNumber(), comment); err != nil {
+		if _, rsp, err := issues.CreateComment(ctx, owner, issueRepo, issue.GetNumber(), comment); err != nil {
+			if rsp != nil && (rsp.StatusCode == http.StatusGone || rsp.StatusCode == http.StatusForbidden) {
+				log.Warn().
+					Str("org", owner).
+					Str("repo", repo).
+					Str("area", policy).
+					Msg("Action set to issue, but issues are disabled.")
+				return nil
+			}
 			return err
 		}
 		state := "closed"

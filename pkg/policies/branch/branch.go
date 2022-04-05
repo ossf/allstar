@@ -409,8 +409,17 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 					}
 					pr.RequiredStatusChecks = rsc
 				}
-				_, _, err := rep.UpdateBranchProtection(ctx, owner, repo, b, pr)
+				_, rsp, err := rep.UpdateBranchProtection(ctx, owner, repo, b, pr)
 				if err != nil {
+					if rsp != nil && rsp.StatusCode == http.StatusForbidden {
+						log.Warn().
+							Str("org", owner).
+							Str("repo", repo).
+							Str("area", polName).
+							Msg("Action set to fix, but did not accept admin:write permissions update.")
+						// no sense to continue, just return
+						return nil
+					}
 					return err
 				}
 				continue
@@ -528,8 +537,16 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 			}
 		}
 		if update {
-			_, _, err := rep.UpdateBranchProtection(ctx, owner, repo, b, pr)
+			_, rsp, err := rep.UpdateBranchProtection(ctx, owner, repo, b, pr)
 			if err != nil {
+				if rsp != nil && rsp.StatusCode == http.StatusForbidden {
+					log.Warn().
+						Str("org", owner).
+						Str("repo", repo).
+						Str("area", polName).
+						Msg("Action set to fix, but did not accept admin:write permissions update.")
+					return nil
+				}
 				return err
 			}
 			log.Info().
