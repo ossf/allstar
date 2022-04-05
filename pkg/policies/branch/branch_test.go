@@ -60,8 +60,6 @@ func (m mockRepos) UpdateBranchProtection(ctx context.Context, owner, repo,
 }
 
 func TestCheck(t *testing.T) {
-	one := 1
-	fal := false
 	tests := []struct {
 		Name         string
 		Org          OrgConfig
@@ -479,8 +477,8 @@ func TestCheck(t *testing.T) {
 				BlockForce:      true,
 			},
 			Repo: RepoConfig{
-				ApprovalCount: &one,
-				DismissStale:  &fal,
+				ApprovalCount: github.Int(1),
+				DismissStale:  github.Bool(false),
 			},
 			Prot: map[string]github.Protection{
 				"main": github.Protection{
@@ -519,8 +517,8 @@ func TestCheck(t *testing.T) {
 				BlockForce:      true,
 			},
 			Repo: RepoConfig{
-				ApprovalCount: &one,
-				DismissStale:  &fal,
+				ApprovalCount: github.Int(1),
+				DismissStale:  github.Bool(false),
 			},
 			Prot: map[string]github.Protection{
 				"main": github.Protection{
@@ -650,9 +648,6 @@ func TestCheck(t *testing.T) {
 }
 
 func TestFix(t *testing.T) {
-	flse := false
-	var appid int64
-	appid = 123
 	tests := []struct {
 		Name         string
 		Org          OrgConfig
@@ -713,7 +708,7 @@ func TestFix(t *testing.T) {
 						Checks: []*github.RequiredStatusCheck{
 							&github.RequiredStatusCheck{
 								Context: "mycheck",
-								AppID:   &appid,
+								AppID:   github.Int64(123),
 							},
 						},
 					},
@@ -722,7 +717,7 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
 				"main": github.ProtectionRequest{
-					AllowForcePushes: &flse,
+					AllowForcePushes: github.Bool(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 2,
@@ -732,7 +727,7 @@ func TestFix(t *testing.T) {
 						Checks: []*github.RequiredStatusCheck{ // No Contexts in request
 							&github.RequiredStatusCheck{
 								Context: "mycheck",
-								AppID:   &appid,
+								AppID:   github.Int64(123),
 							},
 						},
 					},
@@ -790,7 +785,7 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
 				"main": github.ProtectionRequest{
-					AllowForcePushes: &flse,
+					AllowForcePushes: github.Bool(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 2,
@@ -821,7 +816,7 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
 				"main": github.ProtectionRequest{
-					AllowForcePushes: &flse,
+					AllowForcePushes: github.Bool(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						RequiredApprovingReviewCount: 0,
 					},
@@ -877,7 +872,7 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
 				"main": github.ProtectionRequest{
-					AllowForcePushes: &flse,
+					AllowForcePushes: github.Bool(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						RequiredApprovingReviewCount: 0,
 					},
@@ -915,7 +910,7 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
 				"main": github.ProtectionRequest{
-					AllowForcePushes: &flse,
+					AllowForcePushes: github.Bool(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						RequiredApprovingReviewCount: 0,
 					},
@@ -959,7 +954,7 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
 				"main": github.ProtectionRequest{
-					AllowForcePushes: &flse,
+					AllowForcePushes: github.Bool(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						RequiredApprovingReviewCount: 0,
 					},
@@ -1005,7 +1000,7 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
 				"main": github.ProtectionRequest{
-					AllowForcePushes: &flse,
+					AllowForcePushes: github.Bool(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						RequiredApprovingReviewCount: 0,
 					},
