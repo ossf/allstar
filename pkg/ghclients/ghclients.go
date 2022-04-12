@@ -25,6 +25,7 @@ import (
 	"github.com/gregjones/httpcache"
 	"github.com/ossf/allstar/pkg/config/operator"
 	"gocloud.dev/runtimevar"
+	_ "gocloud.dev/runtimevar/awssecretsmanager"
 	_ "gocloud.dev/runtimevar/gcpsecretmanager"
 )
 
