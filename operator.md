@@ -30,11 +30,14 @@ to create and download a private key. Also note down the App ID in the General /
 About section of your new app.
 
 Upload the private key contents to a supported service by [Go CDK Runtime
-Configuration](https://gocloud.dev/howto/runtimevar/)
+Configuration](https://gocloud.dev/howto/runtimevar/).
 
 Edit `pkg/config/operator/operator.go` and set the AppID and KeySecret link. You
 may need to edit `pkg/ghclients/ghclients.go` and add a new import line for your
 secret service, ex: `_ "gocloud.dev/runtimevar/gcpsecretmanager"`.
+
+Alternatively, you can provide the AppID and KeySecret as environment variables
+`APP_ID` and `KEY_SECRET`.
 
 ## Run Allstar.
 
