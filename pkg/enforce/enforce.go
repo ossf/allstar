@@ -18,6 +18,7 @@ package enforce
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ossf/allstar/pkg/config"
@@ -25,6 +26,7 @@ import (
 	"github.com/ossf/allstar/pkg/issue"
 	"github.com/ossf/allstar/pkg/policies"
 	"github.com/ossf/allstar/pkg/policydef"
+	"github.com/ossf/allstar/pkg/scorecard"
 
 	"github.com/google/go-github/v43/github"
 	"github.com/rs/zerolog/log"
@@ -209,5 +211,6 @@ func RunPolicies(ctx context.Context, c *github.Client, owner, repo string, enab
 			}
 		}
 	}
+	scorecard.Close(fmt.Sprintf("%s/%s", owner, repo))
 	return nil
 }
