@@ -1,4 +1,4 @@
-// Copyright 2021 Allstar Authors
+// Copyright 2022 Allstar Authors
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package binary implements the Binary Artifacts security policy check from
-// scorecard.
-package binary
+// Package workflow implements the Dangerous Workflow security policy check
+// from scorecard.
+package workflow
 
 import (
 	"context"
@@ -30,8 +30,8 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const configFile = "binary_artifacts.yaml"
-const polName = "Binary Artifacts"
+const configFile = "dangerous_workflow.yaml"
+const polName = "Dangerous Workflow"
 
 // OrgConfig is the org-level config definition for this policy.
 type OrgConfig struct {
@@ -57,7 +57,7 @@ type mergedConfig struct {
 }
 
 type details struct {
-	Artifacts []string
+	Findings []string
 }
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, bool, interface{}) error
@@ -66,17 +66,18 @@ func init() {
 	configFetchConfig = config.FetchConfig
 }
 
-// Binary is the Binary Artifacts policy object, implements policydef.Policy.
-type Binary bool
+// Workflow is the Dangerous Workflow policy object, implements
+// policydef.Policy.
+type Workflow bool
 
-// NewBinary returns a new Binary Artifacts policy.
-func NewBinary() policydef.Policy {
-	var b Binary
+// NewWorkflow returns a new Dangerous Workflow policy.
+func NewWorkflow() policydef.Policy {
+	var b Workflow
 	return b
 }
 
 // Name returns the name of this policy, implementing policydef.Policy.Name()
-func (b Binary) Name() string {
+func (b Workflow) Name() string {
 	return polName
 }
 
@@ -119,7 +120,7 @@ func (l *logger) Flush() []checker.CheckDetail {
 
 // Check performs the policy check for this policy based on the
 // configuration stored in the org/repo, implementing policydef.Policy.Check()
-func (b Binary) Check(ctx context.Context, c *github.Client, owner,
+func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
 	oc, rc := getConfig(ctx, c, owner, repo)
 	enabled, err := config.IsEnabled(ctx, oc.OptConfig, rc.OptConfig, c, owner, repo)
@@ -132,17 +133,6 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		Str("area", polName).
 		Bool("enabled", enabled).
 		Msg("Check repo enabled")
-	if !enabled {
-		// Don't run this policy unless enabled, as it is expensive. This is only
-		// checking enablement of policy, but not Allstar overall, this is ok for
-		// now.
-		return &policydef.Result{
-			Enabled:    enabled,
-			Pass:       true,
-			NotifyText: "Disabled",
-			Details:    details{},
-		}, nil
-	}
 
 	fullName := fmt.Sprintf("%s/%s", owner, repo)
 	tr := c.Client().Transport
@@ -159,7 +149,7 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		Dlogger:    &l,
 	}
 
-	res := checks.BinaryArtifacts(cr)
+	res := checks.DangerousWorkflow(cr)
 	if res.Error2 != nil {
 		return nil, res.Error2
 	}
@@ -168,23 +158,24 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 	pass := res.Score >= checker.MaxResultScore
 	var notify string
 	if !pass {
-		notify = fmt.Sprintf(`Project is out of compliance with Binary Artifacts policy: %v
+		notify = fmt.Sprintf(`Project is out of compliance with Dangerous Workflow policy: %v
 
 **Rule Description**
-Binary Artifacts are an increased security risk in your repository. Binary artifacts cannot be reviewed, allowing the introduction of possibly obsolete or maliciously subverted executables. For more information see the [Security Scorecards Documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md#binary-artifacts) for Binary Artifacts.
+Dangerous Workflows are GitHub Action workflows that exhibit dangerous patterns that could render them vulnerable to attack. A vulnerable workflow is susceptible to leaking repository secrets, or allowing an attacker write access using the GITHUB_TOKEN. For more information about the particular patterns that are detected see the [Security Scorecards Documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md#dangerous-workflow) for Dangerous Workflow.
 
 **Remediation Steps**
-To remediate, remove the generated executable artifacts from the repository.
+Avoid the dangerous workflow patterns. See this [post](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/) for information on avoiding untrusted code checkouts. See this [document](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#understanding-the-risk-of-script-injections) for information on avoiding and mitigating the risk of script injections.
+
 
 `,
 			res.Reason)
 		if len(logs) > 10 {
 			notify += fmt.Sprintf(
-				"**First 10 Artifacts Found**\n\n%v"+
+				"**First 10 Dangerous Patterns Found**\n\n%v"+
 					"- Run a Scorecards scan to see full list.\n\n",
 				listJoin(logs[:10]))
 		} else {
-			notify += fmt.Sprintf("**Artifacts Found**\n\n%v\n", listJoin(logs))
+			notify += fmt.Sprintf("**Dangerous Patterns Found**\n\n%v\n", listJoin(logs))
 		}
 		notify += `**Additional Information**
 This policy is drawn from [Security Scorecards](https://github.com/ossf/scorecard/), which is a tool that scores a project's adherence to security best practices. You may wish to run a Scorecards scan directly on this repository for more details.`
@@ -195,7 +186,7 @@ This policy is drawn from [Security Scorecards](https://github.com/ossf/scorecar
 		Pass:       pass,
 		NotifyText: notify,
 		Details: details{
-			Artifacts: logs,
+			Findings: logs,
 		},
 	}, nil
 }
@@ -211,13 +202,13 @@ func listJoin(list []string) string {
 func convertLogs(logs []checker.CheckDetail) []string {
 	var s []string
 	for _, l := range logs {
-		s = append(s, l.Msg.Path)
+		s = append(s, fmt.Sprintf("%v[%v]:%v", l.Msg.Path, l.Msg.Offset, l.Msg.Text))
 	}
 	return s
 }
 
 // Fix implementing policydef.Policy.Fix(). Scorecard checks will not have a Fix option.
-func (b Binary) Fix(ctx context.Context, c *github.Client, owner, repo string) error {
+func (b Workflow) Fix(ctx context.Context, c *github.Client, owner, repo string) error {
 	log.Warn().
 		Str("org", owner).
 		Str("repo", repo).
@@ -229,7 +220,7 @@ func (b Binary) Fix(ctx context.Context, c *github.Client, owner, repo string) e
 // GetAction returns the configured action from this policy's configuration
 // stored in the org-level repo, default log. Implementing
 // policydef.Policy.GetAction()
-func (b Binary) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
+func (b Workflow) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
 	oc, rc := getConfig(ctx, c, owner, repo)
 	mc := mergeConfig(oc, rc, repo)
 	return mc.Action

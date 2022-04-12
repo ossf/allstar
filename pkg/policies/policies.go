@@ -21,6 +21,7 @@ import (
 	"github.com/ossf/allstar/pkg/policies/branch"
 	"github.com/ossf/allstar/pkg/policies/outside"
 	"github.com/ossf/allstar/pkg/policies/security"
+	"github.com/ossf/allstar/pkg/policies/workflow"
 	"github.com/ossf/allstar/pkg/policydef"
 )
 
@@ -31,5 +32,6 @@ func GetPolicies() []policydef.Policy {
 		branch.NewBranch(),
 		outside.NewOutside(),
 		security.NewSecurity(),
+		workflow.NewWorkflow(),
 	}
 }
