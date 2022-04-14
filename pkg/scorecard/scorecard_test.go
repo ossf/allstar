@@ -107,7 +107,7 @@ func TestGetNew(t *testing.T) {
 	close = func() error {
 		return nil
 	}
-	_, _ = Get(nil, "org/repo", nil)
+	_, _ = Get(context.Background(), "org/repo", nil)
 	if !makeCalled {
 		t.Error("githubrepo.MakeGithubRepo not called for new repo")
 	}
@@ -137,9 +137,9 @@ func TestGetExisting(t *testing.T) {
 	close = func() error {
 		return nil
 	}
-	_, _ = Get(nil, "org/repo", nil)
+	_, _ = Get(context.Background(), "org/repo", nil)
 	makeCalled, createCalled, initCalled = false, false, false
-	_, _ = Get(nil, "org/repo", nil)
+	_, _ = Get(context.Background(), "org/repo", nil)
 	if makeCalled {
 		t.Error("githubrepo.MakeGithubRepo called for existing repo")
 	}
@@ -167,7 +167,7 @@ func TestClose(t *testing.T) {
 		closeCalled = true
 		return nil
 	}
-	_, _ = Get(nil, "org/repo", nil)
+	_, _ = Get(context.Background(), "org/repo", nil)
 	Close("org/repo")
 	if !closeCalled {
 		t.Error("repoclient.Close not called for Close")
@@ -191,10 +191,10 @@ func TestRecreate(t *testing.T) {
 	close = func() error {
 		return nil
 	}
-	_, _ = Get(nil, "org/repo", nil)
+	_, _ = Get(context.Background(), "org/repo", nil)
 	Close("org/repo")
 	makeCalled, createCalled, initCalled = false, false, false
-	_, _ = Get(nil, "org/repo", nil)
+	_, _ = Get(context.Background(), "org/repo", nil)
 	if !makeCalled {
 		t.Error("githubrepo.MakeGithubRepo not called for new repo")
 	}
