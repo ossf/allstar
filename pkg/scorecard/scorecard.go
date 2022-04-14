@@ -76,7 +76,6 @@ func Close(fullRepo string) {
 	}
 	scClients[fullRepo].ScRepoClient.Close()
 	delete(scClients, fullRepo)
-	return
 }
 
 func create(ctx context.Context, fullRepo string, tr http.RoundTripper) (*ScClient, error) {
