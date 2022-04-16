@@ -90,15 +90,8 @@ func TestCheck(t *testing.T) {
 			Exp: policydef.Result{
 				Enabled:    false,
 				Pass:       true,
-				NotifyText: "",
-				Details: map[string]details{
-					"main": details{
-						PRReviews:    true,
-						NumReviews:   1,
-						DismissStale: true,
-						BlockForce:   true,
-					},
-				},
+				NotifyText: "Disabled",
+				Details:    map[string]details{},
 			},
 		},
 		{
