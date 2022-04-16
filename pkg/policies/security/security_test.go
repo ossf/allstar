@@ -50,11 +50,8 @@ func TestCheck(t *testing.T) {
 			Exp: policydef.Result{
 				Enabled:    false,
 				Pass:       true,
-				NotifyText: "",
-				Details: details{
-					Enabled: true,
-					URL:     "",
-				},
+				NotifyText: "Disabled",
+				Details:    details{},
 			},
 		},
 		{
