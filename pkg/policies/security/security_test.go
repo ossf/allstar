@@ -34,19 +34,38 @@ func (m mockClient) Query(ctx context.Context, q interface{}, v map[string]inter
 
 func TestCheck(t *testing.T) {
 	tests := []struct {
-		Name         string
-		Org          OrgConfig
-		Repo         RepoConfig
-		SecEnabled   bool
-		cofigEnabled bool
-		Exp          policydef.Result
+		Name              string
+		Org               OrgConfig
+		Repo              RepoConfig
+		SecEnabled        bool
+		cofigEnabled      bool
+		doNothingOnOptOut bool
+		Exp               policydef.Result
 	}{
 		{
-			Name:         "NotEnabled",
-			Org:          OrgConfig{},
-			Repo:         RepoConfig{},
-			SecEnabled:   true,
-			cofigEnabled: false,
+			Name:              "NotEnabled",
+			Org:               OrgConfig{},
+			Repo:              RepoConfig{},
+			SecEnabled:        true,
+			cofigEnabled:      false,
+			doNothingOnOptOut: false,
+			Exp: policydef.Result{
+				Enabled:    false,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					Enabled: true,
+					URL:     "",
+				},
+			},
+		},
+		{
+			Name:              "NotEnabledDoNothing",
+			Org:               OrgConfig{},
+			Repo:              RepoConfig{},
+			SecEnabled:        true,
+			cofigEnabled:      false,
+			doNothingOnOptOut: true,
 			Exp: policydef.Result{
 				Enabled:    false,
 				Pass:       true,
@@ -61,9 +80,10 @@ func TestCheck(t *testing.T) {
 					OptOutStrategy: true,
 				},
 			},
-			Repo:         RepoConfig{},
-			SecEnabled:   true,
-			cofigEnabled: true,
+			Repo:              RepoConfig{},
+			SecEnabled:        true,
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
@@ -81,9 +101,10 @@ func TestCheck(t *testing.T) {
 					OptOutStrategy: true,
 				},
 			},
-			Repo:         RepoConfig{},
-			SecEnabled:   false,
-			cofigEnabled: true,
+			Repo:              RepoConfig{},
+			SecEnabled:        false,
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -126,6 +147,7 @@ func TestCheck(t *testing.T) {
 				c *github.Client, owner, repo string) (bool, error) {
 				return test.cofigEnabled, nil
 			}
+			doNothingOnOptOut = test.doNothingOnOptOut
 			res, err := check(context.Background(), nil, mockClient{}, "", "thisrepo")
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
