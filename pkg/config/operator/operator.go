@@ -49,6 +49,15 @@ const RepoConfigDir = ".allstar"
 // AppConfigFile is the name of the expected file in org or repo level config.
 const AppConfigFile = "allstar.yaml"
 
+// DoNothingOnOptOut is a configuration flag indicating if allstar should do
+// nothing and skip the corresponding checks when a repository is opted out.
+// Can be configured with environment variable DO_NOTHING_ON_OPT_OUT, where
+// the value should be a string equivalent of a bool, as accepted by
+// strconv.ParseBool.
+const setDoNothingOnOptOut = false
+
+var DoNothingOnOptOut bool
+
 // GitHubIssueLabel is the label used to tag, search, and identify GitHub
 // Issues created by the bot.
 const GitHubIssueLabel = "allstar"
@@ -83,5 +92,13 @@ func setVars() {
 		KeySecret = keySecret
 	} else {
 		KeySecret = setKeySecret
+	}
+
+	doNothingOnOptOutStr := osGetenv("DO_NOTHING_ON_OPT_OUT")
+	doNothingOnOptOut, err := strconv.ParseBool(doNothingOnOptOutStr)
+	if err == nil {
+		DoNothingOnOptOut = doNothingOnOptOut
+	} else {
+		DoNothingOnOptOut = setDoNothingOnOptOut
 	}
 }

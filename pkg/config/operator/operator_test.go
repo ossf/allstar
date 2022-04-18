@@ -23,32 +23,49 @@ import (
 
 func TestSetVars(t *testing.T) {
 	tests := []struct {
-		Name         string
-		AppID        string
-		KeySecret    string
-		ExpAppID     int64
-		ExpKeySecret string
+		Name                 string
+		AppID                string
+		KeySecret            string
+		DoNothingOnOptOut    string
+		ExpAppID             int64
+		ExpKeySecret         string
+		ExpDoNothingOnOptOut bool
 	}{
 		{
-			Name:         "NoVars",
-			AppID:        "",
-			KeySecret:    "",
-			ExpAppID:     setAppID,
-			ExpKeySecret: setKeySecret,
+			Name:                 "NoVars",
+			AppID:                "",
+			KeySecret:            "",
+			DoNothingOnOptOut:    "",
+			ExpAppID:             setAppID,
+			ExpKeySecret:         setKeySecret,
+			ExpDoNothingOnOptOut: setDoNothingOnOptOut,
 		},
 		{
-			Name:         "SetVars",
-			AppID:        "123",
-			KeySecret:    "asdf",
-			ExpAppID:     123,
-			ExpKeySecret: "asdf",
+			Name:                 "SetVars",
+			AppID:                "123",
+			KeySecret:            "asdf",
+			DoNothingOnOptOut:    "true",
+			ExpAppID:             123,
+			ExpKeySecret:         "asdf",
+			ExpDoNothingOnOptOut: true,
 		},
 		{
-			Name:         "BadInt",
-			AppID:        "notint",
-			KeySecret:    "",
-			ExpAppID:     setAppID,
-			ExpKeySecret: setKeySecret,
+			Name:                 "BadInt",
+			AppID:                "notint",
+			KeySecret:            "",
+			DoNothingOnOptOut:    "",
+			ExpAppID:             setAppID,
+			ExpKeySecret:         setKeySecret,
+			ExpDoNothingOnOptOut: setDoNothingOnOptOut,
+		},
+		{
+			Name:                 "BadBool",
+			AppID:                "",
+			KeySecret:            "",
+			DoNothingOnOptOut:    "not-bool",
+			ExpAppID:             setAppID,
+			ExpKeySecret:         setKeySecret,
+			ExpDoNothingOnOptOut: setDoNothingOnOptOut,
 		},
 	}
 	for _, test := range tests {
@@ -60,6 +77,9 @@ func TestSetVars(t *testing.T) {
 				if in == "KEY_SECRET" {
 					return test.KeySecret
 				}
+				if in == "DO_NOTHING_ON_OPT_OUT" {
+					return test.DoNothingOnOptOut
+				}
 				return ""
 			}
 			setVars()
@@ -67,6 +87,9 @@ func TestSetVars(t *testing.T) {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 			if diff := cmp.Diff(test.ExpKeySecret, KeySecret); diff != "" {
+				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+			}
+			if diff := cmp.Diff(test.ExpDoNothingOnOptOut, DoNothingOnOptOut); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 		})

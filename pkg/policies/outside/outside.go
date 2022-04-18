@@ -20,11 +20,14 @@ import (
 	"fmt"
 
 	"github.com/ossf/allstar/pkg/config"
+	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/policydef"
 
 	"github.com/google/go-github/v43/github"
 	"github.com/rs/zerolog/log"
 )
+
+var doNothingOnOptOut = operator.DoNothingOnOptOut
 
 const configFile = "outside.yaml"
 const polName = "Outside Collaborators"
@@ -161,9 +164,10 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		Str("area", polName).
 		Bool("enabled", enabled).
 		Msg("Check repo enabled")
-	if !enabled {
-		// Don't run this policy unless enabled. This is only checking enablement
-		// of policy, but not Allstar overall, this is ok for now.
+	if !enabled && doNothingOnOptOut {
+		// Don't run this policy if disabled and requested by operator. This is
+		// only checking enablement of policy, but not Allstar overall, this is
+		// ok for now.
 		return &policydef.Result{
 			Enabled:    enabled,
 			Pass:       true,

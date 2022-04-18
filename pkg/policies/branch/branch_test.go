@@ -61,12 +61,13 @@ func (m mockRepos) UpdateBranchProtection(ctx context.Context, owner, repo,
 
 func TestCheck(t *testing.T) {
 	tests := []struct {
-		Name         string
-		Org          OrgConfig
-		Repo         RepoConfig
-		Prot         map[string]github.Protection
-		cofigEnabled bool
-		Exp          policydef.Result
+		Name              string
+		Org               OrgConfig
+		Repo              RepoConfig
+		Prot              map[string]github.Protection
+		cofigEnabled      bool
+		doNothingOnOptOut bool
+		Exp               policydef.Result
 	}{
 		{
 			Name: "NotEnabled",
@@ -86,7 +87,42 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled: false,
+			cofigEnabled:      false,
+			doNothingOnOptOut: false,
+			Exp: policydef.Result{
+				Enabled:    false,
+				Pass:       true,
+				NotifyText: "",
+				Details: map[string]details{
+					"main": details{
+						PRReviews:    true,
+						NumReviews:   1,
+						DismissStale: true,
+						BlockForce:   true,
+					},
+				},
+			},
+		},
+		{
+			Name: "NotEnabledDoNothing",
+			Org: OrgConfig{
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   1,
+				DismissStale:    true,
+				BlockForce:      true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 1,
+					},
+				},
+			},
+			cofigEnabled:      false,
+			doNothingOnOptOut: true,
 			Exp: policydef.Result{
 				Enabled:    false,
 				Pass:       true,
@@ -94,6 +130,7 @@ func TestCheck(t *testing.T) {
 				Details:    map[string]details{},
 			},
 		},
+
 		{
 			Name: "CatchBlockForce",
 			Org: OrgConfig{
@@ -118,7 +155,8 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled: true,
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -157,7 +195,8 @@ func TestCheck(t *testing.T) {
 				},
 				"release": github.Protection{},
 			},
-			cofigEnabled: true,
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -203,7 +242,8 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled: true,
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
@@ -253,7 +293,8 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled: true,
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -299,7 +340,8 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled: true,
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -347,7 +389,8 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled: true,
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -394,7 +437,8 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled: true,
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
@@ -441,7 +485,8 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled: true,
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -481,7 +526,8 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled: true,
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
@@ -521,7 +567,8 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled: true,
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -548,9 +595,10 @@ func TestCheck(t *testing.T) {
 				DismissStale:    true,
 				BlockForce:      true,
 			},
-			Repo:         RepoConfig{},
-			Prot:         map[string]github.Protection{},
-			cofigEnabled: true,
+			Repo:              RepoConfig{},
+			Prot:              map[string]github.Protection{},
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -611,6 +659,7 @@ func TestCheck(t *testing.T) {
 				c *github.Client, owner, repo string) (bool, error) {
 				return test.cofigEnabled, nil
 			}
+			doNothingOnOptOut = test.doNothingOnOptOut
 			res, err := check(context.Background(), mockRepos{}, nil, "", "thisrepo")
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
