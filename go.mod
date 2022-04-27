@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/bradleyfalzon/ghinstallation/v2 v2.0.4
-	github.com/google/go-cmp v0.5.7
+	github.com/google/go-cmp v0.5.8
 	github.com/google/go-github/v43 v43.0.0
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79
 	github.com/ossf/scorecard/v4 v4.1.0
