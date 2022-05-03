@@ -19,6 +19,7 @@ package binary
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
@@ -41,6 +42,11 @@ type OrgConfig struct {
 
 	// Action defines which action to take, default log, other: issue...
 	Action string `yaml:"action"`
+
+	// IgnoreFiles is a list of file names to ignore. Any Binary Artifacts found
+	// with these names are allowed, and the policy may still pass. These are
+	// just the file name, not a full path. Globs are not allowed.
+	IgnoreFiles []string `yaml:"ignoreFiles"`
 }
 
 // RepoConfig is the repo-level config for this policy.
@@ -50,10 +56,18 @@ type RepoConfig struct {
 
 	// Action overrides the same setting in org-level, only if present.
 	Action *string `yaml:"action"`
+
+	// IgnorePaths is a list of full paths to ignore. If these are reported as a
+	// Binary Artifact, they will be ignored and the policy may still pass. These
+	// must be full paths with directories. Globs are not allowed. These are
+	// allowed even if RepoOverride is false.
+	IgnorePaths []string `yaml:"ignorePaths"`
 }
 
 type mergedConfig struct {
-	Action string
+	Action      string
+	IgnoreFiles []string
+	IgnorePaths []string
 }
 
 type details struct {
@@ -122,6 +136,7 @@ func (l *logger) Flush() []checker.CheckDetail {
 func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
 	oc, rc := getConfig(ctx, c, owner, repo)
+	mc := mergeConfig(oc, rc, repo)
 	enabled, err := config.IsEnabled(ctx, oc.OptConfig, rc.OptConfig, c, owner, repo)
 	if err != nil {
 		return nil, err
@@ -164,8 +179,11 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		return nil, res.Error2
 	}
 
-	logs := convertLogs(l.logs)
-	pass := res.Score >= checker.MaxResultScore
+	logs := convertAndFilterLogs(l.logs, mc)
+
+	// We assume every log is a finding and do filtering on the Allstar side
+	pass := len(logs) > 0
+
 	var notify string
 	if !pass {
 		notify = fmt.Sprintf(`Project is out of compliance with Binary Artifacts policy: %v
@@ -208,9 +226,15 @@ func listJoin(list []string) string {
 	return s
 }
 
-func convertLogs(logs []checker.CheckDetail) []string {
+func convertAndFilterLogs(logs []checker.CheckDetail, mc *mergedConfig) []string {
 	var s []string
 	for _, l := range logs {
+		if in(l.Msg.Path, mc.IgnorePaths) {
+			continue
+		}
+		if in(filepath.Base(l.Msg.Path), mc.IgnoreFiles) {
+			continue
+		}
 		s = append(s, l.Msg.Path)
 	}
 	return s
@@ -265,7 +289,9 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 
 func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 	mc := &mergedConfig{
-		Action: oc.Action,
+		Action:      oc.Action,
+		IgnoreFiles: oc.IgnoreFiles,
+		IgnorePaths: rc.IgnorePaths,
 	}
 
 	if !oc.OptConfig.DisableRepoOverride {
@@ -274,4 +300,13 @@ func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 		}
 	}
 	return mc
+}
+
+func in(s string, l []string) bool {
+	for _, v := range l {
+		if s == v {
+			return true
+		}
+	}
+	return false
 }
