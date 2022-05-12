@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - uses: actions/setup-go@v2
+    - uses: actions/setup-go@fcdc43634adb5f7ae75a9d7a9b9361790f7293e2
       with:
         go-version: 1.17
     - uses: sigstore/cosign-installer@main
