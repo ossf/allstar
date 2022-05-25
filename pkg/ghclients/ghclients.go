@@ -71,22 +71,24 @@ func (g *GHClients) Get(i int64) (*github.Client, error) {
 	if c, ok := g.clients[i]; ok {
 		return c, nil
 	}
+
+	ctr := &httpcache.Transport{
+		Transport:           g.tr,
+		Cache:               g.cache,
+		MarkCachedResponses: true,
+	}
+
 	var tr http.RoundTripper
 	var err error
 	if i == 0 {
-		tr, err = ghinstallationNewAppsTransport(g.tr, operator.AppID, g.key)
+		tr, err = ghinstallationNewAppsTransport(ctr, operator.AppID, g.key)
 	} else {
-		tr, err = ghinstallationNew(g.tr, operator.AppID, i, g.key)
+		tr, err = ghinstallationNew(ctr, operator.AppID, i, g.key)
 	}
 	if err != nil {
 		return nil, err
 	}
-	ctr := &httpcache.Transport{
-		Transport:           tr,
-		Cache:               g.cache,
-		MarkCachedResponses: true,
-	}
-	g.clients[i] = github.NewClient(&http.Client{Transport: ctr})
+	g.clients[i] = github.NewClient(&http.Client{Transport: tr})
 	return g.clients[i], nil
 }
 
