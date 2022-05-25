@@ -116,10 +116,10 @@ func setVars() {
 
 	logLevelStr := osGetenv("ALLSTAR_LOG_LEVEL")
 	logLevel, err := zerolog.ParseLevel(logLevelStr)
-	if err == nil {
-		LogLevel = logLevel
-	} else {
+	if err != nil || logLevel == zerolog.NoLevel {
 		LogLevel = setLogLevel
+	} else {
+		LogLevel = logLevel
 	}
 	zerolog.SetGlobalLevel(LogLevel)
 }
