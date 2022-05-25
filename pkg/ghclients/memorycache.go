@@ -40,6 +40,12 @@ func (c *memoryCache) Get(key string) (resp []byte, ok bool) {
 	c.mu.RLock()
 	resp, ok = c.items[key]
 	c.mu.RUnlock()
+
+	log.Debug().
+		Str("area", "bot").
+		Str("key", key).
+		Msg("Cache GET request")
+
 	return resp, ok
 }
 
@@ -48,6 +54,11 @@ func (c *memoryCache) Set(key string, resp []byte) {
 	c.mu.Lock()
 	c.items[key] = resp
 	c.mu.Unlock()
+
+	log.Debug().
+		Str("area", "bot").
+		Str("key", key).
+		Msg("Cache SET request")
 }
 
 // Delete removes key from the cache
@@ -55,6 +66,11 @@ func (c *memoryCache) Delete(key string) {
 	c.mu.Lock()
 	delete(c.items, key)
 	c.mu.Unlock()
+
+	log.Debug().
+		Str("area", "bot").
+		Str("key", key).
+		Msg("Cache DELETE request")
 }
 
 func (c *memoryCache) LogCacheSize() {
@@ -65,6 +81,7 @@ func (c *memoryCache) LogCacheSize() {
 	log.Info().
 		Str("area", "bot").
 		Int("size", total).
+		Int("items", len(c.items)).
 		Msg("Total cache size.")
 }
 
