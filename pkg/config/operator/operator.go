@@ -19,6 +19,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/rs/zerolog"
 )
 
 // AppID should be set to the application ID of the created GitHub App. See:
@@ -57,6 +59,16 @@ const AppConfigFile = "allstar.yaml"
 const setDoNothingOnOptOut = false
 
 var DoNothingOnOptOut bool
+
+// LogLevel is a configuration flag indicating the minimum logging level that
+// allstar should use when emitting logs. Can be configured with the environment
+// variable ALLSTAR_LOG_LEVEL, which must be one of the following strings:
+// panic ; fatal ; error ; warn ; info ; debug ; trace
+// If an unparsable string is provided, then allstar will automatically default
+// to info level.
+const setLogLevel = zerolog.InfoLevel
+
+var LogLevel zerolog.Level
 
 // GitHubIssueLabel is the label used to tag, search, and identify GitHub
 // Issues created by the bot.
@@ -101,4 +113,13 @@ func setVars() {
 	} else {
 		DoNothingOnOptOut = setDoNothingOnOptOut
 	}
+
+	logLevelStr := osGetenv("ALLSTAR_LOG_LEVEL")
+	logLevel, err := zerolog.ParseLevel(logLevelStr)
+	if err == nil {
+		LogLevel = logLevel
+	} else {
+		LogLevel = setLogLevel
+	}
+	zerolog.SetGlobalLevel(LogLevel)
 }
