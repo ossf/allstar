@@ -577,7 +577,7 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 // policydef.Policy.GetAction()
 func (b Branch) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
-	mc := mergeConfig(oc, rc, rc, repo)
+	mc := mergeConfig(oc, orc, rc, repo)
 	return mc.Action
 }
 

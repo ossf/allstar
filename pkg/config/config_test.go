@@ -167,7 +167,7 @@ optConfig:
 				*github.Response, error) {
 				return nil, nil, nil
 			}
-			err := fetchConfig(context.Background(), mockRepos{}, "", "", "", true, test.Got)
+			err := fetchConfig(context.Background(), mockRepos{}, "", "", "", OrgLevel, test.Got)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -182,6 +182,7 @@ func TestIsEnabled(t *testing.T) {
 	tests := []struct {
 		Name           string
 		Org            OrgOptConfig
+		OrgRepo        RepoOptConfig
 		Repo           RepoOptConfig
 		IsPrivateRepo  bool
 		IsArchivedRepo bool
@@ -193,6 +194,7 @@ func TestIsEnabled(t *testing.T) {
 				OptOutStrategy: false,
 				OptInRepos:     []string{"thisrepo"},
 			},
+			OrgRepo:       RepoOptConfig{},
 			Repo:          RepoOptConfig{},
 			IsPrivateRepo: false,
 			Expect:        true,
@@ -203,6 +205,7 @@ func TestIsEnabled(t *testing.T) {
 				OptOutStrategy: false,
 				OptInRepos:     []string{"otherrepo"},
 			},
+			OrgRepo:       RepoOptConfig{},
 			Repo:          RepoOptConfig{},
 			IsPrivateRepo: false,
 			Expect:        false,
@@ -212,6 +215,7 @@ func TestIsEnabled(t *testing.T) {
 			Org: OrgOptConfig{
 				OptOutStrategy: true,
 			},
+			OrgRepo:       RepoOptConfig{},
 			Repo:          RepoOptConfig{},
 			IsPrivateRepo: false,
 			Expect:        true,
@@ -222,6 +226,7 @@ func TestIsEnabled(t *testing.T) {
 				OptOutStrategy: true,
 				OptOutRepos:    []string{"thisrepo"},
 			},
+			OrgRepo:       RepoOptConfig{},
 			Repo:          RepoOptConfig{},
 			IsPrivateRepo: false,
 			Expect:        false,
@@ -232,6 +237,7 @@ func TestIsEnabled(t *testing.T) {
 				OptOutStrategy:     true,
 				OptOutPrivateRepos: true,
 			},
+			OrgRepo:       RepoOptConfig{},
 			Repo:          RepoOptConfig{},
 			IsPrivateRepo: true,
 			Expect:        false,
@@ -242,6 +248,7 @@ func TestIsEnabled(t *testing.T) {
 				OptOutStrategy:     true,
 				OptOutPrivateRepos: false,
 			},
+			OrgRepo:       RepoOptConfig{},
 			Repo:          RepoOptConfig{},
 			IsPrivateRepo: true,
 			Expect:        true,
@@ -252,6 +259,7 @@ func TestIsEnabled(t *testing.T) {
 				OptOutStrategy:    true,
 				OptOutPublicRepos: true,
 			},
+			OrgRepo:       RepoOptConfig{},
 			Repo:          RepoOptConfig{},
 			IsPrivateRepo: false,
 			Expect:        false,
@@ -262,6 +270,7 @@ func TestIsEnabled(t *testing.T) {
 				OptOutStrategy:    true,
 				OptOutPublicRepos: false,
 			},
+			OrgRepo:       RepoOptConfig{},
 			Repo:          RepoOptConfig{},
 			IsPrivateRepo: false,
 			Expect:        true,
@@ -272,6 +281,7 @@ func TestIsEnabled(t *testing.T) {
 				OptOutStrategy:      true,
 				OptOutArchivedRepos: true,
 			},
+			OrgRepo:        RepoOptConfig{},
 			Repo:           RepoOptConfig{},
 			IsPrivateRepo:  true,
 			IsArchivedRepo: true,
@@ -282,14 +292,16 @@ func TestIsEnabled(t *testing.T) {
 			Org: OrgOptConfig{
 				OptOutStrategy: true,
 			},
+			OrgRepo:        RepoOptConfig{},
 			Repo:           RepoOptConfig{},
 			IsPrivateRepo:  true,
 			IsArchivedRepo: true,
 			Expect:         true,
 		},
 		{
-			Name: "RepoOptIn",
-			Org:  OrgOptConfig{},
+			Name:    "RepoOptIn",
+			Org:     OrgOptConfig{},
+			OrgRepo: RepoOptConfig{},
 			Repo: RepoOptConfig{
 				OptIn: true,
 			},
@@ -301,6 +313,7 @@ func TestIsEnabled(t *testing.T) {
 			Org: OrgOptConfig{
 				OptOutStrategy: true,
 			},
+			OrgRepo: RepoOptConfig{},
 			Repo: RepoOptConfig{
 				OptOut: true,
 			},
@@ -313,11 +326,63 @@ func TestIsEnabled(t *testing.T) {
 				OptOutStrategy:      true,
 				DisableRepoOverride: true,
 			},
+			OrgRepo: RepoOptConfig{},
 			Repo: RepoOptConfig{
 				OptOut: true,
 			},
 			IsPrivateRepo: false,
 			Expect:        true,
+		},
+		{
+			Name: "OrgRepoOptIn",
+			Org:  OrgOptConfig{},
+			OrgRepo: RepoOptConfig{
+				OptIn: true,
+			},
+			Repo:          RepoOptConfig{},
+			IsPrivateRepo: false,
+			Expect:        true,
+		},
+		{
+			Name: "OrgRepoOptOut",
+			Org: OrgOptConfig{
+				OptOutStrategy: true,
+			},
+			OrgRepo: RepoOptConfig{
+				OptOut: true,
+			},
+			Repo:          RepoOptConfig{},
+			IsPrivateRepo: false,
+			Expect:        false,
+		},
+		{
+			Name: "OrgRepoOptOutRepoOptIn",
+			Org: OrgOptConfig{
+				OptOutStrategy: true,
+			},
+			OrgRepo: RepoOptConfig{
+				OptOut: false,
+			},
+			Repo: RepoOptConfig{
+				OptOut: true,
+			},
+			IsPrivateRepo: false,
+			Expect:        false,
+		},
+		{
+			Name: "DissallowWithOrgRepo",
+			Org: OrgOptConfig{
+				OptOutStrategy:      true,
+				DisableRepoOverride: true,
+			},
+			OrgRepo: RepoOptConfig{
+				OptOut: true,
+			},
+			Repo: RepoOptConfig{
+				OptOut: true,
+			},
+			IsPrivateRepo: false,
+			Expect:        false,
 		},
 	}
 	for _, test := range tests {
@@ -329,7 +394,7 @@ func TestIsEnabled(t *testing.T) {
 					Archived: &test.IsArchivedRepo,
 				}, nil, nil
 			}
-			got, _ := isEnabled(context.Background(), test.Org, test.Repo, mockRepos{}, "thisorg", "thisrepo")
+			got, _ := isEnabled(context.Background(), test.Org, test.OrgRepo, test.Repo, mockRepos{}, "thisorg", "thisrepo")
 			if got != test.Expect {
 				t.Errorf("Unexpected results on %v. Expected: %v", test.Name, test.Expect)
 			}

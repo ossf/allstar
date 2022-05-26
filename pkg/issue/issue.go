@@ -42,7 +42,7 @@ type issues interface {
 		*github.IssueComment, *github.Response, error)
 }
 
-var configGetAppConfigs func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig)
+var configGetAppConfigs func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig)
 
 func init() {
 	configGetAppConfigs = config.GetAppConfigs
@@ -93,7 +93,7 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		return err
 	}
 	if issue == nil {
-		oc, _ := configGetAppConfigs(ctx, c, owner, repo)
+		oc, _, _ := configGetAppConfigs(ctx, c, owner, repo)
 		var footer string
 		if oc.IssueFooter == "" {
 			footer = operator.GitHubIssueFooter
@@ -204,9 +204,12 @@ func closeIssue(ctx context.Context, c *github.Client, issues issues, owner, rep
 
 func getIssueLabel(ctx context.Context, c *github.Client, owner, repo string) string {
 	label := operator.GitHubIssueLabel
-	oc, rc := configGetAppConfigs(ctx, c, owner, repo)
+	oc, orc, rc := configGetAppConfigs(ctx, c, owner, repo)
 	if len(oc.IssueLabel) > 0 {
 		label = oc.IssueLabel
+	}
+	if len(orc.IssueLabel) > 0 {
+		label = orc.IssueLabel
 	}
 	if len(rc.IssueLabel) > 0 {
 		label = rc.IssueLabel
@@ -215,7 +218,7 @@ func getIssueLabel(ctx context.Context, c *github.Client, owner, repo string) st
 }
 
 func getIssueRepoTitle(ctx context.Context, c *github.Client, owner, repo, policy string) (string, string) {
-	oc, _ := configGetAppConfigs(ctx, c, owner, repo)
+	oc, _, _ := configGetAppConfigs(ctx, c, owner, repo)
 	if len(oc.IssueRepo) > 0 {
 		return oc.IssueRepo, fmt.Sprintf(issueRepoTitle, repo, policy)
 	}

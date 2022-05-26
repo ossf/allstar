@@ -245,8 +245,8 @@ func IsBotEnabled(ctx context.Context, c *github.Client, owner, repo string) boo
 }
 
 func isBotEnabled(ctx context.Context, r repositories, owner, repo string) bool {
-	oc, rc := getAppConfigs(ctx, r, owner, repo)
-	enabled, err := isEnabled(ctx, oc.OptConfig, rc.OptConfig, r, owner, repo)
+	oc, orc, rc := getAppConfigs(ctx, r, owner, repo)
+	enabled, err := isEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, r, owner, repo)
 	if err != nil {
 		log.Error().
 			Str("org", owner).
@@ -267,35 +267,46 @@ func isBotEnabled(ctx context.Context, r repositories, owner, repo string) bool 
 }
 
 // GetAppConfigs gets the Allstar configurations for both Org and Repo level.
-func GetAppConfigs(ctx context.Context, c *github.Client, owner, repo string) (*OrgConfig, *RepoConfig) {
+func GetAppConfigs(ctx context.Context, c *github.Client, owner, repo string) (*OrgConfig, *RepoConfig, *RepoConfig) {
 	return getAppConfigs(ctx, c.Repositories, owner, repo)
 }
 
-func getAppConfigs(ctx context.Context, r repositories, owner, repo string) (*OrgConfig, *RepoConfig) {
+func getAppConfigs(ctx context.Context, r repositories, owner, repo string) (*OrgConfig, *RepoConfig, *RepoConfig) {
 	// drop errors, if cfg file is not there, go with defaults
 	oc := &OrgConfig{}
-	if err := fetchConfig(ctx, r, owner, "", operator.AppConfigFile, true, oc); err != nil {
+	if err := fetchConfig(ctx, r, owner, "", operator.AppConfigFile, OrgLevel, oc); err != nil {
 		log.Error().
 			Str("org", owner).
 			Str("repo", repo).
-			Bool("orgLevel", true).
+			Str("configLevel", "orgLevel").
+			Str("area", "bot").
+			Str("file", operator.AppConfigFile).
+			Err(err).
+			Msg("Unexpected config error, using defaults.")
+	}
+	orc := &RepoConfig{}
+	if err := fetchConfig(ctx, r, owner, repo, operator.AppConfigFile, OrgRepoLevel, orc); err != nil {
+		log.Error().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("configLevel", "orgRepoLevel").
 			Str("area", "bot").
 			Str("file", operator.AppConfigFile).
 			Err(err).
 			Msg("Unexpected config error, using defaults.")
 	}
 	rc := &RepoConfig{}
-	if err := fetchConfig(ctx, r, owner, repo, operator.AppConfigFile, false, rc); err != nil {
+	if err := fetchConfig(ctx, r, owner, repo, operator.AppConfigFile, RepoLevel, rc); err != nil {
 		log.Error().
 			Str("org", owner).
 			Str("repo", repo).
-			Bool("orgLevel", false).
+			Str("configLevel", "repoLevel").
 			Str("area", "bot").
 			Str("file", operator.AppConfigFile).
 			Err(err).
 			Msg("Unexpected config error, using defaults.")
 	}
-	return oc, rc
+	return oc, orc, rc
 }
 
 func contains(s []string, e string) bool {
