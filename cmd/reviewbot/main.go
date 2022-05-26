@@ -38,7 +38,9 @@ func main() {
 		log.Fatal().Err(err).Msg("Error determining configuration")
 	}
 
-	reviewbot.HandleWebhooks(&config)
+	if err := reviewbot.HandleWebhooks(&config); err != nil {
+		log.Fatal().Err(err).Msg("Error listening to webhooks")
+	}
 }
 
 func determineConfigFromEnv(config *reviewbot.Config) error {
@@ -113,10 +115,14 @@ func determineConfig(config *reviewbot.Config) error {
 	config.Port = defaultPort
 
 	// Determine from environment variables
-	determineConfigFromEnv(config)
+	if err := determineConfigFromEnv(config); err != nil {
+		return err
+	}
 
 	// Determine from flags
-	determineConfigFromFlags(config)
+	if err := determineConfigFromFlags(config); err != nil {
+		return err
+	}
 
 	return nil
 }
