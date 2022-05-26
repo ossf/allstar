@@ -32,6 +32,113 @@ func (m mockClient) Query(ctx context.Context, q interface{}, v map[string]inter
 	return query(ctx, q, v)
 }
 
+func TestConfigPrecedence(t *testing.T) {
+	tests := []struct {
+		Name      string
+		Org       OrgConfig
+		OrgRepo   RepoConfig
+		Repo      RepoConfig
+		ExpAction string
+		Exp       mergedConfig
+	}{
+		{
+			Name: "OrgOnly",
+			Org: OrgConfig{
+				Action: "issue",
+			},
+			OrgRepo:   RepoConfig{},
+			Repo:      RepoConfig{},
+			ExpAction: "issue",
+			Exp: mergedConfig{
+				Action: "issue",
+			},
+		},
+		{
+			Name: "OrgRepoOverOrg",
+			Org: OrgConfig{
+				Action: "issue",
+			},
+			OrgRepo: RepoConfig{
+				Action: github.String("log"),
+			},
+			Repo:      RepoConfig{},
+			ExpAction: "log",
+			Exp: mergedConfig{
+				Action: "log",
+			},
+		},
+		{
+			Name: "RepoOverAllOrg",
+			Org: OrgConfig{
+				Action: "issue",
+			},
+			OrgRepo: RepoConfig{
+				Action: github.String("log"),
+			},
+			Repo: RepoConfig{
+				Action: github.String("email"),
+			},
+			ExpAction: "email",
+			Exp: mergedConfig{
+				Action: "email",
+			},
+		},
+		{
+			Name: "RepoDisallowed",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					DisableRepoOverride: true,
+				},
+				Action: "issue",
+			},
+			OrgRepo: RepoConfig{
+				Action: github.String("log"),
+			},
+			Repo: RepoConfig{
+				Action: github.String("email"),
+			},
+			ExpAction: "log",
+			Exp: mergedConfig{
+				Action: "log",
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			configFetchConfig = func(ctx context.Context, c *github.Client,
+				owner, repo, path string, ol config.ConfigLevel, out interface{}) error {
+				switch ol {
+				case config.RepoLevel:
+					rc := out.(*RepoConfig)
+					*rc = test.Repo
+				case config.OrgRepoLevel:
+					orc := out.(*RepoConfig)
+					*orc = test.OrgRepo
+				case config.OrgLevel:
+					oc := out.(*OrgConfig)
+					*oc = test.Org
+				}
+				return nil
+			}
+
+			s := Security(true)
+			ctx := context.Background()
+
+			action := s.GetAction(ctx, nil, "", "thisrepo")
+			if action != test.ExpAction {
+				t.Errorf("Unexpected results. want %s, got %s", test.ExpAction, action)
+			}
+
+			oc, orc, rc := getConfig(ctx, nil, "", "thisrepo")
+			mc := mergeConfig(oc, orc, rc, "thisrepo")
+			if diff := cmp.Diff(&test.Exp, mc); diff != "" {
+				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
 func TestCheck(t *testing.T) {
 	tests := []struct {
 		Name              string
@@ -120,11 +227,11 @@ func TestCheck(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			configFetchConfig = func(ctx context.Context, c *github.Client,
-				owner string, repo string, path string, ol bool, out interface{}) error {
-				if repo == "thisrepo" {
+				owner, repo, path string, ol config.ConfigLevel, out interface{}) error {
+				if repo == "thisrepo" && ol == config.RepoLevel {
 					rc := out.(*RepoConfig)
 					*rc = test.Repo
-				} else {
+				} else if ol == config.OrgLevel {
 					oc := out.(*OrgConfig)
 					*oc = test.Org
 				}
@@ -143,7 +250,7 @@ func TestCheck(t *testing.T) {
 				qc.Repository.IsSecurityPolicyEnabled = test.SecEnabled
 				return nil
 			}
-			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, r config.RepoOptConfig,
+			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig,
 				c *github.Client, owner, repo string) (bool, error) {
 				return test.cofigEnabled, nil
 			}

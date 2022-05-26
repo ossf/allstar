@@ -64,8 +64,8 @@ func TestEnsure(t *testing.T) {
 	closed := "closed"
 	open := "open"
 	body := "_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)._\n\n**Security Policy Violation**\nStatus text\n\n---\n\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
-	configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig) {
-		return &config.OrgConfig{}, &config.RepoConfig{}
+	configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+		return &config.OrgConfig{}, &config.RepoConfig{}, &config.RepoConfig{}
 	}
 	t.Run("NoIssue", func(t *testing.T) {
 		listByRepo = func(ctx context.Context, owner string, repo string,
@@ -98,8 +98,8 @@ func TestEnsure(t *testing.T) {
 		}
 	})
 	t.Run("NoIssueWithFooter", func(t *testing.T) {
-		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig) {
-			return &config.OrgConfig{IssueFooter: "CustomFooter"}, &config.RepoConfig{}
+		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+			return &config.OrgConfig{IssueFooter: "CustomFooter"}, &config.RepoConfig{}, &config.RepoConfig{}
 		}
 		bodyWithFooter := "_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)._\n\n**Security Policy Violation**\nStatus text\n\n---\n\nCustomFooter\n\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
 		listByRepo = func(ctx context.Context, owner string, repo string,
@@ -228,8 +228,8 @@ func TestEnsure(t *testing.T) {
 
 func TestClose(t *testing.T) {
 	issueTitle := fmt.Sprintf(sameRepoTitle, "thispolicy")
-	configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig) {
-		return &config.OrgConfig{}, &config.RepoConfig{}
+	configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+		return &config.OrgConfig{}, &config.RepoConfig{}, &config.RepoConfig{}
 	}
 	t.Run("NoIssue", func(t *testing.T) {
 		listByRepo = func(ctx context.Context, owner string, repo string,
@@ -305,10 +305,11 @@ func TestClose(t *testing.T) {
 
 func TestLabel(t *testing.T) {
 	tests := []struct {
-		Name      string
-		OrgLabel  string
-		RepoLabel string
-		Expect    string
+		Name         string
+		OrgLabel     string
+		OrgRepoLabel string
+		RepoLabel    string
+		Expect       string
 	}{
 		{
 			Name:   "None",
@@ -330,11 +331,29 @@ func TestLabel(t *testing.T) {
 			RepoLabel: "repolabel",
 			Expect:    "repolabel",
 		},
+		{
+			Name:         "OrgRepo1",
+			OrgRepoLabel: "repolabel",
+			Expect:       "repolabel",
+		},
+		{
+			Name:         "OrgRepo2",
+			OrgLabel:     "orglabel",
+			OrgRepoLabel: "repolabel",
+			Expect:       "repolabel",
+		},
+		{
+			Name:         "Repo3",
+			OrgLabel:     "orglabel",
+			OrgRepoLabel: "orgrepolabel",
+			RepoLabel:    "repolabel",
+			Expect:       "repolabel",
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig) {
-				return &config.OrgConfig{IssueLabel: test.OrgLabel}, &config.RepoConfig{IssueLabel: test.RepoLabel}
+			configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+				return &config.OrgConfig{IssueLabel: test.OrgLabel}, &config.RepoConfig{IssueLabel: test.OrgRepoLabel}, &config.RepoConfig{IssueLabel: test.RepoLabel}
 			}
 			got := getIssueLabel(context.Background(), nil, "", "")
 			if got != test.Expect {
@@ -371,8 +390,8 @@ func TestRepoTitle(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig) {
-				return &config.OrgConfig{IssueRepo: test.IssueRepo}, nil
+			configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+				return &config.OrgConfig{IssueRepo: test.IssueRepo}, nil, nil
 			}
 			gotRepo, gotTitle := getIssueRepoTitle(context.Background(), nil, "", test.Repo, test.Policy)
 			if gotRepo != test.ExpRepo {
