@@ -149,10 +149,9 @@ type details struct {
 	RequireStatusChecks   []StatusCheck
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string,
-	string, bool, interface{}) error
+var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
 var configIsEnabled func(ctx context.Context, o config.OrgOptConfig,
-	r config.RepoOptConfig, c *github.Client, owner, repo string) (bool, error)
+	orc, r config.RepoOptConfig, c *github.Client, owner, repo string) (bool, error)
 var doNothingOnOptOut = operator.DoNothingOnOptOut
 
 func init() {
@@ -194,8 +193,8 @@ func (b Branch) Check(ctx context.Context, c *github.Client, owner,
 
 func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
-	oc, rc := getConfig(ctx, c, owner, repo)
-	enabled, err := configIsEnabled(ctx, oc.OptConfig, rc.OptConfig, c, owner, repo)
+	oc, orc, rc := getConfig(ctx, c, owner, repo)
+	enabled, err := configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 	if err != nil {
 		return nil, err
 	}
@@ -217,7 +216,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		}, nil
 	}
 
-	mc := mergeConfig(oc, rc, repo)
+	mc := mergeConfig(oc, orc, rc, repo)
 
 	r, _, err := rep.Get(ctx, owner, repo)
 	if err != nil {
@@ -375,15 +374,15 @@ func (b Branch) Fix(ctx context.Context, c *github.Client, owner, repo string) e
 
 func fix(ctx context.Context, rep repositories, c *github.Client,
 	owner, repo string) error {
-	oc, rc := getConfig(ctx, c, owner, repo)
-	enabled, err := configIsEnabled(ctx, oc.OptConfig, rc.OptConfig, c, owner, repo)
+	oc, orc, rc := getConfig(ctx, c, owner, repo)
+	enabled, err := configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 	if err != nil {
 		return err
 	}
 	if !enabled {
 		return nil
 	}
-	mc := mergeConfig(oc, rc, repo)
+	mc := mergeConfig(oc, orc, rc, repo)
 
 	r, _, err := rep.Get(ctx, owner, repo)
 	if err != nil {
@@ -577,12 +576,12 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 // configuration stored in the org-level repo, default log. Implementing
 // policydef.Policy.GetAction()
 func (b Branch) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
-	oc, rc := getConfig(ctx, c, owner, repo)
-	mc := mergeConfig(oc, rc, repo)
+	oc, orc, rc := getConfig(ctx, c, owner, repo)
+	mc := mergeConfig(oc, rc, rc, repo)
 	return mc.Action
 }
 
-func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgConfig, *RepoConfig) {
+func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgConfig, *RepoConfig, *RepoConfig) {
 	oc := &OrgConfig{ // Fill out non-zero defaults
 		Action:                "log",
 		EnforceDefault:        true,
@@ -592,31 +591,42 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 		BlockForce:            true,
 		RequireUpToDateBranch: true,
 	}
-	if err := configFetchConfig(ctx, c, owner, "", configFile, true, oc); err != nil {
+	if err := configFetchConfig(ctx, c, owner, "", configFile, config.OrgLevel, oc); err != nil {
 		log.Error().
 			Str("org", owner).
 			Str("repo", repo).
-			Bool("orgLevel", true).
+			Str("configLevel", "orgLevel").
+			Str("area", polName).
+			Str("file", configFile).
+			Err(err).
+			Msg("Unexpected config error, using defaults.")
+	}
+	orc := &RepoConfig{}
+	if err := configFetchConfig(ctx, c, owner, repo, configFile, config.OrgRepoLevel, orc); err != nil {
+		log.Error().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("configLevel", "orgRepoLevel").
 			Str("area", polName).
 			Str("file", configFile).
 			Err(err).
 			Msg("Unexpected config error, using defaults.")
 	}
 	rc := &RepoConfig{}
-	if err := configFetchConfig(ctx, c, owner, repo, configFile, false, rc); err != nil {
+	if err := configFetchConfig(ctx, c, owner, repo, configFile, config.RepoLevel, rc); err != nil {
 		log.Error().
 			Str("org", owner).
 			Str("repo", repo).
-			Bool("orgLevel", false).
+			Str("configLevel", "repoLevel").
 			Str("area", polName).
 			Str("file", configFile).
 			Err(err).
 			Msg("Unexpected config error, using defaults.")
 	}
-	return oc, rc
+	return oc, orc, rc
 }
 
-func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
+func mergeConfig(oc *OrgConfig, orc, rc *RepoConfig, repo string) *mergedConfig {
 	mc := &mergedConfig{
 		Action:                oc.Action,
 		EnforceDefault:        oc.EnforceDefault,
@@ -628,33 +638,40 @@ func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
 		RequireUpToDateBranch: oc.RequireUpToDateBranch,
 		RequireStatusChecks:   oc.RequireStatusChecks,
 	}
-	mc.EnforceBranches = append(mc.EnforceBranches, rc.EnforceBranches...)
+	mc.EnforceBranches = append(mc.EnforceBranches, orc.EnforceBranches...)
+	mc = mergeInRepoConfig(mc, orc, repo)
 
+	mc.EnforceBranches = append(mc.EnforceBranches, rc.EnforceBranches...)
 	if !oc.OptConfig.DisableRepoOverride {
-		if rc.Action != nil {
-			mc.Action = *rc.Action
-		}
-		if rc.EnforceDefault != nil {
-			mc.EnforceDefault = *rc.EnforceDefault
-		}
-		if rc.RequireApproval != nil {
-			mc.RequireApproval = *rc.RequireApproval
-		}
-		if rc.ApprovalCount != nil {
-			mc.ApprovalCount = *rc.ApprovalCount
-		}
-		if rc.DismissStale != nil {
-			mc.DismissStale = *rc.DismissStale
-		}
-		if rc.BlockForce != nil {
-			mc.BlockForce = *rc.BlockForce
-		}
-		if rc.RequireUpToDateBranch != nil {
-			mc.RequireUpToDateBranch = *rc.RequireUpToDateBranch
-		}
-		if rc.RequireStatusChecks != nil {
-			mc.RequireStatusChecks = rc.RequireStatusChecks
-		}
+		mc = mergeInRepoConfig(mc, rc, repo)
+	}
+	return mc
+}
+
+func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedConfig {
+	if rc.Action != nil {
+		mc.Action = *rc.Action
+	}
+	if rc.EnforceDefault != nil {
+		mc.EnforceDefault = *rc.EnforceDefault
+	}
+	if rc.RequireApproval != nil {
+		mc.RequireApproval = *rc.RequireApproval
+	}
+	if rc.ApprovalCount != nil {
+		mc.ApprovalCount = *rc.ApprovalCount
+	}
+	if rc.DismissStale != nil {
+		mc.DismissStale = *rc.DismissStale
+	}
+	if rc.BlockForce != nil {
+		mc.BlockForce = *rc.BlockForce
+	}
+	if rc.RequireUpToDateBranch != nil {
+		mc.RequireUpToDateBranch = *rc.RequireUpToDateBranch
+	}
+	if rc.RequireStatusChecks != nil {
+		mc.RequireStatusChecks = rc.RequireStatusChecks
 	}
 	return mc
 }
