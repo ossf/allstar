@@ -182,7 +182,7 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 	logs := convertAndFilterLogs(l.logs, mc)
 
 	// We assume every log is a finding and do filtering on the Allstar side
-	pass := len(logs) > 0
+	pass := len(logs) == 0
 
 	var notify string
 	if !pass {
