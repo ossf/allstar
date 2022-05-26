@@ -109,26 +109,52 @@ type RepoOptConfig struct {
 
 const githubConfRepo = ".github"
 
+// ConfigLevel is an enum to indicate which level config to retrieve for the
+// particular policy.
+type ConfigLevel int8
+
+const (
+	// OrgLevel is the organization level config that is defined in the .allstar
+	// or .github config repo.
+	OrgLevel ConfigLevel = iota
+
+	// OrgRepoLevel is the repo level config that is defined in the .allstar or
+	// .github config repo.
+	OrgRepoLevel
+
+	// RepoLevel is the repo level config that is defined in the .allstar folder
+	// of the repo being checked.
+	RepoLevel
+)
+
 // FetchConfig grabs a yaml config file from github and writes it to out.
-func FetchConfig(ctx context.Context, c *github.Client, owner, repo, name string, orgLevel bool, out interface{}) error {
-	return fetchConfig(ctx, c.Repositories, owner, repo, name, orgLevel, out)
+func FetchConfig(ctx context.Context, c *github.Client, owner, repo, name string, cl ConfigLevel, out interface{}) error {
+	return fetchConfig(ctx, c.Repositories, owner, repo, name, cl, out)
 }
 
-func fetchConfig(ctx context.Context, r repositories, owner, repoIn, name string, orgLevel bool, out interface{}) error {
+func fetchConfig(ctx context.Context, r repositories, owner, repoIn, name string, cl ConfigLevel, out interface{}) error {
 	var repo string
 	var p string
-	if orgLevel {
+	switch cl {
+	case OrgLevel, OrgRepoLevel:
 		_, rsp, err := r.Get(ctx, owner, operator.OrgConfigRepo)
 		if err == nil {
 			repo = operator.OrgConfigRepo
 			p = name
+			if cl == OrgRepoLevel {
+				p = path.Join(repoIn, p)
+			}
 		} else if rsp != nil && rsp.StatusCode == http.StatusNotFound {
 			repo = githubConfRepo
-			p = path.Join(operator.OrgConfigDir, name)
+			if cl == OrgRepoLevel {
+				p = path.Join(operator.OrgConfigDir, repoIn, name)
+			} else {
+				p = path.Join(operator.OrgConfigDir, name)
+			}
 		} else {
 			return err
 		}
-	} else {
+	case RepoLevel:
 		repo = repoIn
 		p = path.Join(operator.RepoConfigDir, name)
 	}
@@ -165,12 +191,12 @@ type repositories interface {
 }
 
 // IsEnabled determines if a repo is enabled by interpreting the provided
-// org-level and repo-level OptConfigs.
-func IsEnabled(ctx context.Context, o OrgOptConfig, r RepoOptConfig, c *github.Client, owner, repo string) (bool, error) {
-	return isEnabled(ctx, o, r, c.Repositories, owner, repo)
+// org-level, org-repo-level, and repo-level OptConfigs.
+func IsEnabled(ctx context.Context, o OrgOptConfig, orc, r RepoOptConfig, c *github.Client, owner, repo string) (bool, error) {
+	return isEnabled(ctx, o, orc, r, c.Repositories, owner, repo)
 }
 
-func isEnabled(ctx context.Context, o OrgOptConfig, r RepoOptConfig, rep repositories, owner, repo string) (bool, error) {
+func isEnabled(ctx context.Context, o OrgOptConfig, orc, r RepoOptConfig, rep repositories, owner, repo string) (bool, error) {
 	var enabled bool
 
 	gr, _, err := rep.Get(ctx, owner, repo)
@@ -192,12 +218,18 @@ func isEnabled(ctx context.Context, o OrgOptConfig, r RepoOptConfig, rep reposit
 		if o.OptOutArchivedRepos && gr.GetArchived() {
 			enabled = false
 		}
+		if orc.OptOut {
+			enabled = false
+		}
 		if !o.DisableRepoOverride && r.OptOut {
 			enabled = false
 		}
 	} else {
 		enabled = false
 		if contains(o.OptInRepos, repo) {
+			enabled = true
+		}
+		if orc.OptIn {
 			enabled = true
 		}
 		if !o.DisableRepoOverride && r.OptIn {

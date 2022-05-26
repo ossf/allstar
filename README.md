@@ -340,6 +340,25 @@ secondary location. To clarify, for `allstar.yaml`:
 This is also true for the org-level configuration files for the individual
 policies, as described below.
 
+### Repo policy configurations in the Org Repo
+
+Allstar will also look for repo-level policy configurations in the
+organization's `.allstar` repository, under the directory with the same name as
+the repository. This configuration is used regardless of whether "repo override"
+is disabled.
+
+For example, Allstar will lookup the policy configuration for a given repo
+`myapp` in the following order:
+
+| Repository | Path | Condition |
+| - | - | - |
+| `myapp` | `.allstar/branch_protection.yaml` | When "repo override" is allowed. |
+| `.allstar` | `myapp/branch_protection.yaml` | All times. |
+| `.allstar` | `branch_protection.yaml` | All times. |
+| `.github` | `allstar/myapp/branch_protection.yaml` | If `.allstar` repo does not exist. |
+| `.github` | `allstar/branch_protection.yaml` | If `.allstar` repo does not exist. |
+
+
 ## **Contribute Policies**
 
 [Interface definition.](pkg/policydef/policydef.go)

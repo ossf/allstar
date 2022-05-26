@@ -74,7 +74,7 @@ type details struct {
 	Artifacts []string
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string, bool, interface{}) error
+var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
 
 func init() {
 	configFetchConfig = config.FetchConfig
@@ -135,9 +135,9 @@ func (l *logger) Flush() []checker.CheckDetail {
 // configuration stored in the org/repo, implementing policydef.Policy.Check()
 func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
-	oc, rc := getConfig(ctx, c, owner, repo)
-	mc := mergeConfig(oc, rc, repo)
-	enabled, err := config.IsEnabled(ctx, oc.OptConfig, rc.OptConfig, c, owner, repo)
+	oc, orc, rc := getConfig(ctx, c, owner, repo)
+	mc := mergeConfig(oc, orc, rc, repo)
+	enabled, err := config.IsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 	if err != nil {
 		return nil, err
 	}
@@ -254,50 +254,67 @@ func (b Binary) Fix(ctx context.Context, c *github.Client, owner, repo string) e
 // stored in the org-level repo, default log. Implementing
 // policydef.Policy.GetAction()
 func (b Binary) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
-	oc, rc := getConfig(ctx, c, owner, repo)
-	mc := mergeConfig(oc, rc, repo)
+	oc, orc, rc := getConfig(ctx, c, owner, repo)
+	mc := mergeConfig(oc, orc, rc, repo)
 	return mc.Action
 }
 
-func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgConfig, *RepoConfig) {
+func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgConfig, *RepoConfig, *RepoConfig) {
 	oc := &OrgConfig{ // Fill out non-zero defaults
 		Action: "log",
 	}
-	if err := configFetchConfig(ctx, c, owner, "", configFile, true, oc); err != nil {
+	if err := configFetchConfig(ctx, c, owner, "", configFile, config.OrgLevel, oc); err != nil {
 		log.Error().
 			Str("org", owner).
 			Str("repo", repo).
-			Bool("orgLevel", true).
+			Str("configLevel", "orgLevel").
+			Str("area", polName).
+			Str("file", configFile).
+			Err(err).
+			Msg("Unexpected config error, using defaults.")
+	}
+	orc := &RepoConfig{}
+	if err := configFetchConfig(ctx, c, owner, repo, configFile, config.OrgRepoLevel, orc); err != nil {
+		log.Error().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("configLevel", "orgRepoLevel").
 			Str("area", polName).
 			Str("file", configFile).
 			Err(err).
 			Msg("Unexpected config error, using defaults.")
 	}
 	rc := &RepoConfig{}
-	if err := configFetchConfig(ctx, c, owner, repo, configFile, false, rc); err != nil {
+	if err := configFetchConfig(ctx, c, owner, repo, configFile, config.RepoLevel, rc); err != nil {
 		log.Error().
 			Str("org", owner).
 			Str("repo", repo).
-			Bool("orgLevel", false).
+			Str("configLevel", "repoLevel").
 			Str("area", polName).
 			Str("file", configFile).
 			Err(err).
 			Msg("Unexpected config error, using defaults.")
 	}
-	return oc, rc
+	return oc, orc, rc
 }
 
-func mergeConfig(oc *OrgConfig, rc *RepoConfig, repo string) *mergedConfig {
+func mergeConfig(oc *OrgConfig, orc, rc *RepoConfig, repo string) *mergedConfig {
 	mc := &mergedConfig{
 		Action:      oc.Action,
 		IgnoreFiles: oc.IgnoreFiles,
 		IgnorePaths: rc.IgnorePaths,
 	}
+	mc = mergeInRepoConfig(mc, orc, repo)
 
 	if !oc.OptConfig.DisableRepoOverride {
-		if rc.Action != nil {
-			mc.Action = *rc.Action
-		}
+		mc = mergeInRepoConfig(mc, rc, repo)
+	}
+	return mc
+}
+
+func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedConfig {
+	if rc.Action != nil {
+		mc.Action = *rc.Action
 	}
 	return mc
 }
