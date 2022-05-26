@@ -60,7 +60,9 @@ func (h *WebookHandler) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error().Interface("payload", payload).Err(err).Msg("Got an invalid payload")
 		w.WriteHeader(400)
-		w.Write([]byte("Got an invalid payload"))
+		if _, err := fmt.Fprintln(w, "Got an invalid payload"); err != nil {
+			log.Error().Err(err).Msg("Failed to write http response")
+		}
 		return
 	}
 
@@ -69,7 +71,9 @@ func (h *WebookHandler) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error().Interface("event", event).Err(err).Msg("Failed to parse the webhook payload")
 		w.WriteHeader(400)
-		w.Write([]byte("Failed to parse the webhook payload"))
+		if _, err := fmt.Fprintln(w, "Failed to parse the webhook payload"); err != nil {
+			log.Error().Err(err).Msg("Failed to write http response")
+		}
 		return
 	}
 
@@ -89,7 +93,9 @@ func (h *WebookHandler) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	default:
 		log.Warn().Interface("event", event).Msg("Unknown event")
 		w.WriteHeader(400)
-		w.Write([]byte("Unknown GitHub Event"))
+		if _, err := fmt.Fprintln(w, "Unknown GitHub Event"); err != nil {
+			log.Error().Err(err).Msg("Failed to write http response")
+		}
 		return
 	}
 
@@ -100,7 +106,9 @@ func (h *WebookHandler) HandleRoot(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error().Interface("pr", pr).Err(err).Msg("Error handling webhook")
 		w.WriteHeader(500)
-		w.Write([]byte("Error handling webhook"))
+		if _, err := fmt.Fprintln(w, "Error handling webhook"); err != nil {
+			log.Error().Err(err).Msg("Failed to write http response")
+		}
 		return
 	}
 }
