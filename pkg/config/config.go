@@ -17,11 +17,14 @@ package config
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"path"
+	"strings"
 
 	"github.com/ossf/allstar/pkg/config/operator"
 
+	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/google/go-github/v43/github"
 	"github.com/rs/zerolog/log"
 	"sigs.k8s.io/yaml"
@@ -183,17 +186,79 @@ func fetchConfig(ctx context.Context, r repositories, owner, repoIn, name string
 	if err != nil {
 		return err
 	}
-	if err := yaml.UnmarshalStrict([]byte(con), out); err != nil {
+	conJSON, err := yaml.YAMLToJSON([]byte(con))
+	if err != nil {
+		return err
+	}
+	if cl == OrgLevel {
+		mergedJSON, err := checkAndMergeBase(ctx, r, p, conJSON)
+		if err != nil {
+			return err
+		}
+		conJSON = mergedJSON
+	}
+	if err := json.Unmarshal(conJSON, out); err != nil {
 		log.Warn().
 			Str("org", owner).
 			Str("repo", repo).
 			Str("file", p).
 			Err(err).
 			Msg("Malformed config file, using defaults.")
-		// TODO: if UnmarshalStrict errors, does it still fill out the found fields?
 		return nil
 	}
 	return nil
+}
+
+type anyWithBase struct {
+	BaseConfig *string `json:"baseConfig"`
+}
+
+// checkAndMergeBase checks the contents for a field "baseConfig". If found
+// reads that as "org/repo" then pulls the same path from there and uses it as
+// a base config to merge this contents on top of. Returns JSON.
+func checkAndMergeBase(ctx context.Context, r repositories, path string, contents []byte) ([]byte, error) {
+	var b anyWithBase
+	if err := json.Unmarshal(contents, &b); err != nil {
+		return nil, err
+	}
+	if b.BaseConfig == nil {
+		return contents, nil
+	}
+	sp := strings.Split(*b.BaseConfig, "/")
+	if len(sp) != 2 {
+		log.Warn().
+			Str("file", path).
+			Str("baseConfig", *b.BaseConfig).
+			Msg("Expect baseConfig to be a GitHub \"owner/repo\", ignoring.")
+		return contents, nil
+	}
+	cf, _, rsp, err := r.GetContents(ctx, sp[0], sp[1], path, nil)
+	if err != nil {
+		if rsp != nil && rsp.StatusCode == http.StatusNotFound {
+			log.Warn().
+				Str("file", path).
+				Str("baseConfig", *b.BaseConfig).
+				Msg("Path in specified baseConfig does not exist.")
+			return contents, nil
+		}
+		return nil, err
+	}
+	baseYAML, err := cf.GetContent()
+	if err != nil {
+		return nil, err
+	}
+	baseJSON, err := yaml.YAMLToJSON([]byte(baseYAML))
+	if err != nil {
+		return nil, err
+	}
+	if string(baseJSON) == "null" {
+		baseJSON = []byte("{}")
+	}
+	mergedJSON, err := jsonpatch.MergePatch(baseJSON, contents)
+	if err != nil {
+		return nil, err
+	}
+	return mergedJSON, nil
 }
 
 // IsEnabled determines if a repo is enabled by interpreting the provided
