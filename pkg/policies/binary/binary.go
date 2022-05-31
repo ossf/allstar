@@ -38,30 +38,30 @@ const polName = "Binary Artifacts"
 type OrgConfig struct {
 	// OptConfig is the standard org-level opt in/out config, RepoOverride applies to all
 	// config.
-	OptConfig config.OrgOptConfig `yaml:"optConfig"`
+	OptConfig config.OrgOptConfig `json:"optConfig"`
 
 	// Action defines which action to take, default log, other: issue...
-	Action string `yaml:"action"`
+	Action string `json:"action"`
 
 	// IgnoreFiles is a list of file names to ignore. Any Binary Artifacts found
 	// with these names are allowed, and the policy may still pass. These are
 	// just the file name, not a full path. Globs are not allowed.
-	IgnoreFiles []string `yaml:"ignoreFiles"`
+	IgnoreFiles []string `json:"ignoreFiles"`
 }
 
 // RepoConfig is the repo-level config for this policy.
 type RepoConfig struct {
 	// OptConfig is the standard repo-level opt in/out config.
-	OptConfig config.RepoOptConfig `yaml:"optConfig"`
+	OptConfig config.RepoOptConfig `json:"optConfig"`
 
 	// Action overrides the same setting in org-level, only if present.
-	Action *string `yaml:"action"`
+	Action *string `json:"action"`
 
 	// IgnorePaths is a list of full paths to ignore. If these are reported as a
 	// Binary Artifact, they will be ignored and the policy may still pass. These
 	// must be full paths with directories. Globs are not allowed. These are
 	// allowed even if RepoOverride is false.
-	IgnorePaths []string `yaml:"ignorePaths"`
+	IgnorePaths []string `json:"ignorePaths"`
 }
 
 type mergedConfig struct {

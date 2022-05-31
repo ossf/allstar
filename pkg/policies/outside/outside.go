@@ -60,41 +60,41 @@ Alternately, if this repository does not have any maintainers, archive or delete
 type OrgConfig struct {
 	// OptConfig is the standard org-level opt in/out config, RepoOverride
 	// applies to all config.
-	OptConfig config.OrgOptConfig `yaml:"optConfig"`
+	OptConfig config.OrgOptConfig `json:"optConfig"`
 
 	// Action defines which action to take, default log, other: issue...
-	Action string `yaml:"action"`
+	Action string `json:"action"`
 
 	// PushAllowed defined if outside collaboraters are allowed to have push
 	// access, default true.
-	PushAllowed bool `yaml:"pushAllowed"`
+	PushAllowed bool `json:"pushAllowed"`
 
 	// AdminAllowed defined if outside collaboraters are allowed to have admin
 	// access, default false.
-	AdminAllowed bool `yaml:"adminAllowed"`
+	AdminAllowed bool `json:"adminAllowed"`
 
 	// TestingOwnerlessAllowed defined if repositories are allowed to have no
 	// administrators, default false.
-	TestingOwnerlessAllowed bool `yaml:"testingOwnerlessAllowed"`
+	TestingOwnerlessAllowed bool `json:"testingOwnerlessAllowed"`
 }
 
 // RepoConfig is the repo-level config for Outside Collaborators security
 // policy.
 type RepoConfig struct {
 	// OptConfig is the standard repo-level opt in/out config.
-	OptConfig config.RepoOptConfig `yaml:"optConfig"`
+	OptConfig config.RepoOptConfig `json:"optConfig"`
 
 	// Action overrides the same setting in org-level, only if present.
-	Action *string `yaml:"action"`
+	Action *string `json:"action"`
 
 	// PushAllowed overrides the same setting in org-level, only if present.
-	PushAllowed *bool `yaml:"pushAllowed"`
+	PushAllowed *bool `json:"pushAllowed"`
 
 	// AdminAllowed overrides the same setting in org-level, only if present.
-	AdminAllowed *bool `yaml:"adminAllowed"`
+	AdminAllowed *bool `json:"adminAllowed"`
 
 	// TestingOwnerlessAllowed overrides the same setting in org-level, only if present.
-	TestingOwnerlessAllowed *bool `yaml:"testingOwnerlessAllowed"`
+	TestingOwnerlessAllowed *bool `json:"testingOwnerlessAllowed"`
 }
 
 type mergedConfig struct {

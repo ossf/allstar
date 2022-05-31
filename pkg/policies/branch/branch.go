@@ -35,92 +35,92 @@ const polName = "Branch Protection"
 type OrgConfig struct {
 	// OptConfig is the standard org-level opt in/out config, RepoOverride
 	// applies to all BP config.
-	OptConfig config.OrgOptConfig `yaml:"optConfig"`
+	OptConfig config.OrgOptConfig `json:"optConfig"`
 
 	// Action defines which action to take, default log, other: issue...
-	Action string `yaml:"action"`
+	Action string `json:"action"`
 
 	// EnforceDefault : set to true to enforce policy on default branch, default
 	// true.
-	EnforceDefault bool `yaml:"enforceDefault"`
+	EnforceDefault bool `json:"enforceDefault"`
 
 	// EnforceBranches is a map of repos and branches. These are other
 	// non-default branches to enforce policy on, such as branches which releases
 	// are made from.
-	EnforceBranches map[string][]string `yaml:"enforceBranches"`
+	EnforceBranches map[string][]string `json:"enforceBranches"`
 
 	// RequireApproval : set to true to enforce approval on PRs, default true.
-	RequireApproval bool `yaml:"requireApproval"`
+	RequireApproval bool `json:"requireApproval"`
 
 	// ApprovalCount is the number of required PR approvals, default 1.
-	ApprovalCount int `yaml:"approvalCount"`
+	ApprovalCount int `json:"approvalCount"`
 
 	// DismissStale : set to true to require PR approvals be dismissed when a PR
 	// is updated, default true.
-	DismissStale bool `yaml:"dismissStale"`
+	DismissStale bool `json:"dismissStale"`
 
 	// BlockForce : set to true to block force pushes, default true.
-	BlockForce bool `yaml:"blockForce"`
+	BlockForce bool `json:"blockForce"`
 
 	// RequireUpToDateBranch : set to true to require that branches must be up
 	// to date before merging. Only used if RequireStatusChecks is set. Default
 	// true.
-	RequireUpToDateBranch bool `yaml:"requireUpToDateBranch"`
+	RequireUpToDateBranch bool `json:"requireUpToDateBranch"`
 
 	// RequireStatusChecks is a list of status checks that are required in
 	// order to merge into the protected branch. Each entry must specify
 	// the context, and optionally an appID.
-	RequireStatusChecks []StatusCheck `yaml:"requireStatusChecks"`
+	RequireStatusChecks []StatusCheck `json:"requireStatusChecks"`
 }
 
 // RepoConfig is the repo-level config for Branch Protection
 type RepoConfig struct {
 	// OptConfig is the standard repo-level opt in/out config.
-	OptConfig config.RepoOptConfig `yaml:"optConfig"`
+	OptConfig config.RepoOptConfig `json:"optConfig"`
 
 	// Action overrides the same setting in org-level, only if present.
-	Action *string `yaml:"action"`
+	Action *string `json:"action"`
 
 	// EnforceDefault overrides the same setting in org-level, only if present.
-	EnforceDefault *bool `yaml:"enforceDefault"`
+	EnforceDefault *bool `json:"enforceDefault"`
 
 	// EnforceBranches adds more branches to the org-level list. Does not
 	// override. Always allowed irrespective of DisableRepoOverride setting.
-	EnforceBranches []string `yaml:"enforceBranches"`
+	EnforceBranches []string `json:"enforceBranches"`
 
 	// RequireApproval overrides the same setting in org-level, only if present.
-	RequireApproval *bool `yaml:"requireApproval"`
+	RequireApproval *bool `json:"requireApproval"`
 
 	// ApprovalCount overrides the same setting in org-level, only if present.
-	ApprovalCount *int `yaml:"approvalCount"`
+	ApprovalCount *int `json:"approvalCount"`
 
 	// DismissStale overrides the same setting in org-level, only if present.
-	DismissStale *bool `yaml:"dismissStale"`
+	DismissStale *bool `json:"dismissStale"`
 
 	// BlockForce overrides the same setting in org-level, only if present.
-	BlockForce *bool `yaml:"blockForce"`
+	BlockForce *bool `json:"blockForce"`
 
 	// RequireUpToDateBranch overrides the same setting in org-level, only if
 	// present.
-	RequireUpToDateBranch *bool `yaml:"requireUpToDateBranch"`
+	RequireUpToDateBranch *bool `json:"requireUpToDateBranch"`
 
 	// RequireStatusChecks overrides the same setting in org-level, only if
 	// present. Omitting will lead to taking the org-level config as is, but
 	// specifying an empty list (`requireStatusChecks: []`) will override the
 	// setting to be empty.
-	RequireStatusChecks []StatusCheck `yaml:"requireStatusChecks"`
+	RequireStatusChecks []StatusCheck `json:"requireStatusChecks"`
 }
 
 // StatusCheck is the config description for specifying a single required
 // status check in the RequireStatusChecks list.
 type StatusCheck struct {
 	// Context is the status check name that should be required.
-	Context string `yaml:"context"`
+	Context string `json:"context"`
 
 	// AppID, when provided, will require that the status check be set by
 	// the GitHub App with the given AppID. When omitted, any app can
 	// provide the required status check.
-	AppID *int64 `yaml:"appID"`
+	AppID *int64 `json:"appID"`
 }
 
 type statusCheckHash struct {

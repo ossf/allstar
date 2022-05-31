@@ -24,18 +24,18 @@ import (
 
 	"github.com/google/go-github/v43/github"
 	"github.com/rs/zerolog/log"
-	"gopkg.in/yaml.v2"
+	"sigs.k8s.io/yaml"
 )
 
 // OrgConfig is the org-level config definition for Allstar
 type OrgConfig struct {
 	// OptConfig contains the opt in/out configuration.
-	OptConfig OrgOptConfig `yaml:"optConfig"`
+	OptConfig OrgOptConfig `json:"optConfig"`
 
 	// IssueLabel is the label used to tag, search, and identify GitHub Issues
 	// created by the bot. The defeault is specified by the operator of Allstar,
 	// currently: "allstar"
-	IssueLabel string `yaml:"issueLabel"`
+	IssueLabel string `json:"issueLabel"`
 
 	// IssueRepo is the name of a repository in the organization to create issues
 	// in. If left unset, by default Allstar will create issues in the repository
@@ -49,7 +49,7 @@ type OrgConfig struct {
 	//
 	// Note: When changing this setting, Allstar does not clean up previously
 	// created issues from a previous setting.
-	IssueRepo string `yaml:"issueRepo"`
+	IssueRepo string `json:"issueRepo"`
 
 	// IssueFooter is a custom message to add to the end of all Allstar created
 	// issues in the GitHub organization. It does not supercede the bot-level
@@ -57,54 +57,54 @@ type OrgConfig struct {
 	// one. This setting is useful to direct users to the organization-level
 	// config repository or documentation describing your Allstar settings and
 	// policies.
-	IssueFooter string `yaml:"issueFooter"`
+	IssueFooter string `json:"issueFooter"`
 }
 
 // OrgOptConfig is used in Allstar and policy-secific org-level config to
 // define the opt in/out configuration.
 type OrgOptConfig struct {
 	// OptOutStrategy : set to true to change from opt-in to opt-out.
-	OptOutStrategy bool `yaml:"optOutStrategy"`
+	OptOutStrategy bool `json:"optOutStrategy"`
 
 	// OptInRepos is the list of repos to opt-in when in opt-in strategy.
-	OptInRepos []string `yaml:"optInRepos"`
+	OptInRepos []string `json:"optInRepos"`
 
 	// OptOutRepos is the list of repos to opt-out when in opt-out strategy.
-	OptOutRepos []string `yaml:"optOutRepos"`
+	OptOutRepos []string `json:"optOutRepos"`
 
 	// OptOutPrivateRepos : set to true to not access private repos.
-	OptOutPrivateRepos bool `yaml:"optOutPrivateRepos"`
+	OptOutPrivateRepos bool `json:"optOutPrivateRepos"`
 
 	// OptOutPublicRepos : set to true to not access public repos.
-	OptOutPublicRepos bool `yaml:"optOutPublicRepos"`
+	OptOutPublicRepos bool `json:"optOutPublicRepos"`
 
 	// OptOutArchivedRepos : set to true to opt-out archived repositories.
-	OptOutArchivedRepos bool `yaml:"optOutArchivedRepos"`
+	OptOutArchivedRepos bool `json:"optOutArchivedRepos"`
 
 	// DisableRepoOverride : set to true to disallow repos from opt-in/out in
 	// their config.
-	DisableRepoOverride bool `yaml:"disableRepoOverride"`
+	DisableRepoOverride bool `json:"disableRepoOverride"`
 }
 
 // RepoConfig is the repo-level config definition for Allstar
 type RepoConfig struct {
 	// OptConfig contains the opt in/out configuration.
-	OptConfig RepoOptConfig `yaml:"optConfig"`
+	OptConfig RepoOptConfig `json:"optConfig"`
 
 	// IssueLabel is the label used to tag, search, and identify GitHub Issues
 	// created by the bot. Repo-level label my override Org-level setting
 	// regardless of Optconfig.DisableRepoOverride.
-	IssueLabel string `yaml:"issueLabel"`
+	IssueLabel string `json:"issueLabel"`
 }
 
 // RepoOptConfig is used in Allstar and policy-specific repo-level config to
 // opt in/out of enforcement.
 type RepoOptConfig struct {
 	// OptIn : set to true to opt-in this repo when in opt-in strategy
-	OptIn bool `yaml:"optIn"`
+	OptIn bool `json:"optIn"`
 
 	// OptOut: set to true to opt-out this repo when in opt-out strategy
-	OptOut bool `yaml:"optOut"`
+	OptOut bool `json:"optOut"`
 }
 
 const githubConfRepo = ".github"

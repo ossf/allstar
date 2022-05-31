@@ -40,19 +40,19 @@ const polName = "Dangerous Workflow"
 type OrgConfig struct {
 	// OptConfig is the standard org-level opt in/out config, RepoOverride applies to all
 	// config.
-	OptConfig config.OrgOptConfig `yaml:"optConfig"`
+	OptConfig config.OrgOptConfig `json:"optConfig"`
 
 	// Action defines which action to take, default log, other: issue...
-	Action string `yaml:"action"`
+	Action string `json:"action"`
 }
 
 // RepoConfig is the repo-level config for this policy.
 type RepoConfig struct {
 	// OptConfig is the standard repo-level opt in/out config.
-	OptConfig config.RepoOptConfig `yaml:"optConfig"`
+	OptConfig config.RepoOptConfig `json:"optConfig"`
 
 	// Action overrides the same setting in org-level, only if present.
-	Action *string `yaml:"action"`
+	Action *string `json:"action"`
 }
 
 type mergedConfig struct {
