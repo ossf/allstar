@@ -43,10 +43,10 @@ For more information, see https://docs.github.com/en/code-security/getting-start
 type OrgConfig struct {
 	// OptConfig is the standard org-level opt in/out config, RepoOverride applies to all
 	// BP config.
-	OptConfig config.OrgOptConfig `yaml:"optConfig"`
+	OptConfig config.OrgOptConfig `json:"optConfig"`
 
 	// Action defines which action to take, default log, other: issue...
-	Action string `yaml:"action"`
+	Action string `json:"action"`
 
 	//TODO add default contents for "fix" action
 }
@@ -54,10 +54,10 @@ type OrgConfig struct {
 // RepoConfig is the repo-level config for Branch Protection
 type RepoConfig struct {
 	// OptConfig is the standard repo-level opt in/out config.
-	OptConfig config.RepoOptConfig `yaml:"optConfig"`
+	OptConfig config.RepoOptConfig `json:"optConfig"`
 
 	// Action overrides the same setting in org-level, only if present.
-	Action *string `yaml:"action"`
+	Action *string `json:"action"`
 }
 
 type mergedConfig struct {
