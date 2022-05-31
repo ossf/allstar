@@ -137,22 +137,49 @@ func fetchConfig(ctx context.Context, r repositories, owner, repoIn, name string
 	var p string
 	switch cl {
 	case OrgLevel, OrgRepoLevel:
+		var root string
 		_, rsp, err := r.Get(ctx, owner, operator.OrgConfigRepo)
 		if err == nil {
 			repo = operator.OrgConfigRepo
+			root = ""
 			p = name
 			if cl == OrgRepoLevel {
 				p = path.Join(repoIn, p)
 			}
 		} else if rsp != nil && rsp.StatusCode == http.StatusNotFound {
 			repo = githubConfRepo
+			root = operator.OrgConfigDir
+			p = path.Join(operator.OrgConfigDir, name)
 			if cl == OrgRepoLevel {
 				p = path.Join(operator.OrgConfigDir, repoIn, name)
-			} else {
-				p = path.Join(operator.OrgConfigDir, name)
 			}
 		} else {
 			return err
+		}
+
+		if cl == OrgRepoLevel {
+			// Check if the repo directory exists, and skip making the call to
+			// retrieve the contents if it does not. This call is not strictly
+			// necessary as we handle 404 in the get content call, but the list
+			// call is cache friendly, so it can help avoid many API calls if
+			// the configuration does not exist for a repo.
+			_, rcs, rsp, err := r.GetContents(ctx, owner, repo, root, nil)
+			if err != nil {
+				if rsp != nil && rsp.StatusCode == http.StatusNotFound {
+					return nil
+				}
+				return err
+			}
+			var found bool
+			for _, rc := range rcs {
+				if rc.Name != nil && *rc.Name == repoIn {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return nil
+			}
 		}
 	case RepoLevel:
 		repo = repoIn
