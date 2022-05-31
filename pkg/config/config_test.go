@@ -25,6 +25,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v43/github"
 	"github.com/ossf/allstar/pkg/config/operator"
+	"sigs.k8s.io/yaml"
 )
 
 var getContents func(context.Context, string, string, string,
@@ -602,5 +603,110 @@ func TestWalkGetContents(t *testing.T) {
 	}
 	if rsp == nil || rsp.StatusCode != http.StatusNotFound {
 		t.Errorf("Expected status not found, got: %v", rsp)
+	}
+}
+
+func TestMerge(t *testing.T) {
+	tests := []struct {
+		Name   string
+		Input  string
+		Base   string
+		Expect string
+	}{
+		{
+			Name: "NoMerge",
+			Input: `
+foo: asdf
+barBaz: qwer
+`,
+			Base: "",
+			Expect: `barBaz: qwer
+foo: asdf
+`,
+		},
+		{
+			Name: "MergeNoChange",
+			Input: `
+baseConfig: poiu/lkjh
+`,
+			Base: `
+foo: asdf
+barBaz: qwer
+`,
+			Expect: `barBaz: qwer
+baseConfig: poiu/lkjh
+foo: asdf
+`,
+		},
+		{
+			Name: "MergeNoBase",
+			Input: `
+baseConfig: poiu/lkjh
+foo: asdf
+`,
+			Base: "",
+			Expect: `baseConfig: poiu/lkjh
+foo: asdf
+`,
+		},
+		{
+			Name: "MergeAdd",
+			Input: `
+baseConfig: poiu/lkjh
+foo: asdf
+`,
+			Base: `
+barBaz: qwer
+`,
+			Expect: `barBaz: qwer
+baseConfig: poiu/lkjh
+foo: asdf
+`,
+		},
+		{
+			Name: "MergeOverride",
+			Input: `
+baseConfig: poiu/lkjh
+foo: asdf
+`,
+			Base: `
+foo: foo
+barBaz: qwer
+`,
+			Expect: `barBaz: qwer
+baseConfig: poiu/lkjh
+foo: asdf
+`,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			getContents = func(ctx context.Context, owner, repo, path string,
+				opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
+				[]*github.RepositoryContent, *github.Response, error) {
+				// check owner / repo / path??
+				e := "base64"
+				c := base64.StdEncoding.EncodeToString([]byte(test.Base))
+				return &github.RepositoryContent{
+					Encoding: &e,
+					Content:  &c,
+				}, nil, nil, nil
+			}
+			conJSON, err := yaml.YAMLToJSON([]byte(test.Input))
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			got, err := checkAndMergeBase(context.Background(), mockRepos{}, "path", conJSON)
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			gotYAML, err := yaml.JSONToYAML(got)
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if diff := cmp.Diff(test.Expect, string(gotYAML)); diff != "" {
+				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
