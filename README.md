@@ -358,6 +358,41 @@ For example, Allstar will lookup the policy configuration for a given repo
 | `.github` | `allstar/myapp/branch_protection.yaml` | If `.allstar` repo does not exist. |
 | `.github` | `allstar/branch_protection.yaml` | If `.allstar` repo does not exist. |
 
+### Org-level Base and Merge Configuration Location
+
+For org-level Allstar and policy configuration files, you may specify the field
+`baseConfig` to specify another repository that contains base Allstar
+configuration. This is best explained with an example.
+
+Suppose you have multiple GitHub organizations, but want to maintain a single
+Allstar configuration. Your main organization is "acme", and the repository
+`acme/.allstar` contains `allstar.yaml`:
+
+```yaml
+optConfig:
+  optOutStrategy: true
+issueLabel: allstar-acme
+issueFooter: Issue created by Acme security team.
+```
+
+You also have a satellite GitHub organization named "acme-sat". You want to
+re-use the main config, but apply some changes on top by disabling Allstar on
+certain repositories. The repository `acme-sat/.allstar` contains
+`allstar.yaml`:
+
+```yaml
+baseConfig: acme/.allstar
+optConfig:
+  optOutRepos:
+  - acmesat-one
+  - acmesat-two
+```
+
+This will use all the config from `acme/.allstar` as the base config, but then
+apply any changes in the current file on top of the base configuration. The
+method this is applied is described as a [JSON Merge
+Patch](https://datatracker.ietf.org/doc/html/rfc7396). The `baseConfig` must be
+a GitHub `<org>/<repository>`.
 
 ## **Contribute Policies**
 
