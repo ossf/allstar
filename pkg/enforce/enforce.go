@@ -113,11 +113,15 @@ func EnforceAll(ctx context.Context, ghc *ghclients.GHClients) error {
 			Int("count", len(repos)).
 			Msg("Enforcing policies on repos of installation.")
 		repoCount = repoCount + len(repos)
+		var owner string
 		for _, r := range repos {
 			enabled := config.IsBotEnabled(ctx, ic, *r.Owner.Login, *r.Name)
 			err = RunPolicies(ctx, ic, *r.Owner.Login, *r.Name, enabled)
 			if err != nil {
 				break
+			}
+			if owner == "" {
+				owner = *r.Owner.Login
 			}
 		}
 		if err != nil {
@@ -126,6 +130,7 @@ func EnforceAll(ctx context.Context, ghc *ghclients.GHClients) error {
 				Msg("Unexpected error running policies.")
 			continue
 		}
+		config.ClearInstLoc(owner)
 	}
 	ghc.LogCacheSize()
 	log.Info().

@@ -17,10 +17,14 @@ package config
 import (
 	"context"
 	"encoding/base64"
+	"errors"
+	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v43/github"
+	"github.com/ossf/allstar/pkg/config/operator"
 )
 
 var getContents func(context.Context, string, string, string,
@@ -153,7 +157,7 @@ optConfig:
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			getContents = func(ctx context.Context, owner, repo, path string,
+			walkGC = func(ctx context.Context, r repositories, owner, repo, path string,
 				opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
 				[]*github.RepositoryContent, *github.Response, error) {
 				e := "base64"
@@ -416,7 +420,7 @@ optConfig:
 optConfig:
   optOut: true
 `
-	getContents = func(ctx context.Context, owner, repo, path string,
+	walkGC = func(ctx context.Context, r repositories, owner, repo, path string,
 		opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
 		[]*github.RepositoryContent, *github.Response, error) {
 		e := "base64"
@@ -434,5 +438,169 @@ optConfig:
 
 	if !isBotEnabled(context.Background(), mockRepos{}, "", "thisrepo") {
 		t.Error("Expected repo to be enabled")
+	}
+}
+
+func TestCreateIL(t *testing.T) {
+	tests := []struct {
+		Name       string
+		DotAllstar bool
+		DotGithub  bool
+		Expect     *instLoc
+	}{
+		{
+			Name:       "Allstar exists",
+			DotAllstar: true,
+			DotGithub:  true,
+			Expect: &instLoc{
+				Exists: true,
+				Repo:   operator.OrgConfigRepo,
+				Path:   "",
+			},
+		},
+		{
+			Name:       "Allstar exists2",
+			DotAllstar: true,
+			DotGithub:  false,
+			Expect: &instLoc{
+				Exists: true,
+				Repo:   operator.OrgConfigRepo,
+				Path:   "",
+			},
+		},
+		{
+			Name:       "Dot Github",
+			DotAllstar: false,
+			DotGithub:  true,
+			Expect: &instLoc{
+				Exists: true,
+				Repo:   githubConfRepo,
+				Path:   operator.OrgConfigDir,
+			},
+		},
+		{
+			Name:       "Neither",
+			DotAllstar: false,
+			DotGithub:  false,
+			Expect: &instLoc{
+				Exists: false,
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			get = func(ctx context.Context, owner, repo string) (*github.Repository,
+				*github.Response, error) {
+				if repo == operator.OrgConfigRepo && test.DotAllstar {
+					return nil, nil, nil
+				}
+				if repo == githubConfRepo && test.DotGithub {
+					return nil, nil, nil
+				}
+				return nil, &github.Response{Response: &http.Response{StatusCode: http.StatusNotFound}}, errors.New("Not found")
+			}
+			got, err := createIl(context.Background(), mockRepos{}, "")
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if diff := cmp.Diff(test.Expect, got); diff != "" {
+				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestGetIL(t *testing.T) {
+	var getCalled bool
+	get = func(ctx context.Context, owner, repo string) (*github.Repository,
+		*github.Response, error) {
+		getCalled = true
+		return nil, nil, nil
+	}
+	getCalled = false
+	if _, err := getInstLoc(context.Background(), mockRepos{}, "foo"); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !getCalled {
+		t.Errorf("Get not called")
+	}
+	getCalled = false
+	if _, err := getInstLoc(context.Background(), mockRepos{}, "foo"); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if getCalled {
+		t.Errorf("Get called on second lookup")
+	}
+	ClearInstLoc("foo")
+	getCalled = false
+	if _, err := getInstLoc(context.Background(), mockRepos{}, "foo"); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !getCalled {
+		t.Errorf("Get not called after clear")
+	}
+	getCalled = false
+	if _, err := getInstLoc(context.Background(), mockRepos{}, "bar"); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !getCalled {
+		t.Errorf("Get not called on second org")
+	}
+}
+
+func TestWalkGetContents(t *testing.T) {
+	p := "long/path/file.yaml"
+	expect := []string{"", "long/", "long/path/", "long/path/file.yaml"}
+	var got []string
+	getContents = func(ctx context.Context, owner, repo, pt string,
+		opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
+		[]*github.RepositoryContent, *github.Response, error) {
+		got = append(got, pt)
+		if strings.HasSuffix(pt, ".yaml") {
+			e := "base64"
+			c := base64.StdEncoding.EncodeToString([]byte("asdf"))
+			return &github.RepositoryContent{
+				Encoding: &e,
+				Content:  &c,
+			}, nil, nil, nil
+		} else {
+			return nil, []*github.RepositoryContent{ // All three are always there
+				&github.RepositoryContent{Name: github.String("long")},
+				&github.RepositoryContent{Name: github.String("path")},
+				&github.RepositoryContent{Name: github.String("file.yaml")},
+			}, nil, nil
+		}
+	}
+	_, _, _, _ = walkGetContents(context.Background(), mockRepos{}, "", "", p, nil)
+	if diff := cmp.Diff(expect, got); diff != "" {
+		t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+	}
+
+	expect2 := []string{"", "long/"}
+	var got2 []string
+	getContents = func(ctx context.Context, owner, repo, pt string,
+		opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
+		[]*github.RepositoryContent, *github.Response, error) {
+		got2 = append(got2, pt)
+		if strings.HasSuffix(pt, ".yaml") {
+			e := "base64"
+			c := base64.StdEncoding.EncodeToString([]byte("asdf"))
+			return &github.RepositoryContent{
+				Encoding: &e,
+				Content:  &c,
+			}, nil, nil, nil
+		} else {
+			return nil, []*github.RepositoryContent{ // path is not there
+				&github.RepositoryContent{Name: github.String("long")},
+				&github.RepositoryContent{Name: github.String("file.yaml")},
+			}, nil, nil
+		}
+	}
+	_, _, rsp, _ := walkGetContents(context.Background(), mockRepos{}, "", "", p, nil)
+	if diff := cmp.Diff(expect2, got2); diff != "" {
+		t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+	}
+	if rsp == nil || rsp.StatusCode != http.StatusNotFound {
+		t.Errorf("Expected status not found, got: %v", rsp)
 	}
 }
