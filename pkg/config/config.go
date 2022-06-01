@@ -127,38 +127,52 @@ const (
 	RepoLevel
 )
 
+var walkGC func(context.Context, repositories, string, string, string,
+	*github.RepositoryContentGetOptions) (*github.RepositoryContent,
+	[]*github.RepositoryContent, *github.Response, error)
+
+func init() {
+	walkGC = walkGetContents
+}
+
+type repositories interface {
+	Get(context.Context, string, string) (*github.Repository,
+		*github.Response, error)
+	GetContents(context.Context, string, string, string,
+		*github.RepositoryContentGetOptions) (*github.RepositoryContent,
+		[]*github.RepositoryContent, *github.Response, error)
+}
+
 // FetchConfig grabs a yaml config file from github and writes it to out.
 func FetchConfig(ctx context.Context, c *github.Client, owner, repo, name string, cl ConfigLevel, out interface{}) error {
 	return fetchConfig(ctx, c.Repositories, owner, repo, name, cl, out)
 }
 
 func fetchConfig(ctx context.Context, r repositories, owner, repoIn, name string, cl ConfigLevel, out interface{}) error {
+	il, err := getInstLoc(ctx, r, owner)
+	if err != nil {
+		return err
+	}
 	var repo string
 	var p string
 	switch cl {
-	case OrgLevel, OrgRepoLevel:
-		_, rsp, err := r.Get(ctx, owner, operator.OrgConfigRepo)
-		if err == nil {
-			repo = operator.OrgConfigRepo
-			p = name
-			if cl == OrgRepoLevel {
-				p = path.Join(repoIn, p)
-			}
-		} else if rsp != nil && rsp.StatusCode == http.StatusNotFound {
-			repo = githubConfRepo
-			if cl == OrgRepoLevel {
-				p = path.Join(operator.OrgConfigDir, repoIn, name)
-			} else {
-				p = path.Join(operator.OrgConfigDir, name)
-			}
-		} else {
-			return err
+	case OrgLevel:
+		if !il.Exists {
+			return nil
 		}
+		repo = il.Repo
+		p = path.Join(il.Path, name)
+	case OrgRepoLevel:
+		if !il.Exists {
+			return nil
+		}
+		repo = il.Repo
+		p = path.Join(il.Path, repoIn, name)
 	case RepoLevel:
 		repo = repoIn
 		p = path.Join(operator.RepoConfigDir, name)
 	}
-	cf, _, rsp, err := r.GetContents(ctx, owner, repo, p, nil)
+	cf, _, rsp, err := walkGC(ctx, r, owner, repo, p, nil)
 	if err != nil {
 		if rsp != nil && rsp.StatusCode == http.StatusNotFound {
 			return nil
@@ -180,14 +194,6 @@ func fetchConfig(ctx context.Context, r repositories, owner, repoIn, name string
 		return nil
 	}
 	return nil
-}
-
-type repositories interface {
-	Get(context.Context, string, string) (*github.Repository,
-		*github.Response, error)
-	GetContents(context.Context, string, string, string,
-		*github.RepositoryContentGetOptions) (*github.RepositoryContent,
-		[]*github.RepositoryContent, *github.Response, error)
 }
 
 // IsEnabled determines if a repo is enabled by interpreting the provided
