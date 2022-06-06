@@ -27,11 +27,13 @@ func TestSetVars(t *testing.T) {
 		Name                  string
 		AppID                 string
 		KeySecret             string
-		DoNothingOnOptOut     string
 		NoticePingDurationHrs string
+		PrivateKey            string
+		DoNothingOnOptOut     string
 		ExpAppID              int64
 		ExpKeySecret          string
 		ExpDoNothingOnOptOut  bool
+		ExpPrivateKey         string
 		ExpNoticePingDuration time.Duration
 	}{
 		{
@@ -75,6 +77,18 @@ func TestSetVars(t *testing.T) {
 			ExpNoticePingDuration: (24 * time.Hour),
 		},
 		{
+			Name:                  "HasPrivateKey",
+			AppID:                 "",
+			KeySecret:             "",
+			PrivateKey:            "fake-private-key",
+			DoNothingOnOptOut:     "",
+			ExpAppID:              setAppID,
+			ExpKeySecret:          setKeySecret,
+			ExpDoNothingOnOptOut:  setDoNothingOnOptOut,
+			ExpPrivateKey:         "fake-private-key",
+			ExpNoticePingDuration: (24 * time.Hour),
+		},
+		{
 			Name:                  "SetNoticePingDuration",
 			AppID:                 "",
 			KeySecret:             "",
@@ -101,6 +115,9 @@ func TestSetVars(t *testing.T) {
 				if in == "NOTICE_PING_DURATION_HOURS" {
 					return test.NoticePingDurationHrs
 				}
+				if in == "PRIVATE_KEY" {
+					return test.PrivateKey
+				}
 				return ""
 			}
 			setVars()
@@ -114,6 +131,9 @@ func TestSetVars(t *testing.T) {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 			if diff := cmp.Diff(test.ExpNoticePingDuration, NoticePingDuration); diff != "" {
+				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+			}
+			if diff := cmp.Diff(test.PrivateKey, PrivateKey); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 		})
