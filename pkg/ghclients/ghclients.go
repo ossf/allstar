@@ -34,11 +34,16 @@ var ghinstallationNewAppsTransport func(http.RoundTripper, int64,
 var ghinstallationNew func(http.RoundTripper, int64, int64, []byte) (
 	*ghinstallation.Transport, error)
 var getKey func(context.Context) ([]byte, error)
+var getKeyFromSecret func(context.Context, string) ([]byte, error)
+
+var privateKey = operator.PrivateKey
+var keySecret = operator.KeySecret
 
 func init() {
 	ghinstallationNewAppsTransport = ghinstallation.NewAppsTransport
 	ghinstallationNew = ghinstallation.New
 	getKey = getKeyReal
+	getKeyFromSecret = getKeyFromSecretReal
 }
 
 type GhClientsInterface interface {
@@ -101,8 +106,8 @@ func (g *GHClients) LogCacheSize() {
 	g.cache.LogCacheSize()
 }
 
-func getKeyReal(ctx context.Context) ([]byte, error) {
-	v, err := runtimevar.OpenVariable(ctx, operator.KeySecret)
+func getKeyFromSecretReal(ctx context.Context, keySecretVal string) ([]byte, error) {
+	v, err := runtimevar.OpenVariable(ctx, keySecretVal)
 	if err != nil {
 		return nil, err
 	}
@@ -112,4 +117,11 @@ func getKeyReal(ctx context.Context) ([]byte, error) {
 		return nil, err
 	}
 	return s.Value.([]byte), nil
+}
+
+func getKeyReal(ctx context.Context) ([]byte, error) {
+	if privateKey != "" {
+		return []byte(privateKey), nil
+	}
+	return getKeyFromSecret(ctx, keySecret)
 }
