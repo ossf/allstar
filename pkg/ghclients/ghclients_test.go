@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestGet(t *testing.T) {
@@ -36,7 +37,7 @@ func TestGet(t *testing.T) {
 		called = called + 1
 		return &ghinstallation.Transport{BaseURL: fmt.Sprint(i)}, nil
 	}
-	getKey = func(ctx context.Context) ([]byte, error) {
+	getKeyFromSecret = func(ctx context.Context, keySecretVal string) ([]byte, error) {
 		return nil, nil
 	}
 	ghc, err := NewGHClients(context.Background(), http.DefaultTransport)
@@ -73,5 +74,61 @@ func TestGet(t *testing.T) {
 	}
 	if !reflect.DeepEqual(i1, i2) {
 		t.Errorf("Got wrong client")
+	}
+}
+
+func TestGetKey(t *testing.T) {
+	ghinstallationNewAppsTransport = func(http.RoundTripper, int64,
+		[]byte) (*ghinstallation.AppsTransport, error) {
+		return &ghinstallation.AppsTransport{BaseURL: fmt.Sprint(0)}, nil
+	}
+	ghinstallationNew = func(r http.RoundTripper, a int64, i int64,
+		f []byte) (*ghinstallation.Transport, error) {
+		return &ghinstallation.Transport{BaseURL: fmt.Sprint(i)}, nil
+	}
+
+	tests := []struct {
+		Name       string
+		KeySecret  string
+		PrivateKey string
+		ExpKey     string
+	}{
+		{
+			Name:       "HasOnlyPrivateKey",
+			KeySecret:  "",
+			PrivateKey: "foo",
+			ExpKey:     "foo",
+		},
+		{
+			Name:       "HasOnlyKeySecret",
+			KeySecret:  "bar",
+			PrivateKey: "",
+			ExpKey:     "bar",
+		},
+		{
+			Name:       "HasPrivateKeyAndSecret",
+			KeySecret:  "foo",
+			PrivateKey: "bar",
+			ExpKey:     "bar",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			privateKey = test.PrivateKey
+			keySecret = test.KeySecret
+			getKeyFromSecret = func(ctx context.Context, keySecretVal string) ([]byte, error) {
+				return []byte(keySecretVal), nil
+			}
+
+			ghc, err := NewGHClients(context.Background(), http.DefaultTransport)
+
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if diff := cmp.Diff([]byte(test.ExpKey), ghc.key); diff != "" {
+				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+			}
+		})
 	}
 }

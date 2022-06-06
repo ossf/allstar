@@ -27,6 +27,7 @@ func TestSetVars(t *testing.T) {
 		Name                  string
 		AppID                 string
 		KeySecret             string
+		PrivateKey            string
 		NoticePingDurationHrs string
 		PrivateKey            string
 		DoNothingOnOptOut     string
@@ -98,6 +99,18 @@ func TestSetVars(t *testing.T) {
 			ExpKeySecret:          setKeySecret,
 			ExpDoNothingOnOptOut:  setDoNothingOnOptOut,
 			ExpNoticePingDuration: (48 * time.Hour),
+		},
+		{
+			Name:                  "HasPrivateKey",
+			AppID:                 "",
+			KeySecret:             "",
+			PrivateKey:            "fake-private-key",
+			DoNothingOnOptOut:     "",
+			ExpAppID:              setAppID,
+			ExpKeySecret:          setKeySecret,
+			ExpDoNothingOnOptOut:  setDoNothingOnOptOut,
+			ExpPrivateKey:         "fake-private-key",
+			ExpNoticePingDuration: (24 * time.Hour),
 		},
 	}
 	for _, test := range tests {
