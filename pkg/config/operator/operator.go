@@ -29,6 +29,10 @@ const setAppID = 119816
 
 var AppID int64
 
+// Raw value of the private key for the App. See:
+// https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps#generating-a-private-key
+var PrivateKey string
+
 // KeySecret should be set to the name of a secret containing a private key for
 // the App. See:
 // https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps#generating-a-private-key
@@ -100,6 +104,8 @@ func setVars() {
 	} else {
 		AppID = setAppID
 	}
+
+	PrivateKey = osGetenv("PRIVATE_KEY")
 
 	keySecret := osGetenv("KEY_SECRET")
 	if keySecret != "" {

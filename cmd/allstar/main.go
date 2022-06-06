@@ -46,7 +46,7 @@ func main() {
 	flag.Parse()
 
 	if *boolArgPtr {
-		err := enforce.EnforceAll(ctx, ghc)
+		_, err := enforce.EnforceAll(ctx, ghc)
 		if err != nil {
 			log.Fatal().
 				Err(err).

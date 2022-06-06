@@ -41,6 +41,11 @@ func init() {
 	getKey = getKeyReal
 }
 
+type GhClientsInterface interface {
+	Get(i int64) (*github.Client, error)
+	LogCacheSize()
+}
+
 // GHClients stores clients per-installation for re-use througout a process.
 type GHClients struct {
 	clients map[int64]*github.Client
