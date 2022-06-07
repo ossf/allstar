@@ -26,8 +26,6 @@ import (
 	"github.com/ossf/allstar/pkg/config/operator"
 	_ "gocloud.dev/runtimevar/awssecretsmanager"
 	_ "gocloud.dev/runtimevar/gcpsecretmanager"
-
-	"github.com/rs/zerolog/log"
 )
 
 var ghinstallationNewAppsTransport func(http.RoundTripper, int64,
@@ -56,9 +54,6 @@ type GHClients struct {
 // NewGHClients returns a new GHClients. The provided RoundTripper will be
 // stored and used when creating new clients.
 func NewGHClients(ctx context.Context, t http.RoundTripper) (*GHClients, error) {
-	log.Info().
-		Str("key", operator.KeySecret).
-		Msg("Using keysecret for GH client")
 	return &GHClients{
 		clients: make(map[int64]*github.Client),
 		tr:      t,
