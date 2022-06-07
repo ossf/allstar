@@ -33,6 +33,8 @@ import (
 
 func main() {
 	setupLog()
+	log.Info().
+		Msg("Starting application")
 	ctx, cf := context.WithCancel(context.Background())
 
 	ghc, err := ghclients.NewGHClients(ctx, http.DefaultTransport)
