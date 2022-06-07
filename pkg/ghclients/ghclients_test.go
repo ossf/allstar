@@ -102,7 +102,7 @@ func TestGetKey(t *testing.T) {
 	if ghc == nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	if diff := cmp.Diff([]byte(""), ghc.key); diff != "" {
+	if diff := cmp.Diff([]byte("foobar"), ghc.key); diff != "" {
 		t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 	}
 }
