@@ -136,6 +136,9 @@ func TestSetVars(t *testing.T) {
 			if diff := cmp.Diff(test.PrivateKey, PrivateKey); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
+			if diff := cmp.Diff(test.ExpOperatorConfig, Config); diff != "" {
+				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+			}
 		})
 	}
 }

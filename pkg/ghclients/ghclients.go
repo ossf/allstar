@@ -24,6 +24,7 @@ import (
 	"github.com/google/go-github/v43/github"
 	"github.com/gregjones/httpcache"
 	"github.com/ossf/allstar/pkg/config/operator"
+	"gocloud.dev/runtimevar"
 	_ "gocloud.dev/runtimevar/awssecretsmanager"
 	_ "gocloud.dev/runtimevar/gcpsecretmanager"
 )
@@ -32,10 +33,14 @@ var ghinstallationNewAppsTransport func(http.RoundTripper, int64,
 	[]byte) (*ghinstallation.AppsTransport, error)
 var ghinstallationNew func(http.RoundTripper, int64, int64, []byte) (
 	*ghinstallation.Transport, error)
+var getKey func(context.Context, operator.OperatorConfig) ([]byte, error)
+var config operator.OperatorConfig
 
 func init() {
 	ghinstallationNewAppsTransport = ghinstallation.NewAppsTransport
 	ghinstallationNew = ghinstallation.New
+	getKey = getKeyReal
+	config = operator.Config
 }
 
 type GhClientsInterface interface {
@@ -54,10 +59,14 @@ type GHClients struct {
 // NewGHClients returns a new GHClients. The provided RoundTripper will be
 // stored and used when creating new clients.
 func NewGHClients(ctx context.Context, t http.RoundTripper) (*GHClients, error) {
+	key, err := getKey(ctx, config)
+	if err != nil {
+		return nil, err
+	}
 	return &GHClients{
 		clients: make(map[int64]*github.Client),
 		tr:      t,
-		key:     []byte(operator.KeySecret),
+		key:     key,
 		cache:   newMemoryCache(),
 	}, nil
 }
@@ -92,4 +101,20 @@ func (g *GHClients) Get(i int64) (*github.Client, error) {
 
 func (g *GHClients) LogCacheSize() {
 	g.cache.LogCacheSize()
+}
+
+func getKeyReal(ctx context.Context, config operator.OperatorConfig) ([]byte, error) {
+	if config.PrivateKey != "" {
+		return []byte(config.PrivateKey), nil
+	}
+	v, err := runtimevar.OpenVariable(ctx, config.KeySecret)
+	if err != nil {
+		return nil, err
+	}
+	defer v.Close()
+	s, err := v.Latest(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return s.Value.([]byte), nil
 }

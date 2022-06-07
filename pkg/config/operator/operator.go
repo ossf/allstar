@@ -91,6 +91,14 @@ var NoticePingDuration time.Duration
 
 var osGetenv func(string) string
 
+type OperatorConfig struct {
+	AppID      int64
+	PrivateKey string
+	KeySecret  string
+}
+
+var Config OperatorConfig
+
 func init() {
 	osGetenv = os.Getenv
 	setVars()

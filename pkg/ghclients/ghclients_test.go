@@ -22,6 +22,8 @@ import (
 	"testing"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
+	"github.com/google/go-cmp/cmp"
+	"github.com/ossf/allstar/pkg/config/operator"
 )
 
 func TestGet(t *testing.T) {
@@ -36,7 +38,7 @@ func TestGet(t *testing.T) {
 		called = called + 1
 		return &ghinstallation.Transport{BaseURL: fmt.Sprint(i)}, nil
 	}
-	getKey = func(ctx context.Context) ([]byte, error) {
+	getKey = func(ctx context.Context, config operator.OperatorConfig) ([]byte, error) {
 		return nil, nil
 	}
 	ghc, err := NewGHClients(context.Background(), http.DefaultTransport)
@@ -73,5 +75,34 @@ func TestGet(t *testing.T) {
 	}
 	if !reflect.DeepEqual(i1, i2) {
 		t.Errorf("Got wrong client")
+	}
+}
+
+func TestGetKey(t *testing.T) {
+	ghinstallationNewAppsTransport = func(http.RoundTripper, int64,
+		[]byte) (*ghinstallation.AppsTransport, error) {
+		return &ghinstallation.AppsTransport{BaseURL: fmt.Sprint(0)}, nil
+	}
+	ghinstallationNew = func(r http.RoundTripper, a int64, i int64,
+		f []byte) (*ghinstallation.Transport, error) {
+		return &ghinstallation.Transport{BaseURL: fmt.Sprint(i)}, nil
+	}
+	config = operator.OperatorConfig{
+		PrivateKey: "foobar",
+	}
+	// getKey = func(ctx context.Context, config operator.OperatorConfig) ([]byte, error) {
+	// 	return nil, nil
+	// }
+
+	ghc, err := NewGHClients(context.Background(), http.DefaultTransport)
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if ghc == nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if diff := cmp.Diff([]byte(""), ghc.key); diff != "" {
+		t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 	}
 }
