@@ -33,15 +33,16 @@ var ghinstallationNewAppsTransport func(http.RoundTripper, int64,
 	[]byte) (*ghinstallation.AppsTransport, error)
 var ghinstallationNew func(http.RoundTripper, int64, int64, []byte) (
 	*ghinstallation.Transport, error)
-var getKey func(context.Context, operator.OperatorConfig) ([]byte, error)
+var getKey func(context.Context) ([]byte, error)
 var getKeyFromSecret func(context.Context, string) ([]byte, error)
-var config operator.OperatorConfig
+
+var privateKey = operator.PrivateKey
+var keySecret = operator.KeySecret
 
 func init() {
 	ghinstallationNewAppsTransport = ghinstallation.NewAppsTransport
 	ghinstallationNew = ghinstallation.New
 	getKey = getKeyReal
-	config = operator.Config
 	getKeyFromSecret = getKeyFromSecretReal
 }
 
@@ -61,7 +62,7 @@ type GHClients struct {
 // NewGHClients returns a new GHClients. The provided RoundTripper will be
 // stored and used when creating new clients.
 func NewGHClients(ctx context.Context, t http.RoundTripper) (*GHClients, error) {
-	key, err := getKey(ctx, config)
+	key, err := getKey(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -105,8 +106,8 @@ func (g *GHClients) LogCacheSize() {
 	g.cache.LogCacheSize()
 }
 
-func getKeyFromSecretReal(ctx context.Context, keySecret string) ([]byte, error) {
-	v, err := runtimevar.OpenVariable(ctx, keySecret)
+func getKeyFromSecretReal(ctx context.Context, keySecretVal string) ([]byte, error) {
+	v, err := runtimevar.OpenVariable(ctx, keySecretVal)
 	if err != nil {
 		return nil, err
 	}
@@ -118,9 +119,9 @@ func getKeyFromSecretReal(ctx context.Context, keySecret string) ([]byte, error)
 	return s.Value.([]byte), nil
 }
 
-func getKeyReal(ctx context.Context, config operator.OperatorConfig) ([]byte, error) {
-	if config.PrivateKey != "" {
-		return []byte(config.PrivateKey), nil
+func getKeyReal(ctx context.Context) ([]byte, error) {
+	if privateKey != "" {
+		return []byte(privateKey), nil
 	}
-	return getKeyFromSecret(ctx, config.KeySecret)
+	return getKeyFromSecret(ctx, keySecret)
 }

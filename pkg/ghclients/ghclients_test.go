@@ -23,7 +23,6 @@ import (
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-cmp/cmp"
-	"github.com/ossf/allstar/pkg/config/operator"
 )
 
 func TestGet(t *testing.T) {
@@ -38,7 +37,7 @@ func TestGet(t *testing.T) {
 		called = called + 1
 		return &ghinstallation.Transport{BaseURL: fmt.Sprint(i)}, nil
 	}
-	getKey = func(ctx context.Context, config operator.OperatorConfig) ([]byte, error) {
+	getKey = func(ctx context.Context) ([]byte, error) {
 		return nil, nil
 	}
 	ghc, err := NewGHClients(context.Background(), http.DefaultTransport)
@@ -110,12 +109,10 @@ func TestGetKey(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			config = operator.OperatorConfig{
-				KeySecret:  test.KeySecret,
-				PrivateKey: test.PrivateKey,
-			}
-			getKeyFromSecret = func(ctx context.Context, keySecret string) ([]byte, error) {
-				return []byte(keySecret), nil
+			privateKey = test.PrivateKey
+			keySecret = test.KeySecret
+			getKeyFromSecret = func(ctx context.Context, keySecretVal string) ([]byte, error) {
+				return []byte(keySecretVal), nil
 			}
 
 			ghc, err := NewGHClients(context.Background(), http.DefaultTransport)
