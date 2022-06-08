@@ -37,7 +37,7 @@ func TestGet(t *testing.T) {
 		called = called + 1
 		return &ghinstallation.Transport{BaseURL: fmt.Sprint(i)}, nil
 	}
-	getKey = func(ctx context.Context) ([]byte, error) {
+	getKeyFromSecret = func(ctx context.Context, keySecretVal string) ([]byte, error) {
 		return nil, nil
 	}
 	ghc, err := NewGHClients(context.Background(), http.DefaultTransport)
