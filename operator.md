@@ -37,7 +37,9 @@ may need to edit `pkg/ghclients/ghclients.go` and add a new import line for your
 secret service, ex: `_ "gocloud.dev/runtimevar/gcpsecretmanager"`.
 
 Alternatively, you can provide the AppID and KeySecret as environment variables
-`APP_ID` and `KEY_SECRET`.
+`APP_ID` and `KEY_SECRET`. Or, you can provide the private key directly in the
+environment variable `PRIVATE_KEY` instead of using a secret service. If you
+specify `PRIVATE_KEY` and `KEY_SECRET`, `PRIVATE_KEY` will take precedence.
 
 ## Run Allstar.
 
