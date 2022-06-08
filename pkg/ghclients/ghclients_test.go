@@ -87,22 +87,45 @@ func TestGetKey(t *testing.T) {
 		f []byte) (*ghinstallation.Transport, error) {
 		return &ghinstallation.Transport{BaseURL: fmt.Sprint(i)}, nil
 	}
-	config = operator.OperatorConfig{
-		PrivateKey: "foobar",
-	}
-	// getKey = func(ctx context.Context, config operator.OperatorConfig) ([]byte, error) {
-	// 	return nil, nil
-	// }
 
-	ghc, err := NewGHClients(context.Background(), http.DefaultTransport)
+	tests := []struct {
+		Name       string
+		KeySecret  string
+		PrivateKey string
+		ExpKey     string
+	}{
+		{
+			Name:       "HasPrivateKey",
+			KeySecret:  "",
+			PrivateKey: "foo",
+			ExpKey:     "foo",
+		},
+		{
+			Name:       "HasKeySecret",
+			KeySecret:  "bar",
+			PrivateKey: "",
+			ExpKey:     "bar",
+		},
+	}
 
-	if err != nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-	if ghc == nil {
-		t.Fatalf("Unexpected error: %v", err)
-	}
-	if diff := cmp.Diff([]byte("foobar"), ghc.key); diff != "" {
-		t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			config = operator.OperatorConfig{
+				KeySecret:  test.KeySecret,
+				PrivateKey: test.PrivateKey,
+			}
+			getKeyFromSecret = func(ctx context.Context, keySecret string) ([]byte, error) {
+				return []byte(keySecret), nil
+			}
+
+			ghc, err := NewGHClients(context.Background(), http.DefaultTransport)
+
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if diff := cmp.Diff([]byte(test.ExpKey), ghc.key); diff != "" {
+				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
