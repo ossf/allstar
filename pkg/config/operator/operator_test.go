@@ -17,55 +17,73 @@ package operator
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 )
 
 func TestSetVars(t *testing.T) {
 	tests := []struct {
-		Name                 string
-		AppID                string
-		KeySecret            string
-		DoNothingOnOptOut    string
-		ExpAppID             int64
-		ExpKeySecret         string
-		ExpDoNothingOnOptOut bool
+		Name                  string
+		AppID                 string
+		KeySecret             string
+		DoNothingOnOptOut     string
+		NoticePingDurationHrs string
+		ExpAppID              int64
+		ExpKeySecret          string
+		ExpDoNothingOnOptOut  bool
+		ExpNoticePingDuration time.Duration
 	}{
 		{
-			Name:                 "NoVars",
-			AppID:                "",
-			KeySecret:            "",
-			DoNothingOnOptOut:    "",
-			ExpAppID:             setAppID,
-			ExpKeySecret:         setKeySecret,
-			ExpDoNothingOnOptOut: setDoNothingOnOptOut,
+			Name:                  "NoVars",
+			AppID:                 "",
+			KeySecret:             "",
+			DoNothingOnOptOut:     "",
+			ExpAppID:              setAppID,
+			ExpKeySecret:          setKeySecret,
+			ExpDoNothingOnOptOut:  setDoNothingOnOptOut,
+			ExpNoticePingDuration: (24 * time.Hour),
 		},
 		{
-			Name:                 "SetVars",
-			AppID:                "123",
-			KeySecret:            "asdf",
-			DoNothingOnOptOut:    "true",
-			ExpAppID:             123,
-			ExpKeySecret:         "asdf",
-			ExpDoNothingOnOptOut: true,
+			Name:                  "SetVars",
+			AppID:                 "123",
+			KeySecret:             "asdf",
+			DoNothingOnOptOut:     "true",
+			ExpAppID:              123,
+			ExpKeySecret:          "asdf",
+			ExpDoNothingOnOptOut:  true,
+			ExpNoticePingDuration: (24 * time.Hour),
 		},
 		{
-			Name:                 "BadInt",
-			AppID:                "notint",
-			KeySecret:            "",
-			DoNothingOnOptOut:    "",
-			ExpAppID:             setAppID,
-			ExpKeySecret:         setKeySecret,
-			ExpDoNothingOnOptOut: setDoNothingOnOptOut,
+			Name:                  "BadInt",
+			AppID:                 "notint",
+			KeySecret:             "",
+			DoNothingOnOptOut:     "",
+			ExpAppID:              setAppID,
+			ExpKeySecret:          setKeySecret,
+			ExpDoNothingOnOptOut:  setDoNothingOnOptOut,
+			ExpNoticePingDuration: (24 * time.Hour),
 		},
 		{
-			Name:                 "BadBool",
-			AppID:                "",
-			KeySecret:            "",
-			DoNothingOnOptOut:    "not-bool",
-			ExpAppID:             setAppID,
-			ExpKeySecret:         setKeySecret,
-			ExpDoNothingOnOptOut: setDoNothingOnOptOut,
+			Name:                  "BadBool",
+			AppID:                 "",
+			KeySecret:             "",
+			DoNothingOnOptOut:     "not-bool",
+			ExpAppID:              setAppID,
+			ExpKeySecret:          setKeySecret,
+			ExpDoNothingOnOptOut:  setDoNothingOnOptOut,
+			ExpNoticePingDuration: (24 * time.Hour),
+		},
+		{
+			Name:                  "SetNoticePingDuration",
+			AppID:                 "",
+			KeySecret:             "",
+			DoNothingOnOptOut:     "",
+			NoticePingDurationHrs: "48",
+			ExpAppID:              setAppID,
+			ExpKeySecret:          setKeySecret,
+			ExpDoNothingOnOptOut:  setDoNothingOnOptOut,
+			ExpNoticePingDuration: (48 * time.Hour),
 		},
 	}
 	for _, test := range tests {
@@ -80,6 +98,9 @@ func TestSetVars(t *testing.T) {
 				if in == "DO_NOTHING_ON_OPT_OUT" {
 					return test.DoNothingOnOptOut
 				}
+				if in == "NOTICE_PING_DURATION_HOURS" {
+					return test.NoticePingDurationHrs
+				}
 				return ""
 			}
 			setVars()
@@ -90,6 +111,9 @@ func TestSetVars(t *testing.T) {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 			if diff := cmp.Diff(test.ExpDoNothingOnOptOut, DoNothingOnOptOut); diff != "" {
+				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+			}
+			if diff := cmp.Diff(test.ExpNoticePingDuration, NoticePingDuration); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 		})

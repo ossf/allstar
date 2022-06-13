@@ -79,9 +79,11 @@ const GitHubIssueFooter = `This issue will auto resolve when the policy is in co
 
 Issue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer.`
 
-// NoticePingDuration is the duration to wait between pinging notice actions,
+// NoticePingDuration is the duration (in hours) to wait between pinging notice actions,
 // such as updating a GitHub issue.
-const NoticePingDuration = (24 * time.Hour)
+const setNoticePingDurationHrs = (24 * time.Hour)
+
+var NoticePingDuration time.Duration
 
 var osGetenv func(string) string
 
@@ -122,4 +124,12 @@ func setVars() {
 		LogLevel = logLevel
 	}
 	zerolog.SetGlobalLevel(LogLevel)
+
+	noticePingDurationRaw := osGetenv("NOTICE_PING_DURATION_HOURS")
+	noticePingDuration, err := strconv.ParseInt(noticePingDurationRaw, 10, 64)
+	if err == nil {
+		NoticePingDuration = (time.Duration(noticePingDuration) * time.Hour)
+	} else {
+		NoticePingDuration = setNoticePingDurationHrs
+	}
 }
