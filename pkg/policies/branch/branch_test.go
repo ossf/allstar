@@ -35,6 +35,10 @@ var getBranchProtection func(context.Context, string, string, string) (
 	*github.Protection, *github.Response, error)
 var updateBranchProtection func(context.Context, string, string, string,
 	*github.ProtectionRequest) (*github.Protection, *github.Response, error)
+var getSignaturesProtectedBranch func(context.Context, string, string, string) (
+	*github.SignaturesProtectedBranch, *github.Response, error)
+var requireSignaturesProtectedBranch func(context.Context, string, string, string) (
+	*github.SignaturesProtectedBranch, *github.Response, error)
 
 type mockRepos struct{}
 
@@ -59,6 +63,16 @@ func (m mockRepos) UpdateBranchProtection(ctx context.Context, owner, repo,
 	return updateBranchProtection(ctx, owner, repo, branch, preq)
 }
 
+func (m mockRepos) GetSignaturesProtectedBranch(ctx context.Context, owner, repo,
+	branch string) (*github.SignaturesProtectedBranch, *github.Response, error) {
+	return getSignaturesProtectedBranch(ctx, owner, repo, branch)
+}
+
+func (m mockRepos) RequireSignaturesOnProtectedBranch(ctx context.Context, owner, repo, branch string) (
+	*github.SignaturesProtectedBranch, *github.Response, error) {
+	return requireSignaturesProtectedBranch(ctx, owner, repo, branch)
+}
+
 func TestConfigPrecedence(t *testing.T) {
 	tests := []struct {
 		Name      string
@@ -77,6 +91,7 @@ func TestConfigPrecedence(t *testing.T) {
 				RequireStatusChecks: []StatusCheck{
 					{"mycheck", nil}, {"theothercheck", nil},
 				},
+				RequireSignedCommits: true,
 			},
 			OrgRepo:   RepoConfig{},
 			Repo:      RepoConfig{},
@@ -88,6 +103,7 @@ func TestConfigPrecedence(t *testing.T) {
 				RequireStatusChecks: []StatusCheck{
 					{"mycheck", nil}, {"theothercheck", nil},
 				},
+				RequireSignedCommits: true,
 			},
 		},
 		{
@@ -221,12 +237,72 @@ func TestConfigPrecedence(t *testing.T) {
 	}
 }
 
+func TestGetSignatureProtectionEnabled(t *testing.T) {
+	error403 := errors.New("403")
+	tests := []struct {
+		Name                 string
+		SignatureProtEnabled bool
+		GetResponse          github.Response
+		GetError             error
+		ExpEnabled           bool
+		ExpError             error
+	}{
+		{
+			Name:                 "SignatureProtectionEnabled",
+			SignatureProtEnabled: true,
+			ExpEnabled:           true,
+		},
+		{
+			Name: "GetResponse404",
+			GetResponse: github.Response{
+				Response: &http.Response{
+					StatusCode: http.StatusNotFound,
+				},
+			},
+			GetError:   errors.New("404"),
+			ExpEnabled: false,
+		},
+		{
+			Name: "GetResponse403",
+			GetResponse: github.Response{
+				Response: &http.Response{
+					StatusCode: http.StatusForbidden,
+				},
+			},
+			GetError: error403,
+			ExpError: error403,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			getSignaturesProtectedBranch = func(ctx context.Context, o string, r string, b string) (
+				*github.SignaturesProtectedBranch, *github.Response, error) {
+				return &github.SignaturesProtectedBranch{Enabled: github.Bool(test.SignatureProtEnabled)},
+					&test.GetResponse, test.GetError
+			}
+
+			enabled, err := getSignatureProtectionEnabled(context.Background(), mockRepos{}, "fake-owner", "repo", "branch")
+			if test.ExpError == nil && err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if !errors.Is(err, test.ExpError) {
+				t.Fatalf("Expected error: %v, got: %v", test.ExpError, err)
+			}
+			if enabled != test.ExpEnabled {
+				t.Fatalf("Expected: %v, got: %v", test.ExpEnabled, enabled)
+			}
+		})
+	}
+}
+
 func TestCheck(t *testing.T) {
 	tests := []struct {
 		Name              string
 		Org               OrgConfig
 		Repo              RepoConfig
 		Prot              map[string]github.Protection
+		SigProtection     map[string]github.SignaturesProtectedBranch
 		cofigEnabled      bool
 		doNothingOnOptOut bool
 		Exp               policydef.Result
@@ -247,6 +323,11 @@ func TestCheck(t *testing.T) {
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 1,
 					},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
 				},
 			},
 			cofigEnabled:      false,
@@ -316,6 +397,11 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
 			cofigEnabled:      true,
 			doNothingOnOptOut: false,
 			Exp: policydef.Result{
@@ -355,6 +441,14 @@ func TestCheck(t *testing.T) {
 					},
 				},
 				"release": github.Protection{},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+				"release": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
 			},
 			cofigEnabled:      true,
 			doNothingOnOptOut: false,
@@ -401,6 +495,11 @@ func TestCheck(t *testing.T) {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: false,
 					},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
 				},
 			},
 			cofigEnabled:      true,
@@ -454,6 +553,11 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
 			cofigEnabled:      true,
 			doNothingOnOptOut: false,
 			Exp: policydef.Result{
@@ -499,6 +603,11 @@ func TestCheck(t *testing.T) {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: false,
 					},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
 				},
 			},
 			cofigEnabled:      true,
@@ -550,6 +659,11 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
 			cofigEnabled:      true,
 			doNothingOnOptOut: false,
 			Exp: policydef.Result{
@@ -596,6 +710,11 @@ func TestCheck(t *testing.T) {
 							{Context: "mycheck", AppID: github.Int64(123456)},
 						},
 					},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
 				},
 			},
 			cofigEnabled:      true,
@@ -646,6 +765,11 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
 			cofigEnabled:      true,
 			doNothingOnOptOut: false,
 			Exp: policydef.Result{
@@ -686,6 +810,11 @@ func TestCheck(t *testing.T) {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: false,
 					},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
 				},
 			},
 			cofigEnabled:      true,
@@ -734,6 +863,11 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
 			cofigEnabled:      true,
 			doNothingOnOptOut: false,
 			Exp: policydef.Result{
@@ -774,6 +908,11 @@ func TestCheck(t *testing.T) {
 						DismissStaleReviews:          false,
 						RequiredApprovingReviewCount: 1,
 					},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
 				},
 			},
 			cofigEnabled:      true,
@@ -817,6 +956,11 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
 			cofigEnabled:      true,
 			doNothingOnOptOut: false,
 			Exp: policydef.Result{
@@ -845,8 +989,13 @@ func TestCheck(t *testing.T) {
 				DismissStale:    true,
 				BlockForce:      true,
 			},
-			Repo:              RepoConfig{},
-			Prot:              map[string]github.Protection{},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
 			cofigEnabled:      true,
 			doNothingOnOptOut: false,
 			Exp: policydef.Result{
@@ -859,6 +1008,170 @@ func TestCheck(t *testing.T) {
 						NumReviews:   0,
 						DismissStale: false,
 						BlockForce:   false,
+					},
+				},
+			},
+		},
+		{
+			Name: "SignedCommitsRequiredNotEnabled",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:       true,
+				RequireApproval:      true,
+				ApprovalCount:        1,
+				RequireSignedCommits: true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 1,
+					},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Signed commits required, but not enabled for branch: main\n",
+				Details: map[string]details{
+					"main": details{
+						PRReviews:            true,
+						NumReviews:           1,
+						DismissStale:         true,
+						BlockForce:           true,
+						RequireSignedCommits: false,
+					},
+				},
+			},
+		},
+		{
+			Name: "SignedCommitsRequiredEnabled",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:       true,
+				RequireApproval:      true,
+				ApprovalCount:        1,
+				RequireSignedCommits: true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 1,
+					},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(true),
+				},
+			},
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: map[string]details{
+					"main": details{
+						PRReviews:            true,
+						NumReviews:           1,
+						DismissStale:         true,
+						BlockForce:           true,
+						RequireSignedCommits: true,
+					},
+				},
+			},
+		},
+		{
+			Name: "SignedCommitsNotRequiredNotEnabled",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:       true,
+				RequireApproval:      true,
+				ApprovalCount:        1,
+				RequireSignedCommits: false,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 1,
+					},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: map[string]details{
+					"main": details{
+						PRReviews:            true,
+						NumReviews:           1,
+						DismissStale:         true,
+						BlockForce:           true,
+						RequireSignedCommits: false,
+					},
+				},
+			},
+		},
+		{
+			Name: "SignedCommitsNotFound",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:       true,
+				RequireApproval:      true,
+				ApprovalCount:        1,
+				RequireSignedCommits: false,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 1,
+					},
+				},
+			},
+			SigProtection:     map[string]github.SignaturesProtectedBranch{},
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: map[string]details{
+					"main": {
+						PRReviews:            true,
+						NumReviews:           1,
+						DismissStale:         true,
+						BlockForce:           true,
+						RequireSignedCommits: false,
 					},
 				},
 			},
@@ -905,6 +1218,19 @@ func TestCheck(t *testing.T) {
 					}, errors.New("404")
 				}
 			}
+			getSignaturesProtectedBranch = func(ctx context.Context, o string, r string, b string) (
+				*github.SignaturesProtectedBranch, *github.Response, error) {
+				sp, ok := test.SigProtection[b]
+				if ok {
+					return &sp, nil, nil
+				} else {
+					return nil, &github.Response{
+						Response: &http.Response{
+							StatusCode: http.StatusNotFound,
+						},
+					}, errors.New("404")
+				}
+			}
 			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig,
 				c *github.Client, owner, repo string) (bool, error) {
 				return test.cofigEnabled, nil
@@ -941,12 +1267,14 @@ func TestCheck(t *testing.T) {
 
 func TestFix(t *testing.T) {
 	tests := []struct {
-		Name         string
-		Org          OrgConfig
-		Repo         RepoConfig
-		Prot         map[string]github.Protection
-		cofigEnabled bool
-		Exp          map[string]github.ProtectionRequest
+		Name                 string
+		Org                  OrgConfig
+		Repo                 RepoConfig
+		Prot                 map[string]github.Protection
+		SignatureProt        map[string]github.SignaturesProtectedBranch
+		cofigEnabled         bool
+		Exp                  map[string]github.ProtectionRequest
+		ExpSignatureRequests map[string]bool
 	}{
 		{
 			Name: "NoChange",
@@ -974,15 +1302,22 @@ func TestFix(t *testing.T) {
 			},
 			cofigEnabled: true,
 			Exp:          map[string]github.ProtectionRequest{},
+			SignatureProt: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
+			ExpSignatureRequests: map[string]bool{},
 		},
 		{
 			Name: "AddProtection",
 			Org: OrgConfig{
-				EnforceDefault:  true,
-				RequireApproval: true,
-				ApprovalCount:   2,
-				DismissStale:    true,
-				BlockForce:      true,
+				EnforceDefault:       true,
+				RequireApproval:      true,
+				ApprovalCount:        2,
+				DismissStale:         true,
+				BlockForce:           true,
+				RequireSignedCommits: false,
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
@@ -1025,6 +1360,12 @@ func TestFix(t *testing.T) {
 					},
 				},
 			},
+			SignatureProt: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
+			ExpSignatureRequests: map[string]bool{},
 		},
 		{
 			Name: "AddProtectionFromScratch",
@@ -1049,6 +1390,7 @@ func TestFix(t *testing.T) {
 					},
 				},
 			},
+			ExpSignatureRequests: map[string]bool{},
 		},
 		{
 			Name: "NotEnabled",
@@ -1071,17 +1413,19 @@ func TestFix(t *testing.T) {
 					RequiredPullRequestReviews: nil,
 				},
 			},
-			cofigEnabled: false,
-			Exp:          map[string]github.ProtectionRequest{},
+			cofigEnabled:         false,
+			Exp:                  map[string]github.ProtectionRequest{},
+			ExpSignatureRequests: map[string]bool{},
 		},
 		{
 			Name: "IncreaseCountAndBlockForce",
 			Org: OrgConfig{
-				EnforceDefault:  true,
-				RequireApproval: true,
-				ApprovalCount:   2,
-				DismissStale:    true,
-				BlockForce:      true,
+				EnforceDefault:       true,
+				RequireApproval:      true,
+				ApprovalCount:        2,
+				DismissStale:         true,
+				BlockForce:           true,
+				RequireSignedCommits: false,
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
@@ -1108,6 +1452,12 @@ func TestFix(t *testing.T) {
 					},
 				},
 			},
+			SignatureProt: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
+			ExpSignatureRequests: map[string]bool{},
 		},
 		{
 			Name: "BlockForceOnly",
@@ -1138,6 +1488,12 @@ func TestFix(t *testing.T) {
 					},
 				},
 			},
+			SignatureProt: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
+			ExpSignatureRequests: map[string]bool{},
 		},
 		{
 			Name: "RequireUpToDateBranchOnly",
@@ -1161,6 +1517,12 @@ func TestFix(t *testing.T) {
 			},
 			cofigEnabled: true,
 			Exp:          map[string]github.ProtectionRequest{},
+			SignatureProt: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
+			ExpSignatureRequests: map[string]bool{},
 		},
 		{
 			Name: "RequireUpToDateBranch",
@@ -1200,6 +1562,12 @@ func TestFix(t *testing.T) {
 					},
 				},
 			},
+			SignatureProt: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
+			ExpSignatureRequests: map[string]bool{},
 		},
 		{
 			Name: "EnforceAdmins",
@@ -1231,6 +1599,12 @@ func TestFix(t *testing.T) {
 					},
 				},
 			},
+			SignatureProt: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
+			ExpSignatureRequests: map[string]bool{},
 		},
 		{
 			Name: "RequireStatusChecksOnly",
@@ -1269,6 +1643,12 @@ func TestFix(t *testing.T) {
 					},
 				},
 			},
+			SignatureProt: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
+			ExpSignatureRequests: map[string]bool{},
 		},
 		{
 			Name: "MergeRequireStatusChecks",
@@ -1313,6 +1693,12 @@ func TestFix(t *testing.T) {
 					},
 				},
 			},
+			SignatureProt: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
+			ExpSignatureRequests: map[string]bool{},
 		},
 		{
 			Name: "MergeRequireStatusChecksDifferentAppID",
@@ -1363,6 +1749,12 @@ func TestFix(t *testing.T) {
 					},
 				},
 			},
+			SignatureProt: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
+			ExpSignatureRequests: map[string]bool{},
 		},
 		{
 			Name: "NoChangeToRequireStatusChecks",
@@ -1394,6 +1786,82 @@ func TestFix(t *testing.T) {
 			},
 			cofigEnabled: true,
 			Exp:          map[string]github.ProtectionRequest{},
+			SignatureProt: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
+			ExpSignatureRequests: map[string]bool{},
+		},
+		{
+			Name: "MakeSignedCommitsRequired",
+			Org: OrgConfig{
+				EnforceDefault:       true,
+				RequireApproval:      true,
+				ApprovalCount:        1,
+				DismissStale:         true,
+				BlockForce:           true,
+				RequireSignedCommits: true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					EnforceAdmins: &github.AdminEnforcement{
+						Enabled: false,
+					},
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 1,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp:          map[string]github.ProtectionRequest{},
+			SignatureProt: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
+			ExpSignatureRequests: map[string]bool{
+				"main": true,
+			},
+		},
+		{
+			Name: "SignedCommitsAlreadyRequired",
+			Org: OrgConfig{
+				EnforceDefault:       true,
+				RequireApproval:      true,
+				ApprovalCount:        1,
+				DismissStale:         true,
+				BlockForce:           true,
+				RequireSignedCommits: true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					EnforceAdmins: &github.AdminEnforcement{
+						Enabled: false,
+					},
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 1,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp:          map[string]github.ProtectionRequest{},
+			SignatureProt: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(true),
+				},
+			},
+			ExpSignatureRequests: map[string]bool{},
 		},
 		{
 			Name: "HandleExistingEmptyChecks",
@@ -1433,6 +1901,44 @@ func TestFix(t *testing.T) {
 					RequiredStatusChecks: nil,
 				},
 			},
+			SignatureProt: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
+			ExpSignatureRequests: map[string]bool{},
+		},
+		{
+			Name: "SignedCommitsNotFound",
+			Org: OrgConfig{
+				EnforceDefault:       true,
+				RequireApproval:      true,
+				ApprovalCount:        1,
+				DismissStale:         true,
+				BlockForce:           true,
+				RequireSignedCommits: true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					EnforceAdmins: &github.AdminEnforcement{
+						Enabled: false,
+					},
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 1,
+					},
+				},
+			},
+			cofigEnabled:  true,
+			Exp:           map[string]github.ProtectionRequest{},
+			SignatureProt: map[string]github.SignaturesProtectedBranch{},
+			ExpSignatureRequests: map[string]bool{
+				"main": true,
+			},
 		},
 	}
 	get = func(context.Context, string, string) (*github.Repository,
@@ -1452,6 +1958,8 @@ func TestFix(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			got := make(map[string]github.ProtectionRequest)
+			requireSignatureRequests := make(map[string]bool)
+
 			updateBranchProtection = func(ctx context.Context, owner, repo,
 				branch string, preq *github.ProtectionRequest) (*github.Protection,
 				*github.Response, error) {
@@ -1482,11 +1990,30 @@ func TestFix(t *testing.T) {
 					}, errors.New("404")
 				}
 			}
+			getSignaturesProtectedBranch = func(ctx context.Context, o string, r string,
+				b string) (*github.SignaturesProtectedBranch, *github.Response, error) {
+				p, ok := test.SignatureProt[b]
+				if ok {
+					return &p, nil, nil
+				} else {
+					return nil, &github.Response{
+						Response: &http.Response{
+							StatusCode: http.StatusNotFound,
+						},
+					}, errors.New("404")
+				}
+			}
+			requireSignaturesProtectedBranch = func(ctx context.Context, owner, repo, branch string) (
+				*github.SignaturesProtectedBranch, *github.Response, error) {
+				requireSignatureRequests[branch] = true
+				return nil, nil, nil
+			}
 			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig,
 				c *github.Client, owner, repo string) (bool, error) {
 				return test.cofigEnabled, nil
 			}
-			if err := fix(context.Background(), mockRepos{}, nil, "", "thisrepo"); err != nil {
+			err := fix(context.Background(), mockRepos{}, nil, "", "thisrepo")
+			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
 
@@ -1511,6 +2038,9 @@ func TestFix(t *testing.T) {
 			}
 
 			if diff := cmp.Diff(test.Exp, got); diff != "" {
+				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+			}
+			if diff := cmp.Diff(test.ExpSignatureRequests, requireSignatureRequests); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 		})
