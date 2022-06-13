@@ -75,6 +75,9 @@ type OrgConfig struct {
 	// EnforceOnAdmins : set to true to apply the branch protection rules on
 	// administrators as well.
 	EnforceOnAdmins bool `json:"enforceOnAdmins"`
+
+	// RequireSignedCommits : set to true to require signed commits on protected branches, default false
+	RequireSignedCommits bool `json:"requireSignedCommits"`
 }
 
 // RepoConfig is the repo-level config for Branch Protection
@@ -116,6 +119,10 @@ type RepoConfig struct {
 	// specifying an empty list (`requireStatusChecks: []`) will override the
 	// setting to be empty.
 	RequireStatusChecks []StatusCheck `json:"requireStatusChecks"`
+
+	// RequireSignedCommits overrides the same setting in org-level, only if
+	// present.
+	RequireSignedCommits *bool `json:"requireSignedCommits"`
 }
 
 // StatusCheck is the config description for specifying a single required
@@ -146,6 +153,7 @@ type mergedConfig struct {
 	EnforceOnAdmins       bool
 	RequireUpToDateBranch bool
 	RequireStatusChecks   []StatusCheck
+	RequireSignedCommits  bool
 }
 
 type details struct {
@@ -156,6 +164,7 @@ type details struct {
 	EnforceOnAdmins       bool
 	RequireUpToDateBranch bool
 	RequireStatusChecks   []StatusCheck
+	RequireSignedCommits  bool
 }
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
@@ -191,6 +200,10 @@ type repositories interface {
 		*github.Protection, *github.Response, error)
 	UpdateBranchProtection(context.Context, string, string, string,
 		*github.ProtectionRequest) (*github.Protection, *github.Response, error)
+	GetSignaturesProtectedBranch(ctx context.Context, owner, repo, branch string) (
+		*github.SignaturesProtectedBranch, *github.Response, error)
+	RequireSignaturesOnProtectedBranch(ctx context.Context, owner, repo, branch string) (
+		*github.SignaturesProtectedBranch, *github.Response, error)
 }
 
 // Check performs the polcy check for Branch Protection based on the
@@ -373,6 +386,17 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 				pass = false
 			}
 		}
+
+		signatureProtectionEnabled, err := getSignatureProtectionEnabled(ctx, rep, owner, repo, b)
+		if err != nil {
+			return nil, err
+		}
+		d.RequireSignedCommits = signatureProtectionEnabled
+		if mc.RequireSignedCommits && !d.RequireSignedCommits {
+			pass = false
+			text = text + fmt.Sprintf("Signed commits required, but not enabled for branch: %v\n", b)
+		}
+
 		ds[b] = d
 	}
 
@@ -598,8 +622,50 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 				Str("area", polName).
 				Msg("Updated with Fix action.")
 		}
+
+		signatureProtectionEnabled, err := getSignatureProtectionEnabled(ctx, rep, owner, repo, b)
+		if err != nil {
+			return err
+		}
+		if mc.RequireSignedCommits && !signatureProtectionEnabled {
+			_, rsp, err = rep.RequireSignaturesOnProtectedBranch(ctx, owner, repo, b)
+
+			if err != nil {
+				if rsp != nil && rsp.StatusCode == http.StatusForbidden {
+					log.Warn().
+						Str("org", owner).
+						Str("repo", repo).
+						Str("area", polName).
+						Str("branch", b).
+						Msg("Action set to fix, but did not accept admin:write update to make signed commits required.")
+					return nil
+				}
+				return err
+			}
+			log.Info().
+				Str("org", owner).
+				Str("repo", repo).
+				Str("area", polName).
+				Str("branch", b).
+				Msg("Updated to make signed commits required with Fix action.")
+		}
 	}
 	return nil
+}
+
+func getSignatureProtectionEnabled(ctx context.Context, rep repositories, owner string, repo string, branch string) (
+	bool, error) {
+	sp, rsp, err := rep.GetSignaturesProtectedBranch(ctx, owner, repo, branch)
+	if err != nil {
+		if rsp != nil && rsp.StatusCode == http.StatusNotFound {
+			return false, nil
+		}
+		if rsp != nil && rsp.StatusCode == http.StatusForbidden {
+			err = fmt.Errorf("access denied to commit signing settings for %v: %w", repo, err)
+		}
+		return false, err
+	}
+	return sp.GetEnabled(), nil
 }
 
 // GetAction returns the configured action from Branch Protection's
@@ -668,6 +734,7 @@ func mergeConfig(oc *OrgConfig, orc, rc *RepoConfig, repo string) *mergedConfig 
 		EnforceOnAdmins:       oc.EnforceOnAdmins,
 		RequireUpToDateBranch: oc.RequireUpToDateBranch,
 		RequireStatusChecks:   oc.RequireStatusChecks,
+		RequireSignedCommits:  oc.RequireSignedCommits,
 	}
 	mc.EnforceBranches = append(mc.EnforceBranches, orc.EnforceBranches...)
 	mc = mergeInRepoConfig(mc, orc, repo)
@@ -706,6 +773,9 @@ func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedCon
 	}
 	if rc.RequireStatusChecks != nil {
 		mc.RequireStatusChecks = rc.RequireStatusChecks
+	}
+	if rc.RequireSignedCommits != nil {
+		mc.RequireSignedCommits = *rc.RequireSignedCommits
 	}
 	return mc
 }
