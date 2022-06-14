@@ -26,6 +26,7 @@ import (
 	"github.com/ossf/allstar/pkg/config/operator"
 	"gocloud.dev/runtimevar"
 	_ "gocloud.dev/runtimevar/awssecretsmanager"
+	_ "gocloud.dev/runtimevar/filevar"
 	_ "gocloud.dev/runtimevar/gcpsecretmanager"
 )
 
@@ -120,7 +121,7 @@ func getKeyFromSecretReal(ctx context.Context, keySecretVal string) ([]byte, err
 }
 
 func getKeyReal(ctx context.Context) ([]byte, error) {
-	if privateKey != "" {
+	if keySecret == "direct" {
 		return []byte(privateKey), nil
 	}
 	return getKeyFromSecret(ctx, keySecret)

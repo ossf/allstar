@@ -27,7 +27,6 @@ func TestSetVars(t *testing.T) {
 		Name                  string
 		AppID                 string
 		KeySecret             string
-		PrivateKey            string
 		NoticePingDurationHrs string
 		PrivateKey            string
 		DoNothingOnOptOut     string

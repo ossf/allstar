@@ -95,7 +95,7 @@ func TestGetKey(t *testing.T) {
 	}{
 		{
 			Name:       "HasOnlyPrivateKey",
-			KeySecret:  "",
+			KeySecret:  "direct",
 			PrivateKey: "foo",
 			ExpKey:     "foo",
 		},
@@ -109,7 +109,7 @@ func TestGetKey(t *testing.T) {
 			Name:       "HasPrivateKeyAndSecret",
 			KeySecret:  "foo",
 			PrivateKey: "bar",
-			ExpKey:     "bar",
+			ExpKey:     "foo",
 		},
 	}
 
