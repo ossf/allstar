@@ -51,6 +51,10 @@ func (m mockRC) ListBranches() ([]*clients.BranchRef, error) {
 	return nil, nil
 }
 
+func (m mockRC) GetBranch(branch string) (*clients.BranchRef, error) {
+	return nil, nil
+}
+
 func (m mockRC) GetDefaultBranch() (*clients.BranchRef, error) {
 	return nil, nil
 }
@@ -66,7 +70,7 @@ func (m mockRC) ListReleases() ([]clients.Release, error) {
 	return nil, nil
 }
 
-func (m mockRC) ListContributors() ([]clients.Contributor, error) {
+func (m mockRC) ListContributors() ([]clients.User, error) {
 	return nil, nil
 }
 
@@ -79,6 +83,14 @@ func (m mockRC) ListCheckRunsForRef(ref string) ([]clients.CheckRun, error) {
 }
 
 func (m mockRC) ListStatuses(ref string) ([]clients.Status, error) {
+	return nil, nil
+}
+
+func (m mockRC) ListWebhooks() ([]clients.Webhook, error) {
+	return nil, nil
+}
+
+func (m mockRC) ListProgrammingLanguages() ([]clients.Language, error) {
 	return nil, nil
 }
 
