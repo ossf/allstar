@@ -292,7 +292,6 @@ func TestCheck(t *testing.T) {
 				Details:    map[string]details{},
 			},
 		},
-
 		{
 			Name: "CatchBlockForce",
 			Org: OrgConfig{
@@ -660,6 +659,95 @@ func TestCheck(t *testing.T) {
 						DismissStale:        true,
 						BlockForce:          true,
 						RequireStatusChecks: []StatusCheck{{"mycheck", github.Int64(654321)}},
+					},
+				},
+			},
+		},
+		{
+			Name: "CatchEnforceAdminsAdminEnforcementNil",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   1,
+				DismissStale:    true,
+				BlockForce:      true,
+				EnforceOnAdmins: true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 5,
+					},
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+				},
+			},
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Enforce status checks on admins not configured for branch main\n",
+				Details: map[string]details{
+					"main": details{
+						PRReviews:             true,
+						NumReviews:            5,
+						DismissStale:          true,
+						BlockForce:            true,
+						RequireUpToDateBranch: false,
+						EnforceOnAdmins:       false,
+					},
+				},
+			},
+		},
+		{
+			Name: "CatchEnforceAdminsAdminEnforcementDisabled",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   1,
+				DismissStale:    true,
+				BlockForce:      true,
+				EnforceOnAdmins: true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 5,
+					},
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					EnforceAdmins: &github.AdminEnforcement{
+						Enabled: false,
+					},
+				},
+			},
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Enforce status checks on admins not configured for branch main\n",
+				Details: map[string]details{
+					"main": details{
+						PRReviews:             true,
+						NumReviews:            5,
+						DismissStale:          true,
+						BlockForce:            true,
+						RequireUpToDateBranch: false,
+						EnforceOnAdmins:       false,
 					},
 				},
 			},
@@ -1085,6 +1173,37 @@ func TestFix(t *testing.T) {
 						Checks: []*github.RequiredStatusCheck{
 							{Context: "mycheck"}, {Context: "theothercheck"},
 						},
+					},
+				},
+			},
+		},
+		{
+			Name: "EnforceAdmins",
+			Org: OrgConfig{
+				EnforceDefault:  true,
+				EnforceOnAdmins: true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					EnforceAdmins: &github.AdminEnforcement{
+						Enabled: false,
+					},
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						RequiredApprovingReviewCount: 0,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: map[string]github.ProtectionRequest{
+				"main": github.ProtectionRequest{
+					AllowForcePushes: github.Bool(false),
+					EnforceAdmins:    true,
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
+						RequiredApprovingReviewCount: 0,
 					},
 				},
 			},
