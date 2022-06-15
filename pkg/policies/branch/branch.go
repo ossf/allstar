@@ -71,6 +71,10 @@ type OrgConfig struct {
 	// order to merge into the protected branch. Each entry must specify
 	// the context, and optionally an appID.
 	RequireStatusChecks []StatusCheck `json:"requireStatusChecks"`
+
+	// EnforceOnAdmins : set to true to apply the branch protection rules on
+	// administrators as well.
+	EnforceOnAdmins bool `json:"enforceOnAdmins"`
 }
 
 // RepoConfig is the repo-level config for Branch Protection
@@ -99,6 +103,9 @@ type RepoConfig struct {
 
 	// BlockForce overrides the same setting in org-level, only if present.
 	BlockForce *bool `json:"blockForce"`
+
+	// EnforceOnAdmins overrides the same setting in org-level, only if present.
+	EnforceOnAdmins *bool `json:"enforceOnAdmins"`
 
 	// RequireUpToDateBranch overrides the same setting in org-level, only if
 	// present.
@@ -136,6 +143,7 @@ type mergedConfig struct {
 	ApprovalCount         int
 	DismissStale          bool
 	BlockForce            bool
+	EnforceOnAdmins       bool
 	RequireUpToDateBranch bool
 	RequireStatusChecks   []StatusCheck
 }
@@ -145,6 +153,7 @@ type details struct {
 	NumReviews            int
 	DismissStale          bool
 	BlockForce            bool
+	EnforceOnAdmins       bool
 	RequireUpToDateBranch bool
 	RequireStatusChecks   []StatusCheck
 }
@@ -321,6 +330,14 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 				d.BlockForce = false
 			}
 		}
+		ea := p.GetEnforceAdmins()
+		d.EnforceOnAdmins = false
+		if mc.EnforceOnAdmins && (ea == nil || !ea.Enabled) {
+			text = text +
+				fmt.Sprintf("Enforce status checks on admins not configured for branch %v\n",
+					b)
+			pass = false
+		}
 		if len(mc.RequireStatusChecks) > 0 {
 			rsc := p.GetRequiredStatusChecks()
 			if rsc != nil {
@@ -454,6 +471,10 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 			RequiredStatusChecks: p.RequiredStatusChecks,
 			EnforceAdmins:        p.EnforceAdmins.Enabled,
 			AllowForcePushes:     &p.AllowForcePushes.Enabled,
+		}
+		if mc.EnforceOnAdmins && !pr.EnforceAdmins {
+			pr.EnforceAdmins = true
+			update = true
 		}
 		if pr.RequiredStatusChecks != nil {
 			// Clear out Contexts, since API populates both, but updates require only one.
@@ -635,6 +656,7 @@ func mergeConfig(oc *OrgConfig, orc, rc *RepoConfig, repo string) *mergedConfig 
 		ApprovalCount:         oc.ApprovalCount,
 		DismissStale:          oc.DismissStale,
 		BlockForce:            oc.BlockForce,
+		EnforceOnAdmins:       oc.EnforceOnAdmins,
 		RequireUpToDateBranch: oc.RequireUpToDateBranch,
 		RequireStatusChecks:   oc.RequireStatusChecks,
 	}
@@ -666,6 +688,9 @@ func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedCon
 	}
 	if rc.BlockForce != nil {
 		mc.BlockForce = *rc.BlockForce
+	}
+	if rc.EnforceOnAdmins != nil {
+		mc.EnforceOnAdmins = *rc.EnforceOnAdmins
 	}
 	if rc.RequireUpToDateBranch != nil {
 		mc.RequireUpToDateBranch = *rc.RequireUpToDateBranch
