@@ -38,8 +38,9 @@ var issueClose func(ctx context.Context, c *github.Client, owner, repo, policy s
 var getAppInstallations func(ctx context.Context, ghc ghclients.GhClientsInterface) ([]*github.Installation, error)
 var getAppInstallationRepos func(ctx context.Context, ghc ghclients.GhClientsInterface, ic *github.Client) ([]*github.Repository, *github.Response, error)
 var isBotEnabled func(ctx context.Context, c *github.Client, owner, repo string) bool
+var runPolicies func(ctx context.Context, c *github.Client, owner, repo string, enabled bool) (EnforceRepoResults, error)
 
-type EnforceResults = map[string]bool
+type EnforceRepoResults = map[string]bool
 type EnforceAllResults = map[string]map[string]int
 
 func init() {
@@ -49,6 +50,7 @@ func init() {
 	getAppInstallations = getAppInstallationsReal
 	getAppInstallationRepos = getAppInstallationReposReal
 	isBotEnabled = config.IsBotEnabled
+	runPolicies = RunPolicies
 }
 
 // EnforceAll iterates through all available installations and repos Allstar
@@ -60,7 +62,6 @@ func init() {
 func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface) (EnforceAllResults, error) {
 	var repoCount int
 	var enforceAllResults = make(EnforceAllResults)
-
 	insts, err := getAppInstallations(ctx, ghc)
 	if err != nil {
 		return nil, err
@@ -99,31 +100,19 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface) (EnforceA
 			continue
 		}
 
-		err = nil
 		log.Info().
 			Str("area", "bot").
 			Int64("id", *i.ID).
 			Int("count", len(repos)).
 			Msg("Enforcing policies on repos of installation.")
 		repoCount = repoCount + len(repos)
-		var owner string
-		for _, r := range repos {
-			enabled := isBotEnabled(ctx, ic, *r.Owner.Login, *r.Name)
-			enforceResults, err := RunPolicies(ctx, ic, *r.Owner.Login, *r.Name, enabled)
-			if err != nil {
-				break
+
+		instResults, err := runPoliciesOnInstRepos(ctx, repos, ic)
+		for policyName, results := range instResults {
+			if enforceAllResults[policyName] == nil {
+				enforceAllResults[policyName] = make(map[string]int)
 			}
-			if owner == "" {
-				owner = *r.Owner.Login
-			}
-			for policyName, passed := range enforceResults {
-				if !passed {
-					if enforceAllResults[policyName] == nil {
-						enforceAllResults[policyName] = make(map[string]int)
-					}
-					enforceAllResults[policyName]["totalFailed"] += 1
-				}
-			}
+			enforceAllResults[policyName]["totalFailed"] += results["totalFailed"]
 		}
 		if err != nil {
 			log.Error().
@@ -131,7 +120,6 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface) (EnforceA
 				Msg("Unexpected error running policies.")
 			continue
 		}
-		config.ClearInstLoc(owner)
 	}
 	ghc.LogCacheSize()
 	log.Info().
@@ -140,6 +128,35 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface) (EnforceA
 		Interface("results", enforceAllResults).
 		Msg("EnforceAll complete.")
 	return enforceAllResults, nil
+}
+
+func runPoliciesOnInstRepos(ctx context.Context, repos []*github.Repository, ghclient *github.Client) (
+	EnforceAllResults, error) {
+	var instResults = make(EnforceAllResults)
+	var repoLoopErr error
+	var owner string
+	for _, r := range repos {
+		enabled := isBotEnabled(ctx, ghclient, *r.Owner.Login, *r.Name)
+		enforceResults, err := runPolicies(ctx, ghclient, *r.Owner.Login, *r.Name, enabled)
+		if err != nil {
+			// scope of err doesn't extend outside the for loop
+			repoLoopErr = err
+			break
+		}
+		if owner == "" {
+			owner = *r.Owner.Login
+		}
+		for policyName, passed := range enforceResults {
+			if !passed {
+				if instResults[policyName] == nil {
+					instResults[policyName] = make(map[string]int)
+				}
+				instResults[policyName]["totalFailed"] += 1
+			}
+		}
+	}
+	config.ClearInstLoc(owner)
+	return instResults, repoLoopErr
 }
 
 func getAppInstallationsReal(ctx context.Context, ghc ghclients.GhClientsInterface) ([]*github.Installation, error) {
@@ -209,8 +226,8 @@ func EnforceJob(ctx context.Context, ghc *ghclients.GHClients, d time.Duration) 
 // RunPolicies enforces policies on the provided repo. It is meant to be called
 // from either jobs, webhooks, or delayed checks. TODO: implement concurrency
 // check to only run a single instance per repo at a time.
-func RunPolicies(ctx context.Context, c *github.Client, owner, repo string, enabled bool) (EnforceResults, error) {
-	var enforceResults = make(EnforceResults)
+func RunPolicies(ctx context.Context, c *github.Client, owner, repo string, enabled bool) (EnforceRepoResults, error) {
+	var enforceResults = make(EnforceRepoResults)
 	ps := policiesGetPolicies()
 	for _, p := range ps {
 		r, err := p.Check(ctx, c, owner, repo)

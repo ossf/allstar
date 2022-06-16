@@ -16,6 +16,7 @@ package enforce
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"testing"
 
@@ -71,6 +72,14 @@ func (p pol2) GetAction(ctx context.Context, c *github.Client, owner, repo strin
 	return action
 }
 
+type MockGhClients struct{}
+
+func (m MockGhClients) Get(i int64) (*github.Client, error) {
+	return github.NewClient(&http.Client{}), nil
+}
+
+func (m MockGhClients) LogCacheSize() {}
+
 func TestRunPolicies(t *testing.T) {
 	policiesGetPolicies = func() []policydef.Policy {
 		return []policydef.Policy{
@@ -95,7 +104,7 @@ func TestRunPolicies(t *testing.T) {
 		ShouldFix         bool
 		ShouldEnsure      bool
 		ShouldClose       bool
-		ExpEnforceResults EnforceResults
+		ExpEnforceResults EnforceRepoResults
 	}{
 		{
 			Name: "LogOnly",
@@ -106,7 +115,7 @@ func TestRunPolicies(t *testing.T) {
 			ShouldFix:    false,
 			ShouldEnsure: false,
 			ShouldClose:  false,
-			ExpEnforceResults: EnforceResults{
+			ExpEnforceResults: EnforceRepoResults{
 				"Test policy": false,
 			},
 		},
@@ -119,7 +128,7 @@ func TestRunPolicies(t *testing.T) {
 			ShouldFix:    false,
 			ShouldEnsure: true,
 			ShouldClose:  false,
-			ExpEnforceResults: EnforceResults{
+			ExpEnforceResults: EnforceRepoResults{
 				"Test policy": false,
 			},
 		},
@@ -132,7 +141,7 @@ func TestRunPolicies(t *testing.T) {
 			ShouldFix:    false,
 			ShouldEnsure: false,
 			ShouldClose:  true,
-			ExpEnforceResults: EnforceResults{
+			ExpEnforceResults: EnforceRepoResults{
 				"Test policy": true,
 			},
 		},
@@ -145,7 +154,7 @@ func TestRunPolicies(t *testing.T) {
 			ShouldFix:    true,
 			ShouldEnsure: false,
 			ShouldClose:  false,
-			ExpEnforceResults: EnforceResults{
+			ExpEnforceResults: EnforceRepoResults{
 				"Test policy": false,
 			},
 		},
@@ -158,7 +167,7 @@ func TestRunPolicies(t *testing.T) {
 			ShouldFix:    false,
 			ShouldEnsure: false,
 			ShouldClose:  true,
-			ExpEnforceResults: EnforceResults{
+			ExpEnforceResults: EnforceRepoResults{
 				"Test policy": true,
 			},
 		},
@@ -171,7 +180,7 @@ func TestRunPolicies(t *testing.T) {
 			ShouldFix:         false,
 			ShouldEnsure:      false,
 			ShouldClose:       false,
-			ExpEnforceResults: EnforceResults{},
+			ExpEnforceResults: EnforceRepoResults{},
 		},
 	}
 	for _, test := range tests {
@@ -181,6 +190,7 @@ func TestRunPolicies(t *testing.T) {
 			closeCalled = false
 			policy1Results = test.Res
 			action = test.Action
+
 			enforceResults, err := RunPolicies(context.Background(), nil, "", repo, true)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
@@ -213,13 +223,81 @@ func TestRunPolicies(t *testing.T) {
 	}
 }
 
-type MockGhClients struct{}
+func TestRunPoliciesOnInstRepos(t *testing.T) {
+	isBotEnabled = func(ctx context.Context, c *github.Client, owner, repo string) bool {
+		return true
+	}
 
-func (m MockGhClients) Get(i int64) (*github.Client, error) {
-	return github.NewClient(&http.Client{Transport: http.DefaultTransport}), nil
+	client := github.NewClient(&http.Client{})
+	failErr := errors.New("fail")
+	fakeOwner := "fake-owner"
+
+	tests := []struct {
+		Name           string
+		EnforceResults EnforceRepoResults
+		ExpResults     EnforceAllResults
+		ExpError       error
+		ShouldError    bool
+	}{
+		{
+			Name:        "ReturnsExpectedError",
+			ShouldError: true,
+			ExpError:    failErr,
+		},
+		{
+			Name: "ReturnsExpectedOwner",
+			EnforceResults: EnforceRepoResults{
+				"Test policy": true,
+			},
+			ExpResults: EnforceAllResults{},
+		},
+		{
+			Name: "ReturnsExpectedResults",
+			EnforceResults: EnforceRepoResults{
+				"Test policy": false,
+			},
+			ExpResults: EnforceAllResults{
+				"Test policy": {
+					"totalFailed": 1,
+				},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			repo1Name := "repo1"
+			repos := []*github.Repository{
+				{
+					Name: &repo1Name,
+					Owner: &github.User{
+						Login: &fakeOwner,
+					},
+				},
+			}
+
+			runPolicies = func(ctx context.Context, c *github.Client, owner, repo string, enabled bool) (EnforceRepoResults, error) {
+				if test.ShouldError {
+					return nil, failErr
+				}
+				return test.EnforceResults, nil
+			}
+
+			instResults, err := runPoliciesOnInstRepos(context.Background(), repos, client)
+			if test.ExpError != nil && !errors.Is(test.ExpError, err) {
+				t.Fatalf("Error %v does not match expected error %v", err, test.ExpError)
+			}
+			if test.ExpError == nil && err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if err == nil {
+				if diff := cmp.Diff(test.ExpResults, instResults); diff != "" {
+					t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+				}
+			}
+		})
+	}
 }
-
-func (m MockGhClients) LogCacheSize() {}
 
 func TestEnforceAll(t *testing.T) {
 	policiesGetPolicies = func() []policydef.Policy {
@@ -227,12 +305,6 @@ func TestEnforceAll(t *testing.T) {
 			pol{},
 			pol2{},
 		}
-	}
-	issueEnsure = func(ctx context.Context, c *github.Client, owner, repo, policy, text string) error {
-		return nil
-	}
-	issueClose = func(ctx context.Context, c *github.Client, owner, repo, policy string) error {
-		return nil
 	}
 	getAppInstallations = func(ctx context.Context, ghc ghclients.GhClientsInterface) ([]*github.Installation, error) {
 		var insts []*github.Installation
@@ -270,10 +342,13 @@ func TestEnforceAll(t *testing.T) {
 	}
 
 	mockGhc := &MockGhClients{}
-	action = "log"
+
+	// set back to real value to avoid test interference
+	runPolicies = RunPolicies
 
 	type EnforceTest struct {
 		Name           string
+		Action         string
 		Policy1Results policyRepoResults
 		Policy2Results policyRepoResults
 		ExpResults     EnforceAllResults
@@ -294,6 +369,7 @@ func TestEnforceAll(t *testing.T) {
 					"totalFailed": 1,
 				},
 			},
+			Action: "log",
 		},
 		{
 			Name: "SinglePolicyBothReposFailed",
@@ -310,6 +386,7 @@ func TestEnforceAll(t *testing.T) {
 					"totalFailed": 2,
 				},
 			},
+			Action: "log",
 		},
 		{
 			Name: "BothPolicySingleRepoFailed",
@@ -329,6 +406,7 @@ func TestEnforceAll(t *testing.T) {
 					"totalFailed": 1,
 				},
 			},
+			Action: "log",
 		},
 		{
 			Name: "BothPoliciesBothReposPassed",
@@ -341,6 +419,7 @@ func TestEnforceAll(t *testing.T) {
 				"repo2": {Enabled: true, Pass: true},
 			},
 			ExpResults: EnforceAllResults{},
+			Action:     "log",
 		},
 		{
 			Name: "BothPoliciesSingleRepoDisabled",
@@ -360,6 +439,7 @@ func TestEnforceAll(t *testing.T) {
 					"totalFailed": 1,
 				},
 			},
+			Action: "log",
 		},
 		{
 			Name: "SinglePolicyBothReposDisabled",
@@ -376,6 +456,7 @@ func TestEnforceAll(t *testing.T) {
 					"totalFailed": 2,
 				},
 			},
+			Action: "log",
 		},
 		{
 			Name: "BothPoliciesBothReposFailed",
@@ -400,8 +481,10 @@ func TestEnforceAll(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
+			action = test.Action
 			policy1Results = test.Policy1Results
 			policy2Results = test.Policy2Results
+
 			enforceAllResults, err := EnforceAll(context.Background(), mockGhc)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
