@@ -150,6 +150,19 @@ func TestRunPolicies(t *testing.T) {
 			},
 		},
 		{
+			Name: "CloseIssueOnFix",
+			Res: policyRepoResults{
+				"fake-repo": policydef.Result{Enabled: true, Pass: true},
+			},
+			Action:       "fix",
+			ShouldFix:    false,
+			ShouldEnsure: false,
+			ShouldClose:  true,
+			ExpEnforceResults: EnforceResults{
+				"Test policy": true,
+			},
+		},
+		{
 			Name: "PolicyDisabled",
 			Res: policyRepoResults{
 				"fake-repo": policydef.Result{Enabled: false, Pass: false},
