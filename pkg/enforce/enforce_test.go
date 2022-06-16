@@ -230,7 +230,7 @@ func TestEnforceAll(t *testing.T) {
 		insts = append(insts, inst)
 		return insts, nil
 	}
-	getAppInstallationRepos = func(ctx context.Context, ghc ghclients.GhClientsInterface, ic *github.Client) ([]*github.Repository, error) {
+	getAppInstallationRepos = func(ctx context.Context, ghc ghclients.GhClientsInterface, ic *github.Client) ([]*github.Repository, *github.Response, error) {
 		var repos []*github.Repository
 		repo1Name := "repo1"
 		repo2Name := "repo2"
@@ -250,7 +250,7 @@ func TestEnforceAll(t *testing.T) {
 			},
 		}
 		repos = append(repos, newRepos...)
-		return repos, nil
+		return repos, nil, nil
 	}
 	isBotEnabled = func(ctx context.Context, c *github.Client, owner, repo string) bool {
 		return true
