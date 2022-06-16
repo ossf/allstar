@@ -19,6 +19,7 @@ package enforce
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/ossf/allstar/pkg/config"
@@ -36,7 +37,7 @@ var policiesGetPolicies func() []policydef.Policy
 var issueEnsure func(ctx context.Context, c *github.Client, owner, repo, policy, text string) error
 var issueClose func(ctx context.Context, c *github.Client, owner, repo, policy string) error
 var getAppInstallations func(ctx context.Context, ghc ghclients.GhClientsInterface) ([]*github.Installation, error)
-var getAppInstallationRepos func(ctx context.Context, ghc ghclients.GhClientsInterface, ic *github.Client) ([]*github.Repository, error)
+var getAppInstallationRepos func(ctx context.Context, ghc ghclients.GhClientsInterface, ic *github.Client) ([]*github.Repository, *github.Response, error)
 var isBotEnabled func(ctx context.Context, c *github.Client, owner, repo string) bool
 
 type EnforceResults = map[string]bool
@@ -81,7 +82,13 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface) (EnforceA
 			return nil, err
 		}
 
-		repos, err := getAppInstallationRepos(ctx, ghc, ic)
+		repos, rsp, err := getAppInstallationRepos(ctx, ghc, ic)
+		if err != nil && rsp != nil && rsp.StatusCode == http.StatusForbidden {
+			log.Error().
+				Err(err).
+				Msg("Skip installation, forbidden.")
+			continue
+		}
 		if err != nil {
 			log.Error().
 				Err(err).
@@ -155,15 +162,16 @@ func getAppInstallationsReal(ctx context.Context, ghc ghclients.GhClientsInterfa
 	return insts, nil
 }
 
-func getAppInstallationReposReal(ctx context.Context, ghc ghclients.GhClientsInterface, ic *github.Client) ([]*github.Repository, error) {
+func getAppInstallationReposReal(ctx context.Context, ghc ghclients.GhClientsInterface, ic *github.Client) ([]*github.Repository, *github.Response, error) {
 	var repos []*github.Repository
 	opt := &github.ListOptions{
 		PerPage: 100,
 	}
 	var err error
+	var resp *github.Response
 	for {
 		var rs *github.ListRepositories
-		var resp *github.Response
+		resp = nil
 		rs, resp, err = ic.Apps.ListRepos(ctx, opt)
 		if err != nil {
 			break
@@ -174,7 +182,7 @@ func getAppInstallationReposReal(ctx context.Context, ghc ghclients.GhClientsInt
 		}
 		opt.Page = resp.NextPage
 	}
-	return repos, err
+	return repos, resp, err
 }
 
 // EnforceJob is a reconcilation job that enforces policies on all repos every
