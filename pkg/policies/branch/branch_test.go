@@ -1312,7 +1312,7 @@ func TestFix(t *testing.T) {
 			for _, pr := range got {
 				if pr.RequiredStatusChecks != nil {
 					sc := make([]*github.RequiredStatusCheck, 0)
-					cm := make(map[string][]*github.RequiredStatusCheck, 0)
+					cm := make(map[string][]*github.RequiredStatusCheck)
 					for _, check := range pr.RequiredStatusChecks.Checks {
 						cm[check.Context] = append(cm[check.Context], check)
 					}
