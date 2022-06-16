@@ -248,7 +248,7 @@ func RunPolicies(ctx context.Context, c *github.Client, owner, repo string, enab
 					Msg("Unknown action configured.")
 			}
 		}
-		if r.Pass && a == "issue" {
+		if r.Pass && (a == "issue" || a == "fix") {
 			err := issueClose(ctx, c, owner, repo, p.Name())
 			if err != nil {
 				return nil, err
