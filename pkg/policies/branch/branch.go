@@ -458,6 +458,12 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 		if pr.RequiredStatusChecks != nil {
 			// Clear out Contexts, since API populates both, but updates require only one.
 			pr.RequiredStatusChecks.Contexts = nil
+			// If there are no actual checks or contexts, then unset RequiredStatusChecks entirely,
+			// otherwise update fails
+			if len(pr.RequiredStatusChecks.Checks) == 0 && len(pr.RequiredStatusChecks.Contexts) == 0 {
+				update = true
+				pr.RequiredStatusChecks = nil
+			}
 		}
 		if p.RequiredPullRequestReviews != nil {
 			prr := &github.PullRequestReviewsEnforcementRequest{

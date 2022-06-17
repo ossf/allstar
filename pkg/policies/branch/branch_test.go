@@ -1252,6 +1252,45 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp:          map[string]github.ProtectionRequest{},
 		},
+		{
+			Name: "HandleExistingEmptyChecks",
+			Org: OrgConfig{
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   1,
+				DismissStale:    true,
+				BlockForce:      true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					EnforceAdmins: &github.AdminEnforcement{
+						Enabled: false,
+					},
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 1,
+					},
+					RequiredStatusChecks: &github.RequiredStatusChecks{
+						Strict: false,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: map[string]github.ProtectionRequest{
+				"main": github.ProtectionRequest{
+					AllowForcePushes: github.Bool(false),
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 1,
+					},
+					RequiredStatusChecks: nil,
+				},
+			},
+		},
 	}
 	get = func(context.Context, string, string) (*github.Repository,
 		*github.Response, error) {
