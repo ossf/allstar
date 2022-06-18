@@ -19,7 +19,6 @@ package enforce
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/ossf/allstar/pkg/config"
@@ -82,18 +81,22 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface) (EnforceA
 			return nil, err
 		}
 
-		repos, rsp, err := getAppInstallationRepos(ctx, ghc, ic)
-		if err != nil && rsp != nil && rsp.StatusCode == http.StatusForbidden {
-			log.Error().
-				Err(err).
-				Msg("Skip installation, forbidden.")
-			continue
-		}
+		repos, _, err := getAppInstallationRepos(ctx, ghc, ic)
+		// FIXME, not getting a rsp for this one, instead I think it is a special
+		// error that I need to introspect. just continue on all errors here
+		// temporarily to fix prod.
+		// if err != nil && rsp != nil && rsp.StatusCode == http.StatusForbidden {
+		// 	log.Error().
+		// 		Err(err).
+		// 		Msg("Skip installation, forbidden.")
+		// 	continue
+		// }
 		if err != nil {
 			log.Error().
 				Err(err).
 				Msg("Unexpected error listing installation repos.")
-			return nil, err
+			// return nil, err
+			continue
 		}
 
 		err = nil
