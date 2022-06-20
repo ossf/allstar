@@ -331,7 +331,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 			}
 		}
 		ea := p.GetEnforceAdmins()
-		d.EnforceOnAdmins = false
+		d.EnforceOnAdmins = (ea != nil && ea.Enabled)
 		if mc.EnforceOnAdmins && (ea == nil || !ea.Enabled) {
 			text = text +
 				fmt.Sprintf("Enforce status checks on admins not configured for branch %v\n",
@@ -417,6 +417,9 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 				afp := !mc.BlockForce
 				pr := &github.ProtectionRequest{
 					AllowForcePushes: &afp,
+				}
+				if mc.EnforceOnAdmins {
+					pr.EnforceAdmins = true
 				}
 				if mc.RequireApproval {
 					rq := &github.PullRequestReviewsEnforcementRequest{
