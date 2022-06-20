@@ -1027,6 +1027,30 @@ func TestFix(t *testing.T) {
 			},
 		},
 		{
+			Name: "AddProtectionFromScratch",
+			Org: OrgConfig{
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   2,
+				DismissStale:    true,
+				BlockForce:      true,
+				EnforceOnAdmins: true,
+			},
+			Repo:         RepoConfig{},
+			Prot:         map[string]github.Protection{},
+			cofigEnabled: true,
+			Exp: map[string]github.ProtectionRequest{
+				"main": github.ProtectionRequest{
+					EnforceAdmins:    true,
+					AllowForcePushes: github.Bool(false),
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 2,
+					},
+				},
+			},
+		},
+		{
 			Name: "NotEnabled",
 			Org: OrgConfig{
 				EnforceDefault:  true,
