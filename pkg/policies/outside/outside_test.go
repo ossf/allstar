@@ -448,7 +448,6 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				PushAllowed:             true,
 				TestingOwnerlessAllowed: true,
 				Exemptions: OutsideExemptions{
 					{
@@ -487,7 +486,6 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				PushAllowed:             true,
 				TestingOwnerlessAllowed: true,
 				Exemptions: OutsideExemptions{
 					{
@@ -526,7 +524,6 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				PushAllowed:             true,
 				TestingOwnerlessAllowed: true,
 				Exemptions: OutsideExemptions{
 					{
@@ -566,7 +563,6 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				PushAllowed:             true,
 				TestingOwnerlessAllowed: true,
 				Exemptions: OutsideExemptions{
 					{
@@ -593,7 +589,7 @@ func TestCheck(t *testing.T) {
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
-				NotifyText: "",
+				NotifyText: "Found 1 outside collaborators with push access.\nThis policy requires users with this access to be members of the organisation.",
 				Details: details{
 					OutsidePushCount: 1,
 					OutsidePushers:   []string{"alice"},
