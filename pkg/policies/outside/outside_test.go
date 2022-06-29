@@ -442,6 +442,164 @@ func TestCheck(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name: "Exemption allows push, not admin",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				PushAllowed:             true,
+				TestingOwnerlessAllowed: true,
+				Exemptions: OutsideExemptions{
+					{
+						User:  alice,
+						Repo:  "thisrepo",
+						Push:  true,
+						Admin: false,
+					},
+				},
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Found 1 outside collaborators with admin access.\nThis policy requires all users with this access to be members of the organisation.",
+				Details: details{
+					OutsideAdminCount: 1,
+					OutsideAdmins:     []string{"alice"},
+				},
+			},
+		},
+		{
+			Name: "Exemption allows admin",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				PushAllowed:             true,
+				TestingOwnerlessAllowed: true,
+				Exemptions: OutsideExemptions{
+					{
+						User:  alice,
+						Repo:  "thisrepo",
+						Push:  true,
+						Admin: true,
+					},
+				},
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					OutsideAdminCount: 0,
+					OutsideAdmins:     nil,
+				},
+			},
+		},
+		{
+			Name: "Exemption allows admin but not push",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				PushAllowed:             true,
+				TestingOwnerlessAllowed: true,
+				Exemptions: OutsideExemptions{
+					{
+						User: alice,
+						Repo: "thisrepo",
+						// This would happen if someone set just admin to true in their config. The expected behavior is to allow push as well.
+						Push:  false,
+						Admin: true,
+					},
+				},
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					OutsideAdminCount: 0,
+					OutsideAdmins:     nil,
+				},
+			},
+		},
+		{
+			Name: "Exemption allows neither admin nor push",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				PushAllowed:             true,
+				TestingOwnerlessAllowed: true,
+				Exemptions: OutsideExemptions{
+					{
+						User: alice,
+						Repo: "thisrepo",
+						// This is a useless exemption, so neither should be exempted.
+						Push:  false,
+						Admin: false,
+					},
+				},
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": false,
+					},
+				},
+			},
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "",
+				Details: details{
+					OutsidePushCount: 1,
+					OutsidePushers:   []string{"alice"},
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {
