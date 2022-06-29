@@ -34,7 +34,7 @@ const polName = "Outside Collaborators"
 
 const accessText = "Found %v outside collaborators with %v access.\n"
 
-const accessExp = `This policy requires all users with this access to be members of the organisation. That way you can easily audit who has access to your repo, and if an account is compromised it can quickly be denied access to organization resources. To fix this you should either remove the user from repository-based access, or add them to the organization. 
+const accessExp = `This policy requires users with this access to be members of the organisation. That way you can easily audit who has access to your repo, and if an account is compromised it can quickly be denied access to organization resources. To fix this you should either remove the user from repository-based access, or add them to the organization. 
 
 * Remove the user from the repository-based access. From the main page of the repository, go to Settings -> Manage Access. 
 (For more information, see https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-user-account/managing-access-to-your-personal-repositories/removing-a-collaborator-from-a-personal-repository)
