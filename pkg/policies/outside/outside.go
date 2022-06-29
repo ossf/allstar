@@ -44,6 +44,10 @@ OR
 * Invite the user to join your organisation. Click your profile photo and choose “Your Organization” → choose the org name → “People” → “Invite Member.” (For more information, see https://docs.github.com/en/organizations/managing-membership-in-your-organization/inviting-users-to-join-your-organization)
 
 If you don't see the Settings tab you probably don't have administrative access. Reach out to the administrators of the organisation to fix this issue.
+
+OR
+
+* Exempt the user by adding an exemption to your organization-level Outside Collaborators configuration file.
 `
 
 const ownerlessText = `Did not find any owners of this repository
@@ -76,6 +80,11 @@ type OrgConfig struct {
 	// TestingOwnerlessAllowed defined if repositories are allowed to have no
 	// administrators, default false.
 	TestingOwnerlessAllowed bool `json:"testingOwnerlessAllowed"`
+
+	// Exemptions is a list of user-repo-access pairings to exempt.
+	// Exemptions are only defined at the org level because they should be made
+	// obvious to org security managers.
+	Exemptions OutsideExemptions `json:"exemptions"`
 }
 
 // RepoConfig is the repo-level config for Outside Collaborators security
@@ -102,6 +111,24 @@ type mergedConfig struct {
 	PushAllowed             bool
 	AdminAllowed            bool
 	TestingOwnerlessAllowed bool
+	Exemptions              OutsideExemptions
+}
+
+type OutsideExemptions []*OutsideExemption
+
+// OutsideExemption is an exemption entry for the Outside Collaborators policy.
+type OutsideExemption struct {
+	// User is a GitHub username
+	User string `json:"user"`
+
+	// Repo is a GitHub repo name
+	Repo string `json:"repo"`
+
+	// Push allows push permission
+	Push bool `json:"push"`
+
+	// Admin allows admin permission
+	Admin bool `json:"admin"`
 }
 
 type details struct {
@@ -179,11 +206,11 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	mc := mergeConfig(oc, orc, rc, repo)
 
 	var d details
-	outAdmins, err := getUsers(ctx, rep, owner, repo, "admin", "outside")
+	outAdmins, err := getUsers(ctx, rep, owner, repo, "admin", "outside", mc.Exemptions)
 	if err != nil {
 		return nil, err
 	}
-	outPushers, err := getUsers(ctx, rep, owner, repo, "push", "outside")
+	outPushers, err := getUsers(ctx, rep, owner, repo, "push", "outside", mc.Exemptions)
 	if err != nil {
 		return nil, err
 	}
@@ -192,7 +219,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	d.OutsidePushCount = len(outPushers)
 	d.OutsidePushers = outPushers
 
-	directAdmins, err := getUsers(ctx, rep, owner, repo, "admin", "direct")
+	directAdmins, err := getUsers(ctx, rep, owner, repo, "admin", "direct", mc.Exemptions)
 	if err != nil {
 		return nil, err
 	}
@@ -270,7 +297,7 @@ func in(name string, list []string) bool {
 }
 
 func getUsers(ctx context.Context, r repositories, owner, repo, perm,
-	aff string) ([]string, error) {
+	aff string, exemptions OutsideExemptions) ([]string, error) {
 	opt := &github.ListCollaboratorsOptions{
 		ListOptions: github.ListOptions{
 			PerPage: 100,
@@ -293,10 +320,24 @@ func getUsers(ctx context.Context, r repositories, owner, repo, perm,
 	var rv []string
 	for _, u := range users {
 		if u.GetPermissions()[perm] {
-			rv = append(rv, u.GetLogin())
+			if !exemptions.isExempt(repo, u.GetLogin(), perm) {
+				rv = append(rv, u.GetLogin())
+			}
 		}
 	}
 	return rv, nil
+}
+
+func (ee OutsideExemptions) isExempt(repo, user, access string) bool {
+	for _, e := range ee {
+		if !(((e.Push || e.Admin) && access == "push") || (e.Admin && access == "admin")) {
+			continue
+		}
+		if e.Repo == repo && e.User == user {
+			return true
+		}
+	}
+	return false
 }
 
 // Fix implementing policydef.Policy.Fix(). Currently not supported. Plan
@@ -366,6 +407,7 @@ func mergeConfig(oc *OrgConfig, orc *RepoConfig, rc *RepoConfig, repo string) *m
 		PushAllowed:             oc.PushAllowed,
 		AdminAllowed:            oc.AdminAllowed,
 		TestingOwnerlessAllowed: oc.TestingOwnerlessAllowed,
+		Exemptions:              oc.Exemptions,
 	}
 	mc = mergeInRepoConfig(mc, orc, repo)
 
