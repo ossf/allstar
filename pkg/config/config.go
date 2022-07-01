@@ -87,6 +87,9 @@ type OrgOptConfig struct {
 	// DisableRepoOverride : set to true to disallow repos from opt-in/out in
 	// their config.
 	DisableRepoOverride bool `json:"disableRepoOverride"`
+
+	// OptSchedule is a set of actions to temporarily toggle on some days
+	OptSchedule *OptScheduleConfig `json:"optSchedule"`
 }
 
 // RepoConfig is the repo-level config definition for Allstar
@@ -108,6 +111,23 @@ type RepoOptConfig struct {
 
 	// OptOut: set to true to opt-out this repo when in opt-out strategy
 	OptOut bool `json:"optOut"`
+
+	// OptSchedule is a set of actions to temporarily toggle on some days
+	OptSchedule *OptScheduleConfig `json:"optSchedule"`
+}
+
+// OptScheduleConfig represents a set of actions to enable or disable for a
+// period of time.
+type OptScheduleConfig struct {
+	Timezone string                   `json:"timezone"`
+	Actions  OptScheduleConfigActions `json:"actions"`
+	Days     []string                 `json:"days"`
+}
+
+// OptScheduleConfigActions is a set of actions to enable or disable.
+type OptScheduleConfigActions struct {
+	Issue *bool `json:"issue"`
+	Fix   *bool `json:"fix"`
 }
 
 const githubConfRepo = ".github"

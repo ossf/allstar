@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ossf/allstar/pkg/config"
@@ -43,6 +44,16 @@ type issues interface {
 }
 
 var configGetAppConfigs func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig)
+
+var weekdayStrings = map[string]time.Weekday{
+	"sunday":    time.Sunday,
+	"monday":    time.Monday,
+	"tuesday":   time.Tuesday,
+	"wednesday": time.Wednesday,
+	"thursday":  time.Thursday,
+	"friday":    time.Friday,
+	"saturday":  time.Saturday,
+}
 
 func init() {
 	configGetAppConfigs = config.GetAppConfigs
@@ -92,8 +103,12 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 	if err != nil {
 		return err
 	}
+	oc, orc, rc := configGetAppConfigs(ctx, c, owner, repo)
+	osc := mergeConfig(oc, orc, rc)
+	if createIssue, _ := shouldCreateIssue(osc); !createIssue {
+		return nil
+	}
 	if issue == nil {
-		oc, _, _ := configGetAppConfigs(ctx, c, owner, repo)
 		var footer string
 		if oc.IssueFooter == "" {
 			footer = operator.GitHubIssueFooter
@@ -227,4 +242,49 @@ func getIssueRepoTitle(ctx context.Context, c *github.Client, owner, repo, polic
 		return oc.IssueRepo, fmt.Sprintf(issueRepoTitle, repo, policy)
 	}
 	return repo, fmt.Sprintf(sameRepoTitle, policy)
+}
+
+// shouldCreateIssue determines based on an OptScheduleConfig if an issue should
+// be created. The error may be ignored for default create behavior.
+func shouldCreateIssue(sch *config.OptScheduleConfig) (bool, error) {
+	if sch == nil || sch.Actions.Issue == nil || *sch.Actions.Issue {
+		return true, nil
+	}
+	// Get the day in timezone specified or default "" => UTC
+	loc, err := time.LoadLocation(sch.Timezone)
+	if err != nil {
+		return true, err
+	}
+	loctime, err := time.ParseInLocation("Jan 2 2006 1:00 AM", "Apr 1 2004 10:00 AM", loc)
+	if err != nil {
+		return true, err
+	}
+	_, offsetSeconds := loctime.Zone()
+	weekdayInLoc := time.Now().UTC().Add(time.Duration(offsetSeconds) * time.Second).Weekday()
+	// Check if weekday match in days
+	for i, wds := range sch.Days {
+		// Allow up to 3 days to be silenced
+		if i > 2 {
+			break
+		}
+		wds = strings.ToLower(wds)
+		if wd, ok := weekdayStrings[wds]; ok {
+			if wd == weekdayInLoc {
+				return false, nil
+			}
+		}
+	}
+	return true, nil
+}
+
+func mergeConfig(oc *config.OrgConfig, orc, rc *config.RepoConfig) *config.OptScheduleConfig {
+	sc := oc.OptConfig.OptSchedule
+
+	for _, os := range []*config.RepoConfig{orc, rc} {
+		if os.OptConfig.OptSchedule != nil {
+			sc = os.OptConfig.OptSchedule
+		}
+	}
+
+	return sc
 }
