@@ -58,7 +58,13 @@ func (m mockIssues) CreateComment(ctx context.Context, owner string, repo string
 	return createComment(ctx, owner, repo, number, comment)
 }
 
+func boolptr(b bool) *bool {
+	return &b
+}
+
 func TestEnsure(t *testing.T) {
+	falseptr := boolptr(false)
+	trueptr := boolptr(true)
 	//issueTitle := fmt.Sprintf(sameRepoTitle, "thispolicy")
 	issueTitle := "Security Policy violation thispolicy"
 	closed := "closed"
@@ -222,6 +228,151 @@ func TestEnsure(t *testing.T) {
 		}
 		if commentCalled != true {
 			t.Error("Expected comment to be left")
+		}
+	})
+	t.Run("NoIssueScheduleBlocks", func(t *testing.T) {
+		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+			sch := &config.OptScheduleConfig{
+				Timezone: "UTC",
+				Actions: config.OptScheduleConfigActions{
+					Issue: falseptr,
+				},
+				Days: []string{"not-a-day", time.Now().UTC().Weekday().String()},
+			}
+			return &config.OrgConfig{OptConfig: config.OrgOptConfig{
+					OptSchedule: sch,
+				}}, &config.RepoConfig{OptConfig: config.RepoOptConfig{
+					OptSchedule: sch,
+				}}, &config.RepoConfig{OptConfig: config.RepoOptConfig{
+					OptSchedule: sch,
+				}}
+		}
+		listByRepo = func(ctx context.Context, owner string, repo string,
+			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
+		}
+		createCalled := false
+		create = func(ctx context.Context, owner string, repo string,
+			issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+			if *issue.Title != issueTitle {
+				t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
+			}
+			if (*issue.Labels)[0] != operator.GitHubIssueLabel {
+				t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
+			}
+			if *issue.Body != body {
+				t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), body)
+			}
+			createCalled = true
+			return nil, nil, nil
+		}
+		edit = nil
+		createComment = nil
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if createCalled != false {
+			t.Error("Expected no issue to be created")
+		}
+	})
+	t.Run("NoIssueScheduleAllowsViaActions", func(t *testing.T) {
+		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+			sch := &config.OptScheduleConfig{
+				Timezone: "UTC",
+				Actions: config.OptScheduleConfigActions{
+					Issue: trueptr,
+				},
+				Days: []string{"not-a-day", time.Now().UTC().Weekday().String()},
+			}
+			return &config.OrgConfig{OptConfig: config.OrgOptConfig{
+					OptSchedule: sch,
+				}}, &config.RepoConfig{OptConfig: config.RepoOptConfig{
+					OptSchedule: sch,
+				}}, &config.RepoConfig{OptConfig: config.RepoOptConfig{
+					OptSchedule: sch,
+				}}
+		}
+		listByRepo = func(ctx context.Context, owner string, repo string,
+			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
+		}
+		createCalled := false
+		create = func(ctx context.Context, owner string, repo string,
+			issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+			if *issue.Title != issueTitle {
+				t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
+			}
+			if (*issue.Labels)[0] != operator.GitHubIssueLabel {
+				t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
+			}
+			if *issue.Body != body {
+				t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), body)
+			}
+			createCalled = true
+			return nil, nil, nil
+		}
+		edit = nil
+		createComment = nil
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if createCalled != true {
+			t.Error("Expected issue to be created")
+		}
+	})
+	t.Run("NoIssueScheduleAllowsViaDays", func(t *testing.T) {
+		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+			sch := &config.OptScheduleConfig{
+				Timezone: "UTC",
+				Actions: config.OptScheduleConfigActions{
+					Issue: falseptr,
+				},
+				Days: []string{"not-a-day"},
+			}
+			// add a day (not today) to days
+			todayWeekdayName := time.Now().UTC().Weekday().String()
+			if todayWeekdayName == "thursday" {
+				sch.Days = append(sch.Days, "friday")
+			} else {
+				sch.Days = append(sch.Days, "thursday")
+			}
+			return &config.OrgConfig{OptConfig: config.OrgOptConfig{
+					OptSchedule: sch,
+				}}, &config.RepoConfig{OptConfig: config.RepoOptConfig{
+					OptSchedule: sch,
+				}}, &config.RepoConfig{OptConfig: config.RepoOptConfig{
+					OptSchedule: sch,
+				}}
+		}
+		listByRepo = func(ctx context.Context, owner string, repo string,
+			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
+		}
+		createCalled := false
+		create = func(ctx context.Context, owner string, repo string,
+			issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+			if *issue.Title != issueTitle {
+				t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
+			}
+			if (*issue.Labels)[0] != operator.GitHubIssueLabel {
+				t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
+			}
+			if *issue.Body != body {
+				t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), body)
+			}
+			createCalled = true
+			return nil, nil, nil
+		}
+		edit = nil
+		createComment = nil
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if createCalled != true {
+			t.Error("Expected issue to be created")
 		}
 	})
 }
