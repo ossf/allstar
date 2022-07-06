@@ -267,20 +267,14 @@ func TestEnsure(t *testing.T) {
 	})
 	t.Run("NoIssueScheduleBlocks", func(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
-			sch := &config.OptScheduleConfig{
+			sch := &config.ScheduleConfig{
 				Timezone: "UTC",
-				Actions: config.OptScheduleConfigActions{
+				Actions: config.ScheduleConfigActions{
 					Issue: falseptr,
 				},
 				Days: []string{"not-a-day", time.Now().UTC().Weekday().String()},
 			}
-			return &config.OrgConfig{OptConfig: config.OrgOptConfig{
-					OptSchedule: sch,
-				}}, &config.RepoConfig{OptConfig: config.RepoOptConfig{
-					OptSchedule: nil,
-				}}, &config.RepoConfig{OptConfig: config.RepoOptConfig{
-					OptSchedule: nil,
-				}}
+			return &config.OrgConfig{Schedule: nil}, &config.RepoConfig{Schedule: sch}, &config.RepoConfig{Schedule: nil}
 		}
 		listByRepo = func(ctx context.Context, owner string, repo string,
 			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
@@ -313,20 +307,14 @@ func TestEnsure(t *testing.T) {
 	})
 	t.Run("NoIssueScheduleAllowsViaActions", func(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
-			sch := &config.OptScheduleConfig{
+			sch := &config.ScheduleConfig{
 				Timezone: "UTC",
-				Actions: config.OptScheduleConfigActions{
+				Actions: config.ScheduleConfigActions{
 					Issue: trueptr,
 				},
 				Days: []string{"not-a-day", time.Now().UTC().Weekday().String()},
 			}
-			return &config.OrgConfig{OptConfig: config.OrgOptConfig{
-					OptSchedule: sch,
-				}}, &config.RepoConfig{OptConfig: config.RepoOptConfig{
-					OptSchedule: nil,
-				}}, &config.RepoConfig{OptConfig: config.RepoOptConfig{
-					OptSchedule: nil,
-				}}
+			return &config.OrgConfig{Schedule: sch}, &config.RepoConfig{Schedule: nil}, &config.RepoConfig{Schedule: nil}
 		}
 		listByRepo = func(ctx context.Context, owner string, repo string,
 			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
@@ -359,9 +347,9 @@ func TestEnsure(t *testing.T) {
 	})
 	t.Run("NoIssueScheduleAllowsViaDays", func(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
-			sch := &config.OptScheduleConfig{
+			sch := &config.ScheduleConfig{
 				Timezone: "UTC",
-				Actions: config.OptScheduleConfigActions{
+				Actions: config.ScheduleConfigActions{
 					Issue: falseptr,
 				},
 				Days: []string{"not-a-day"},
@@ -373,13 +361,7 @@ func TestEnsure(t *testing.T) {
 			} else {
 				sch.Days = append(sch.Days, "thursday")
 			}
-			return &config.OrgConfig{OptConfig: config.OrgOptConfig{
-					OptSchedule: sch,
-				}}, &config.RepoConfig{OptConfig: config.RepoOptConfig{
-					OptSchedule: nil,
-				}}, &config.RepoConfig{OptConfig: config.RepoOptConfig{
-					OptSchedule: nil,
-				}}
+			return &config.OrgConfig{Schedule: sch}, &config.RepoConfig{Schedule: nil}, &config.RepoConfig{Schedule: nil}
 		}
 		listByRepo = func(ctx context.Context, owner string, repo string,
 			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
@@ -412,20 +394,14 @@ func TestEnsure(t *testing.T) {
 	})
 	t.Run("NoIssueScheduleBlocksRepoConfig", func(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
-			sch := &config.OptScheduleConfig{
+			sch := &config.ScheduleConfig{
 				Timezone: "UTC",
-				Actions: config.OptScheduleConfigActions{
+				Actions: config.ScheduleConfigActions{
 					Issue: falseptr,
 				},
 				Days: []string{"not-a-day", time.Now().UTC().Weekday().String()},
 			}
-			return &config.OrgConfig{OptConfig: config.OrgOptConfig{
-					OptSchedule: nil,
-				}}, &config.RepoConfig{OptConfig: config.RepoOptConfig{
-					OptSchedule: nil,
-				}}, &config.RepoConfig{OptConfig: config.RepoOptConfig{
-					OptSchedule: sch,
-				}}
+			return &config.OrgConfig{Schedule: nil}, &config.RepoConfig{Schedule: nil}, &config.RepoConfig{Schedule: sch}
 		}
 		listByRepo = func(ctx context.Context, owner string, repo string,
 			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {

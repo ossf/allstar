@@ -246,7 +246,7 @@ func getIssueRepoTitle(ctx context.Context, c *github.Client, owner, repo, polic
 
 // shouldCreateIssue determines based on an OptScheduleConfig if an issue should
 // be created. The error may be ignored for default create behavior.
-func shouldCreateIssue(sch *config.OptScheduleConfig) (bool, error) {
+func shouldCreateIssue(sch *config.ScheduleConfig) (bool, error) {
 	if sch == nil || sch.Actions.Issue == nil || *sch.Actions.Issue {
 		return true, nil
 	}
@@ -277,12 +277,12 @@ func shouldCreateIssue(sch *config.OptScheduleConfig) (bool, error) {
 	return true, nil
 }
 
-func mergeConfig(oc *config.OrgConfig, orc, rc *config.RepoConfig) *config.OptScheduleConfig {
-	sc := oc.OptConfig.OptSchedule
+func mergeConfig(oc *config.OrgConfig, orc, rc *config.RepoConfig) *config.ScheduleConfig {
+	sc := oc.Schedule
 
 	for _, os := range []*config.RepoConfig{orc, rc} {
-		if os.OptConfig.OptSchedule != nil {
-			sc = os.OptConfig.OptSchedule
+		if os.Schedule != nil {
+			sc = os.Schedule
 		}
 	}
 

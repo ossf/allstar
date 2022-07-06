@@ -61,6 +61,9 @@ type OrgConfig struct {
 	// config repository or documentation describing your Allstar settings and
 	// policies.
 	IssueFooter string `json:"issueFooter"`
+
+	// Schedule is a set of actions to temporarily toggle on some days
+	Schedule *ScheduleConfig `json:"schedule"`
 }
 
 // OrgOptConfig is used in Allstar and policy-secific org-level config to
@@ -87,9 +90,6 @@ type OrgOptConfig struct {
 	// DisableRepoOverride : set to true to disallow repos from opt-in/out in
 	// their config.
 	DisableRepoOverride bool `json:"disableRepoOverride"`
-
-	// OptSchedule is a set of actions to temporarily toggle on some days
-	OptSchedule *OptScheduleConfig `json:"optSchedule"`
 }
 
 // RepoConfig is the repo-level config definition for Allstar
@@ -101,6 +101,9 @@ type RepoConfig struct {
 	// created by the bot. Repo-level label my override Org-level setting
 	// regardless of Optconfig.DisableRepoOverride.
 	IssueLabel string `json:"issueLabel"`
+
+	// Schedule is a set of actions to temporarily toggle on some days
+	Schedule *ScheduleConfig `json:"schedule"`
 }
 
 // RepoOptConfig is used in Allstar and policy-specific repo-level config to
@@ -111,21 +114,18 @@ type RepoOptConfig struct {
 
 	// OptOut: set to true to opt-out this repo when in opt-out strategy
 	OptOut bool `json:"optOut"`
-
-	// OptSchedule is a set of actions to temporarily toggle on some days
-	OptSchedule *OptScheduleConfig `json:"optSchedule"`
 }
 
-// OptScheduleConfig represents a set of actions to enable or disable for a
+// ScheduleConfig represents a set of actions to enable or disable for a
 // period of time.
-type OptScheduleConfig struct {
-	Timezone string                   `json:"timezone"`
-	Actions  OptScheduleConfigActions `json:"actions"`
-	Days     []string                 `json:"days"`
+type ScheduleConfig struct {
+	Timezone string                `json:"timezone"`
+	Actions  ScheduleConfigActions `json:"actions"`
+	Days     []string              `json:"days"`
 }
 
-// OptScheduleConfigActions is a set of actions to enable or disable.
-type OptScheduleConfigActions struct {
+// ScheduleConfigActions is a set of actions to enable or disable.
+type ScheduleConfigActions struct {
 	Issue *bool `json:"issue"`
 	Fix   *bool `json:"fix"`
 }
