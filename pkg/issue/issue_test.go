@@ -236,6 +236,7 @@ func TestEnsure(t *testing.T) {
 				Timezone: "UTC",
 				Actions: config.ScheduleConfigActions{
 					Issue: falseptr,
+					Ping:  trueptr,
 				},
 				Days: []string{"not-a-day", time.Now().UTC().Weekday().String()},
 			}
@@ -395,6 +396,140 @@ func TestEnsure(t *testing.T) {
 		}
 		if createCalled != false {
 			t.Error("Expected no issue to be created")
+		}
+	})
+	t.Run("OpenStaleIssueScheduleBlocksPing", func(t *testing.T) {
+		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+			sch := &config.ScheduleConfig{
+				Timezone: "UTC",
+				Actions: config.ScheduleConfigActions{
+					Ping: falseptr,
+				},
+				Days: []string{"not-a-day"},
+			}
+			// add a day (not today) to days
+			todayWeekdayName := time.Now().UTC().Weekday().String()
+			if todayWeekdayName == "thursday" {
+				sch.Days = append(sch.Days, "friday")
+			} else {
+				sch.Days = append(sch.Days, "thursday")
+			}
+			return &config.OrgConfig{Schedule: sch}, &config.RepoConfig{Schedule: nil}, &config.RepoConfig{Schedule: nil}
+		}
+		stale := time.Now().Add(-10 * operator.NoticePingDuration)
+		listByRepo = func(ctx context.Context, owner string, repo string,
+			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			return []*github.Issue{
+				&github.Issue{
+					Title:     &issueTitle,
+					State:     &open,
+					UpdatedAt: &stale,
+				},
+			}, &github.Response{NextPage: 0}, nil
+		}
+		commentCalled := false
+		createComment = func(ctx context.Context, owner string, repo string,
+			number int, comment *github.IssueComment) (*github.IssueComment, *github.Response, error) {
+			if !strings.HasPrefix(comment.GetBody(), "Updating issue") {
+				t.Errorf("Unexpected comment: %v", comment.GetBody())
+			}
+			commentCalled = true
+			return nil, nil, nil
+		}
+		// Expect to not call nil functions
+		create = nil
+		edit = nil
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if commentCalled != true {
+			t.Error("Expected comment to be left")
+		}
+	})
+	t.Run("OpenStaleIssueScheduleAllowsPing", func(t *testing.T) {
+		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+			sch := &config.ScheduleConfig{
+				Timezone: "UTC",
+				Actions: config.ScheduleConfigActions{
+					Issue: falseptr,
+					Ping:  trueptr,
+				},
+				Days: []string{"not-a-day", time.Now().UTC().Weekday().String()},
+			}
+			return &config.OrgConfig{Schedule: nil}, &config.RepoConfig{Schedule: sch}, &config.RepoConfig{Schedule: nil}
+		}
+		stale := time.Now().Add(-10 * operator.NoticePingDuration)
+		listByRepo = func(ctx context.Context, owner string, repo string,
+			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			return []*github.Issue{
+				&github.Issue{
+					Title:     &issueTitle,
+					State:     &open,
+					UpdatedAt: &stale,
+				},
+			}, &github.Response{NextPage: 0}, nil
+		}
+		commentCalled := false
+		createComment = func(ctx context.Context, owner string, repo string,
+			number int, comment *github.IssueComment) (*github.IssueComment, *github.Response, error) {
+			if !strings.HasPrefix(comment.GetBody(), "Updating issue") {
+				t.Errorf("Unexpected comment: %v", comment.GetBody())
+			}
+			commentCalled = true
+			return nil, nil, nil
+		}
+		// Expect to not call nil functions
+		create = nil
+		edit = nil
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if commentCalled != false {
+			t.Error("Expected no comment to be left")
+		}
+	})
+	t.Run("OpenStaleIssueScheduleBlocksPingAndIssue", func(t *testing.T) {
+		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+			sch := &config.ScheduleConfig{
+				Timezone: "UTC",
+				Actions: config.ScheduleConfigActions{
+					Issue: falseptr,
+				},
+				Days: []string{"not-a-day", time.Now().UTC().Weekday().String()},
+			}
+			return &config.OrgConfig{Schedule: nil}, &config.RepoConfig{Schedule: sch}, &config.RepoConfig{Schedule: nil}
+		}
+		stale := time.Now().Add(-10 * operator.NoticePingDuration)
+		listByRepo = func(ctx context.Context, owner string, repo string,
+			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			return []*github.Issue{
+				&github.Issue{
+					Title:     &issueTitle,
+					State:     &open,
+					UpdatedAt: &stale,
+				},
+			}, &github.Response{NextPage: 0}, nil
+		}
+		commentCalled := false
+		createComment = func(ctx context.Context, owner string, repo string,
+			number int, comment *github.IssueComment) (*github.IssueComment, *github.Response, error) {
+			if !strings.HasPrefix(comment.GetBody(), "Updating issue") {
+				t.Errorf("Unexpected comment: %v", comment.GetBody())
+			}
+			commentCalled = true
+			return nil, nil, nil
+		}
+		// Expect to not call nil functions
+		create = nil
+		edit = nil
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if commentCalled != false {
+			t.Error("Expected no comment to be left")
 		}
 	})
 }

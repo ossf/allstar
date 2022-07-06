@@ -29,6 +29,13 @@ import (
 	"github.com/google/go-github/v43/github"
 )
 
+type issueAction int
+
+const (
+	issueActionCreate issueAction = iota
+	issueActionPing
+)
+
 const issueRepoTitle = "Security Policy violation for repository %q %v"
 const sameRepoTitle = "Security Policy violation %v"
 
@@ -105,7 +112,7 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 	}
 	oc, orc, rc := configGetAppConfigs(ctx, c, owner, repo)
 	osc := mergeConfig(oc, orc, rc)
-	if createIssue, _ := shouldCreateIssue(osc); !createIssue {
+	if createIssue, _ := shouldXIssue(osc, issueActionCreate); !createIssue {
 		return nil
 	}
 	if issue == nil {
@@ -157,6 +164,9 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		}
 		_, _, err := issues.CreateComment(ctx, owner, issueRepo, issue.GetNumber(), comment)
 		return err
+	}
+	if pingIssue, _ := shouldXIssue(osc, issueActionPing); !pingIssue {
+		return nil
 	}
 	if issue.GetUpdatedAt().Before(time.Now().Add(-1 * operator.NoticePingDuration)) {
 		body := "Updating issue after ping interval. Status:\n" + text
@@ -240,10 +250,20 @@ func getIssueRepoTitle(ctx context.Context, c *github.Client, owner, repo, polic
 	return repo, fmt.Sprintf(sameRepoTitle, policy)
 }
 
-// shouldCreateIssue determines based on an OptScheduleConfig if an issue should
-// be created. The error may be ignored for default create behavior.
-func shouldCreateIssue(sch *config.ScheduleConfig) (bool, error) {
-	if sch == nil || sch.Actions.Issue == nil || *sch.Actions.Issue {
+// shouldXIssue determines based on an OptScheduleConfig if an action
+// should be taken.
+// The error may be ignored for default create behavior.
+func shouldXIssue(sch *config.ScheduleConfig, x issueAction) (bool, error) {
+	if sch == nil {
+		return true, nil
+	}
+	// If action queried is allowed by schedule, return true
+	// Note that in ensure(), returning true for issueActionCreate will result
+	// in ping not being attempted. This is intentional but something to be
+	// aware of.
+	if x == issueActionCreate && (sch.Actions.Issue == nil || *sch.Actions.Issue) {
+		return true, nil
+	} else if x == issueActionPing && (sch.Actions.Ping == nil || *sch.Actions.Ping) {
 		return true, nil
 	}
 	// Get the day in timezone specified or default "" => UTC

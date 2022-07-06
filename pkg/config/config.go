@@ -126,8 +126,14 @@ type ScheduleConfig struct {
 
 // ScheduleConfigActions is a set of actions to enable or disable.
 type ScheduleConfigActions struct {
+	// Issue toggles issue creation (pinging will be disabled if set to false)
 	Issue *bool `json:"issue"`
-	Fix   *bool `json:"fix"`
+
+	// Ping toggles issue pinging
+	Ping *bool `json:"ping"`
+
+	// Fix toggles fix action
+	Fix *bool `json:"fix"`
 }
 
 const githubConfRepo = ".github"
