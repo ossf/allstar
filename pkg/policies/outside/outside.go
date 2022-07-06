@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/gobwas/glob"
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/policydef"
@@ -333,8 +334,10 @@ func (ee OutsideExemptions) isExempt(repo, user, access string) bool {
 		if !(((e.Push || e.Admin) && access == "push") || (e.Admin && access == "admin")) {
 			continue
 		}
-		if e.Repo == repo && e.User == user {
-			return true
+		if g, err := glob.Compile(e.Repo); err == nil {
+			if g.Match(repo) && e.User == user {
+				return true
+			}
 		}
 	}
 	return false

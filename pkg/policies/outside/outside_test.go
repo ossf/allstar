@@ -596,6 +596,79 @@ func TestCheck(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name: "Exemption allows push on matching glob",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				TestingOwnerlessAllowed: true,
+				Exemptions: OutsideExemptions{
+					{
+						User:  alice,
+						Repo:  "this*",
+						Push:  true,
+						Admin: false,
+					},
+				},
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": false,
+					},
+				},
+			},
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details:    details{},
+			},
+		},
+		{
+			Name: "Exemption does not allow push due to non-matching glob",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				TestingOwnerlessAllowed: true,
+				Exemptions: OutsideExemptions{
+					{
+						User:  alice,
+						Repo:  "test*",
+						Push:  true,
+						Admin: false,
+					},
+				},
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": false,
+					},
+				},
+			},
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Found 1 outside collaborators with push access.\nThis policy requires users with this access to be members of the organisation.",
+				Details: details{
+					OutsidePushCount: 1,
+					OutsidePushers:   []string{"alice"},
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {
