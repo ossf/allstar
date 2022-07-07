@@ -23,6 +23,7 @@ import (
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/config/operator"
+	"github.com/ossf/allstar/pkg/config/schedule"
 
 	"github.com/google/go-github/v43/github"
 )
@@ -58,14 +59,13 @@ func (m mockIssues) CreateComment(ctx context.Context, owner string, repo string
 	return createComment(ctx, owner, repo, number, comment)
 }
 
-func boolptr(b bool) *bool {
-	return &b
+func timeFromDay(weekday time.Weekday) time.Time {
+	return time.Date(1998, 9, 6+int(weekday), 11, 0, 0, 0, time.UTC)
 }
 
 func TestEnsure(t *testing.T) {
-	falseptr := boolptr(false)
-	trueptr := boolptr(true)
 	//issueTitle := fmt.Sprintf(sameRepoTitle, "thispolicy")
+	at := time.Now()
 	issueTitle := "Security Policy violation thispolicy"
 	closed := "closed"
 	open := "open"
@@ -95,7 +95,7 @@ func TestEnsure(t *testing.T) {
 		}
 		edit = nil
 		createComment = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text", at)
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -129,7 +129,7 @@ func TestEnsure(t *testing.T) {
 		}
 		edit = nil
 		createComment = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text", at)
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -166,7 +166,7 @@ func TestEnsure(t *testing.T) {
 			commentCalled = true
 			return nil, nil, nil
 		}
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text", at)
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -193,7 +193,7 @@ func TestEnsure(t *testing.T) {
 		create = nil
 		edit = nil
 		createComment = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text", at)
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -222,7 +222,7 @@ func TestEnsure(t *testing.T) {
 		// Expect to not call nil functions
 		create = nil
 		edit = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text", at)
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -232,13 +232,13 @@ func TestEnsure(t *testing.T) {
 	})
 	t.Run("NoIssueScheduleBlocks", func(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
-			sch := &config.ScheduleConfig{
+			sch := &schedule.ScheduleConfig{
 				Timezone: "UTC",
-				Actions: config.ScheduleConfigActions{
-					Issue: falseptr,
-					Ping:  trueptr,
+				Actions: schedule.ScheduleConfigActions{
+					schedule.ScheduleActionIssueCreate: false,
+					schedule.ScheduleActionIssuePing:   true,
 				},
-				Days: []string{"not-a-day", time.Now().UTC().Weekday().String()},
+				Days: []string{"not-a-day", "monday"},
 			}
 			return &config.OrgConfig{Schedule: nil}, &config.RepoConfig{Schedule: sch}, &config.RepoConfig{Schedule: nil}
 		}
@@ -263,7 +263,7 @@ func TestEnsure(t *testing.T) {
 		}
 		edit = nil
 		createComment = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text", timeFromDay(time.Monday))
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -273,12 +273,12 @@ func TestEnsure(t *testing.T) {
 	})
 	t.Run("NoIssueScheduleAllowsViaActions", func(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
-			sch := &config.ScheduleConfig{
+			sch := &schedule.ScheduleConfig{
 				Timezone: "UTC",
-				Actions: config.ScheduleConfigActions{
-					Issue: trueptr,
+				Actions: schedule.ScheduleConfigActions{
+					schedule.ScheduleActionIssueCreate: true,
 				},
-				Days: []string{"not-a-day", time.Now().UTC().Weekday().String()},
+				Days: []string{"not-a-day", "wednesday"},
 			}
 			return &config.OrgConfig{Schedule: sch}, &config.RepoConfig{Schedule: nil}, &config.RepoConfig{Schedule: nil}
 		}
@@ -303,7 +303,7 @@ func TestEnsure(t *testing.T) {
 		}
 		edit = nil
 		createComment = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text", timeFromDay(time.Wednesday))
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -313,19 +313,12 @@ func TestEnsure(t *testing.T) {
 	})
 	t.Run("NoIssueScheduleAllowsViaDays", func(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
-			sch := &config.ScheduleConfig{
+			sch := &schedule.ScheduleConfig{
 				Timezone: "UTC",
-				Actions: config.ScheduleConfigActions{
-					Issue: falseptr,
+				Actions: schedule.ScheduleConfigActions{
+					schedule.ScheduleActionIssueCreate: false,
 				},
-				Days: []string{"not-a-day"},
-			}
-			// add a day (not today) to days
-			todayWeekdayName := time.Now().UTC().Weekday().String()
-			if todayWeekdayName == "thursday" {
-				sch.Days = append(sch.Days, "friday")
-			} else {
-				sch.Days = append(sch.Days, "thursday")
+				Days: []string{"not-a-day", "tuesday"},
 			}
 			return &config.OrgConfig{Schedule: sch}, &config.RepoConfig{Schedule: nil}, &config.RepoConfig{Schedule: nil}
 		}
@@ -350,7 +343,7 @@ func TestEnsure(t *testing.T) {
 		}
 		edit = nil
 		createComment = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text", timeFromDay(time.Wednesday))
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -360,12 +353,12 @@ func TestEnsure(t *testing.T) {
 	})
 	t.Run("NoIssueScheduleBlocksRepoConfig", func(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
-			sch := &config.ScheduleConfig{
+			sch := &schedule.ScheduleConfig{
 				Timezone: "UTC",
-				Actions: config.ScheduleConfigActions{
-					Issue: falseptr,
+				Actions: schedule.ScheduleConfigActions{
+					schedule.ScheduleActionIssueCreate: false,
 				},
-				Days: []string{"not-a-day", time.Now().UTC().Weekday().String()},
+				Days: []string{"not-a-day", "wednesday"},
 			}
 			return &config.OrgConfig{Schedule: nil}, &config.RepoConfig{Schedule: nil}, &config.RepoConfig{Schedule: sch}
 		}
@@ -390,7 +383,7 @@ func TestEnsure(t *testing.T) {
 		}
 		edit = nil
 		createComment = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text", timeFromDay(time.Wednesday))
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -400,19 +393,12 @@ func TestEnsure(t *testing.T) {
 	})
 	t.Run("OpenStaleIssueScheduleBlocksPing", func(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
-			sch := &config.ScheduleConfig{
+			sch := &schedule.ScheduleConfig{
 				Timezone: "UTC",
-				Actions: config.ScheduleConfigActions{
-					Ping: falseptr,
+				Actions: schedule.ScheduleConfigActions{
+					schedule.ScheduleActionIssuePing: false,
 				},
-				Days: []string{"not-a-day"},
-			}
-			// add a day (not today) to days
-			todayWeekdayName := time.Now().UTC().Weekday().String()
-			if todayWeekdayName == "thursday" {
-				sch.Days = append(sch.Days, "friday")
-			} else {
-				sch.Days = append(sch.Days, "thursday")
+				Days: []string{"not-a-day", "sunday"},
 			}
 			return &config.OrgConfig{Schedule: sch}, &config.RepoConfig{Schedule: nil}, &config.RepoConfig{Schedule: nil}
 		}
@@ -439,7 +425,7 @@ func TestEnsure(t *testing.T) {
 		// Expect to not call nil functions
 		create = nil
 		edit = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text", timeFromDay(time.Monday))
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -449,13 +435,13 @@ func TestEnsure(t *testing.T) {
 	})
 	t.Run("OpenStaleIssueScheduleAllowsPing", func(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
-			sch := &config.ScheduleConfig{
+			sch := &schedule.ScheduleConfig{
 				Timezone: "UTC",
-				Actions: config.ScheduleConfigActions{
-					Issue: falseptr,
-					Ping:  trueptr,
+				Actions: schedule.ScheduleConfigActions{
+					schedule.ScheduleActionIssueCreate: false,
+					schedule.ScheduleActionIssuePing:   true,
 				},
-				Days: []string{"not-a-day", time.Now().UTC().Weekday().String()},
+				Days: []string{"not-a-day", "thursday"},
 			}
 			return &config.OrgConfig{Schedule: nil}, &config.RepoConfig{Schedule: sch}, &config.RepoConfig{Schedule: nil}
 		}
@@ -482,7 +468,7 @@ func TestEnsure(t *testing.T) {
 		// Expect to not call nil functions
 		create = nil
 		edit = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text", timeFromDay(time.Thursday))
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -492,12 +478,12 @@ func TestEnsure(t *testing.T) {
 	})
 	t.Run("OpenStaleIssueScheduleBlocksPingAndIssue", func(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
-			sch := &config.ScheduleConfig{
+			sch := &schedule.ScheduleConfig{
 				Timezone: "UTC",
-				Actions: config.ScheduleConfigActions{
-					Issue: falseptr,
+				Actions: schedule.ScheduleConfigActions{
+					schedule.ScheduleActionIssueCreate: false,
 				},
-				Days: []string{"not-a-day", time.Now().UTC().Weekday().String()},
+				Days: []string{"not-a-day", "tuesday"},
 			}
 			return &config.OrgConfig{Schedule: nil}, &config.RepoConfig{Schedule: sch}, &config.RepoConfig{Schedule: nil}
 		}
@@ -524,7 +510,7 @@ func TestEnsure(t *testing.T) {
 		// Expect to not call nil functions
 		create = nil
 		edit = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text", timeFromDay(time.Tuesday))
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}

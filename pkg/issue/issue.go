@@ -19,21 +19,14 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/config/operator"
+	"github.com/ossf/allstar/pkg/config/schedule"
 	"github.com/rs/zerolog/log"
 
 	"github.com/google/go-github/v43/github"
-)
-
-type issueAction int
-
-const (
-	issueActionCreate issueAction = iota
-	issueActionPing
 )
 
 const issueRepoTitle = "Security Policy violation for repository %q %v"
@@ -99,11 +92,11 @@ func getPolicyIssue(ctx context.Context, issues issues, owner, repo, policy, tit
 // Ensure ensures an issue exists and is open for the provided repo and
 // policy. If opening, re-opening, or pinging an issue, the provided text will
 // be included.
-func Ensure(ctx context.Context, c *github.Client, owner, repo, policy, text string) error {
-	return ensure(ctx, c, c.Issues, owner, repo, policy, text)
+func Ensure(ctx context.Context, c *github.Client, owner, repo, policy, text string, at time.Time) error {
+	return ensure(ctx, c, c.Issues, owner, repo, policy, text, at)
 }
 
-func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, policy, text string) error {
+func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, policy, text string, at time.Time) error {
 	issueRepo, title := getIssueRepoTitle(ctx, c, owner, repo, policy)
 	label := getIssueLabel(ctx, c, owner, repo)
 	issue, err := getPolicyIssue(ctx, issues, owner, issueRepo, policy, title, label)
@@ -111,11 +104,10 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		return err
 	}
 	oc, orc, rc := configGetAppConfigs(ctx, c, owner, repo)
-	osc := mergeConfig(oc, orc, rc)
-	if createIssue, _ := shouldXIssue(osc, issueActionCreate); !createIssue {
-		return nil
-	}
-	if issue == nil {
+	osc := schedule.MergeConfig(oc.Schedule, orc.Schedule, rc.Schedule)
+	createIssue, _ := osc.ShouldPerform(schedule.ScheduleActionIssueCreate, at)
+	pingIssue, _ := osc.ShouldPerform(schedule.ScheduleActionIssuePing, at)
+	if issue == nil && createIssue {
 		var footer string
 		if oc.IssueFooter == "" {
 			footer = operator.GitHubIssueFooter
@@ -142,7 +134,7 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		}
 		return err
 	}
-	if issue.GetState() == "closed" {
+	if issue.GetState() == "closed" && createIssue {
 		state := "open"
 		update := &github.IssueRequest{
 			State: &state,
@@ -165,10 +157,7 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		_, _, err := issues.CreateComment(ctx, owner, issueRepo, issue.GetNumber(), comment)
 		return err
 	}
-	if pingIssue, _ := shouldXIssue(osc, issueActionPing); !pingIssue {
-		return nil
-	}
-	if issue.GetUpdatedAt().Before(time.Now().Add(-1 * operator.NoticePingDuration)) {
+	if issue.GetUpdatedAt().Before(time.Now().Add(-1*operator.NoticePingDuration)) && pingIssue {
 		body := "Updating issue after ping interval. Status:\n" + text
 		comment := &github.IssueComment{
 			Body: &body,
@@ -248,59 +237,4 @@ func getIssueRepoTitle(ctx context.Context, c *github.Client, owner, repo, polic
 		return oc.IssueRepo, fmt.Sprintf(issueRepoTitle, repo, policy)
 	}
 	return repo, fmt.Sprintf(sameRepoTitle, policy)
-}
-
-// shouldXIssue determines based on an OptScheduleConfig if an action
-// should be taken.
-// The error may be ignored for default create behavior.
-func shouldXIssue(sch *config.ScheduleConfig, x issueAction) (bool, error) {
-	if sch == nil {
-		return true, nil
-	}
-	// If action queried is allowed by schedule, return true
-	// Note that in ensure(), returning true for issueActionCreate will result
-	// in ping not being attempted. This is intentional but something to be
-	// aware of.
-	if x == issueActionCreate && (sch.Actions.Issue == nil || *sch.Actions.Issue) {
-		return true, nil
-	} else if x == issueActionPing && (sch.Actions.Ping == nil || *sch.Actions.Ping) {
-		return true, nil
-	}
-	// Get the day in timezone specified or default "" => UTC
-	loc, err := time.LoadLocation(sch.Timezone)
-	if err != nil {
-		return true, err
-	}
-	loctime, err := time.ParseInLocation("Jan 2 2006 1:00 AM", "Apr 1 2004 10:00 AM", loc)
-	if err != nil {
-		return true, err
-	}
-	_, offsetSeconds := loctime.Zone()
-	weekdayInLoc := time.Now().UTC().Add(time.Duration(offsetSeconds) * time.Second).Weekday()
-	// Check if weekday match in days
-	for i, wds := range sch.Days {
-		// Allow up to 3 days to be silenced
-		if i > 2 {
-			break
-		}
-		wds = strings.ToLower(wds)
-		if wd, ok := weekdayStrings[wds]; ok {
-			if wd == weekdayInLoc {
-				return false, nil
-			}
-		}
-	}
-	return true, nil
-}
-
-func mergeConfig(oc *config.OrgConfig, orc, rc *config.RepoConfig) *config.ScheduleConfig {
-	sc := oc.Schedule
-
-	for _, os := range []*config.RepoConfig{orc, rc} {
-		if os.Schedule != nil {
-			sc = os.Schedule
-		}
-	}
-
-	return sc
 }
