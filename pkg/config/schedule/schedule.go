@@ -80,12 +80,7 @@ func (sch *ScheduleConfig) ShouldPerform(a ScheduleAction, at time.Time) (bool, 
 	if err != nil {
 		return true, err
 	}
-	loctime, err := time.ParseInLocation("Jan 2 2006 1:00 AM", "Apr 1 2004 10:00 AM", loc)
-	if err != nil {
-		return true, err
-	}
-	_, offsetSeconds := loctime.Zone()
-	weekdayInLoc := at.UTC().Add(time.Duration(offsetSeconds) * time.Second).Weekday()
+	weekdayInLoc := at.In(loc).Weekday()
 	// Check if weekday match in days
 	for i, wds := range sch.Days {
 		// Allow up to 3 days to be silenced
