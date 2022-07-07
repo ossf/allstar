@@ -94,7 +94,7 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		return err
 	}
 	oc, orc, rc := configGetAppConfigs(ctx, c, owner, repo)
-	osc := schedule.MergeConfig(oc.Schedule, orc.Schedule, rc.Schedule)
+	osc := schedule.MergeSchedules(oc.Schedule, orc.Schedule, rc.Schedule)
 	createIssue, _ := osc.ShouldPerform(schedule.ScheduleActionIssueCreate, at)
 	pingIssue, _ := osc.ShouldPerform(schedule.ScheduleActionIssuePing, at)
 	if issue == nil && createIssue {

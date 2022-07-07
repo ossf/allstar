@@ -102,8 +102,8 @@ func (sch *ScheduleConfig) ShouldPerform(a ScheduleAction, at time.Time) (bool, 
 	return true, nil
 }
 
-// MergeConfig gets the preferred ScheduleConfig from the ScheduleConfigs provided
-func MergeConfig(oc *ScheduleConfig, orc, rc *ScheduleConfig) *ScheduleConfig {
+// MergeSchedules gets the preferred ScheduleConfig from the ScheduleConfigs provided
+func MergeSchedules(oc *ScheduleConfig, orc, rc *ScheduleConfig) *ScheduleConfig {
 	var mc *ScheduleConfig
 
 	for _, cc := range []*ScheduleConfig{oc, orc, rc} {
