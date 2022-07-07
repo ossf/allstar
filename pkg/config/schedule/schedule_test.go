@@ -56,6 +56,12 @@ func TestShouldPerform(t *testing.T) {
 			t.Errorf("Expected to perform issue create %v", err)
 		}
 	})
+	t.Run("AllowNilSchedule", func(t *testing.T) {
+		var sch *schedule.ScheduleConfig
+		if perf, err := sch.ShouldPerform(schedule.ScheduleActionIssueCreate, timeFromDay(time.Monday)); err != nil || perf == false {
+			t.Errorf("Expected to perform issue create %v", err)
+		}
+	})
 	t.Run("DenyDay", func(t *testing.T) {
 		sch := &schedule.ScheduleConfig{
 			Actions: schedule.ScheduleConfigActions{
