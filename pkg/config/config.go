@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/ossf/allstar/pkg/config/operator"
+	"github.com/ossf/allstar/pkg/config/schedule"
 
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/google/go-github/v43/github"
@@ -62,8 +63,8 @@ type OrgConfig struct {
 	// policies.
 	IssueFooter string `json:"issueFooter"`
 
-	// Schedule is a set of actions to temporarily toggle on some days
-	Schedule *ScheduleConfig `json:"schedule"`
+	// Schedule specifies whether to perform certain actions on specific days
+	Schedule *schedule.ScheduleConfig `json:"schedule"`
 }
 
 // OrgOptConfig is used in Allstar and policy-secific org-level config to
@@ -102,8 +103,8 @@ type RepoConfig struct {
 	// regardless of Optconfig.DisableRepoOverride.
 	IssueLabel string `json:"issueLabel"`
 
-	// Schedule is a set of actions to temporarily toggle on some days
-	Schedule *ScheduleConfig `json:"schedule"`
+	// Schedule specifies whether to perform certain actions on specific days
+	Schedule *schedule.ScheduleConfig `json:"schedule"`
 }
 
 // RepoOptConfig is used in Allstar and policy-specific repo-level config to
@@ -114,26 +115,6 @@ type RepoOptConfig struct {
 
 	// OptOut: set to true to opt-out this repo when in opt-out strategy
 	OptOut bool `json:"optOut"`
-}
-
-// ScheduleConfig represents a set of actions to enable or disable for a
-// period of time.
-type ScheduleConfig struct {
-	Timezone string                `json:"timezone"`
-	Actions  ScheduleConfigActions `json:"actions"`
-	Days     []string              `json:"days"`
-}
-
-// ScheduleConfigActions is a set of actions to enable or disable.
-type ScheduleConfigActions struct {
-	// Issue toggles issue creation (pinging will be disabled if set to false)
-	Issue *bool `json:"issue"`
-
-	// Ping toggles issue pinging
-	Ping *bool `json:"ping"`
-
-	// Fix toggles fix action
-	Fix *bool `json:"fix"`
 }
 
 const githubConfRepo = ".github"
