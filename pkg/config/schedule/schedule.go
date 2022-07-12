@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package schedule provides the ActionSchedule type for use in config and
-// when deciding whether to perform an action.
+// Package schedule provides the ShouldPerform function for use with
+// ScheduleConfig.
 package schedule
 
 import (
