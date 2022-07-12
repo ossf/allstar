@@ -19,7 +19,6 @@ import (
 	"errors"
 	"net/http"
 	"testing"
-	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v43/github"
@@ -88,7 +87,7 @@ func TestRunPolicies(t *testing.T) {
 		}
 	}
 	ensureCalled := false
-	issueEnsure = func(ctx context.Context, c *github.Client, owner, repo, policy, text string, at time.Time) error {
+	issueEnsure = func(ctx context.Context, c *github.Client, owner, repo, policy, text string) error {
 		ensureCalled = true
 		return nil
 	}
