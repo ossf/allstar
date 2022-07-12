@@ -62,7 +62,7 @@ type OrgConfig struct {
 	// policies.
 	IssueFooter string `json:"issueFooter"`
 
-	// Schedule specifies whether to perform certain actions on specific days
+	// Schedule specifies whether to perform certain actions on specific days.
 	Schedule *ScheduleConfig `json:"schedule"`
 }
 
@@ -102,7 +102,7 @@ type RepoConfig struct {
 	// regardless of Optconfig.DisableRepoOverride.
 	IssueLabel string `json:"issueLabel"`
 
-	// Schedule specifies whether to perform certain actions on specific days
+	// Schedule specifies whether to perform certain actions on specific days.
 	Schedule *ScheduleConfig `json:"schedule"`
 }
 
@@ -116,6 +116,8 @@ type RepoOptConfig struct {
 	OptOut bool `json:"optOut"`
 }
 
+// ScheduleConfig is used to disable actions during specific days, such as
+// weekends.
 type ScheduleConfig struct {
 	Timezone string                `json:"timezone"`
 	Actions  ScheduleConfigActions `json:"actions"`
