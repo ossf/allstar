@@ -100,11 +100,14 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		} else {
 			footer = fmt.Sprintf("%v\n\n%v", oc.IssueFooter, operator.GitHubIssueFooter)
 		}
-		ownerRepo := fmt.Sprintf("%s/%s", owner, repo)
-		body := fmt.Sprintf("_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/) "+
-			"and refers to [%s](https://github.com/%s)._\n\n**Security Policy Violation**\n"+
+		refersTo := ""
+		if issueRepo != repo {
+			ownerRepo := fmt.Sprintf("%s/%s", owner, repo)
+			refersTo = fmt.Sprintf(" and refers to [%s](https://github.com/%s)", ownerRepo, ownerRepo)
+		}
+		body := fmt.Sprintf("_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)%s._\n\n**Security Policy Violation**\n"+
 			"%v\n\n---\n\n%v",
-			ownerRepo, ownerRepo, text, footer)
+			refersTo, text, footer)
 		new := &github.IssueRequest{
 			Title:  &title,
 			Body:   &body,
