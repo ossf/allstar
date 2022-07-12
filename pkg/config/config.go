@@ -119,14 +119,23 @@ type RepoOptConfig struct {
 // ScheduleConfig is used to disable actions during specific days, such as
 // weekends.
 type ScheduleConfig struct {
-	Timezone string                `json:"timezone"`
-	Actions  ScheduleConfigActions `json:"actions"`
-	Days     []string              `json:"days"`
+	// Timezone specifies a timezone, eg. "America/Los_Angeles"
+	// See https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List
+	Timezone string `json:"timezone"`
+
+	// Actions specifies actions to enable or disable.
+	// Set an action to false to disable it during scheduled period.
+	Actions ScheduleConfigActions `json:"actions"`
+
+	// Days specifies weekdays during which to apply the action toggles.
+	// eg. "saturday" or "sunday"
+	Days []string `json:"days"`
 }
 
 // ScheduleConfigActions is a set of actions to enable or disable.
 type ScheduleConfigActions struct {
 	// Issue specifies whether issues should be created.
+	// Disabling Issue will disable pings as well.
 	Issue *bool `json:"issue"`
 
 	// Ping specifies whether issue comments should be periodically created.

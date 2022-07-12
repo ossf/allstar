@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package schedule provides the ShouldPerform function for use with
-// ScheduleConfig.
+// config.ScheduleConfig.
 package schedule
 
 import (
@@ -23,9 +23,12 @@ import (
 	"github.com/ossf/allstar/pkg/config"
 )
 
+// ScheduleAction represents an action which can be configured in
+// config.ScheduleConfig.
 type ScheduleAction int
 
 const (
+	// ScheduleActionIssueCreate :
 	ScheduleActionIssueCreate ScheduleAction = iota
 	ScheduleActionIssuePing
 )
