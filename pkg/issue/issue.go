@@ -44,9 +44,11 @@ type issues interface {
 }
 
 var configGetAppConfigs func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig)
+var timeNow func() time.Time
 
 func init() {
 	configGetAppConfigs = config.GetAppConfigs
+	timeNow = time.Now
 }
 
 func getPolicyIssue(ctx context.Context, issues issues, owner, repo, policy, title, label string) (*github.Issue, error) {
@@ -82,21 +84,22 @@ func getPolicyIssue(ctx context.Context, issues issues, owner, repo, policy, tit
 // Ensure ensures an issue exists and is open for the provided repo and
 // policy. If opening, re-opening, or pinging an issue, the provided text will
 // be included.
-func Ensure(ctx context.Context, c *github.Client, owner, repo, policy, text string, at time.Time) error {
-	return ensure(ctx, c, c.Issues, owner, repo, policy, text, at)
+func Ensure(ctx context.Context, c *github.Client, owner, repo, policy, text string) error {
+	return ensure(ctx, c, c.Issues, owner, repo, policy, text)
 }
 
-func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, policy, text string, at time.Time) error {
+func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, policy, text string) error {
 	issueRepo, title := getIssueRepoTitle(ctx, c, owner, repo, policy)
 	label := getIssueLabel(ctx, c, owner, repo)
 	issue, err := getPolicyIssue(ctx, issues, owner, issueRepo, policy, title, label)
 	if err != nil {
 		return err
 	}
+	now := timeNow()
 	oc, orc, rc := configGetAppConfigs(ctx, c, owner, repo)
 	osc := schedule.MergeSchedules(oc.Schedule, orc.Schedule, rc.Schedule)
-	createIssue, _ := osc.ShouldPerform(schedule.ScheduleActionIssueCreate, at)
-	pingIssue, _ := osc.ShouldPerform(schedule.ScheduleActionIssuePing, at)
+	createIssue, _ := schedule.ShouldPerform(osc, schedule.ScheduleActionIssueCreate, now)
+	pingIssue, _ := schedule.ShouldPerform(osc, schedule.ScheduleActionIssuePing, now)
 	if issue == nil && createIssue {
 		var footer string
 		if oc.IssueFooter == "" {

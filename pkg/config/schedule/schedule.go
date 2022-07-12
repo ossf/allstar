@@ -19,31 +19,16 @@ package schedule
 import (
 	"strings"
 	"time"
+
+	"github.com/ossf/allstar/pkg/config"
 )
 
-type ScheduleAction string
+type ScheduleAction int
 
 const (
-	ScheduleActionLog         ScheduleAction = "log"
-	ScheduleActionIssueCreate ScheduleAction = "issue"
-	ScheduleActionIssuePing   ScheduleAction = "ping"
-	ScheduleActionFix         ScheduleAction = "fix"
+	ScheduleActionIssueCreate ScheduleAction = iota
+	ScheduleActionIssuePing
 )
-
-// actionOverrides specifies, for each action A, a set of actions B.
-// If any action in B is disabled, action A will be disabled.
-var actionOverrides = map[ScheduleAction][]ScheduleAction{
-	ScheduleActionIssuePing: {ScheduleActionIssueCreate},
-}
-
-type ScheduleConfig struct {
-	Timezone string                `json:"timezone"`
-	Actions  ScheduleConfigActions `json:"actions"`
-	Days     []string              `json:"days"`
-}
-
-// ScheduleConfigActions is a set of actions to enable or disable.
-type ScheduleConfigActions map[ScheduleAction]bool
 
 var weekdayStrings = map[string]time.Weekday{
 	"sunday":    time.Sunday,
@@ -55,24 +40,22 @@ var weekdayStrings = map[string]time.Weekday{
 	"saturday":  time.Saturday,
 }
 
-// ShouldPerform
+// ShouldPerform determines whether an action should be performed based on sch.
 // The error may be ignored for default create behavior.
-func (sch *ScheduleConfig) ShouldPerform(a ScheduleAction, at time.Time) (bool, error) {
+func ShouldPerform(sch *config.ScheduleConfig, action ScheduleAction, at time.Time) (bool, error) {
 	if sch == nil {
 		return true, nil
 	}
-	// Set actions based on actionOverrides
-	if overrides, ok := actionOverrides[a]; ok {
-		// for each override...
-		for _, or := range overrides {
-			// if it is disabled, disable a
-			if allow, ok := sch.Actions[or]; ok && !allow {
-				sch.Actions[a] = false
-			}
-		}
+	// If issue disabled, ping should also be disabled
+	if sch.Actions.Issue != nil && !*sch.Actions.Issue {
+		falsebool := false
+		sch.Actions.Ping = &falsebool
 	}
 	// If action queried is always allowed by schedule, return true
-	if allow, ok := sch.Actions[a]; !ok || allow {
+	if action == ScheduleActionIssueCreate && (sch.Actions.Issue == nil || *sch.Actions.Issue) {
+		return true, nil
+	}
+	if action == ScheduleActionIssuePing && (sch.Actions.Ping == nil || *sch.Actions.Ping) {
 		return true, nil
 	}
 	// Get the day in timezone specified or default "" => UTC
@@ -98,10 +81,10 @@ func (sch *ScheduleConfig) ShouldPerform(a ScheduleAction, at time.Time) (bool, 
 }
 
 // MergeSchedules gets the preferred ScheduleConfig from the ScheduleConfigs provided
-func MergeSchedules(oc *ScheduleConfig, orc, rc *ScheduleConfig) *ScheduleConfig {
-	var mc *ScheduleConfig
+func MergeSchedules(oc *config.ScheduleConfig, orc, rc *config.ScheduleConfig) *config.ScheduleConfig {
+	var mc *config.ScheduleConfig
 
-	for _, cc := range []*ScheduleConfig{oc, orc, rc} {
+	for _, cc := range []*config.ScheduleConfig{oc, orc, rc} {
 		if cc != nil {
 			mc = cc
 		}

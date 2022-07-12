@@ -18,8 +18,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/config/schedule"
 )
+
+func boolptr(b bool) *bool {
+	return &b
+}
 
 func timeFromDay(weekday time.Weekday) time.Time {
 	return time.Date(1998, 9, 6+int(weekday), 11, 0, 0, 0, time.UTC)
@@ -27,68 +32,68 @@ func timeFromDay(weekday time.Weekday) time.Time {
 
 func TestShouldPerform(t *testing.T) {
 	t.Run("AllowDay", func(t *testing.T) {
-		sch := &schedule.ScheduleConfig{
-			Actions: schedule.ScheduleConfigActions{
-				schedule.ScheduleActionIssuePing: false,
+		sch := &config.ScheduleConfig{
+			Actions: config.ScheduleConfigActions{
+				Ping: boolptr(false),
 			},
 			Days: []string{"saturday", "sunday"},
 		}
-		if perf, err := sch.ShouldPerform(schedule.ScheduleActionIssuePing, timeFromDay(time.Monday)); err != nil || perf == false {
+		if perf, err := schedule.ShouldPerform(sch, schedule.ScheduleActionIssuePing, timeFromDay(time.Monday)); err != nil || perf == false {
 			t.Errorf("Expected to perform issue ping %v", err)
 		}
 	})
 	t.Run("AllowDefault", func(t *testing.T) {
-		sch := &schedule.ScheduleConfig{
-			Actions: schedule.ScheduleConfigActions{},
+		sch := &config.ScheduleConfig{
+			Actions: config.ScheduleConfigActions{},
 			Days:    []string{"monday", "tuesday"},
 		}
-		if perf, err := sch.ShouldPerform(schedule.ScheduleActionIssueCreate, timeFromDay(time.Monday)); err != nil || perf == false {
+		if perf, err := schedule.ShouldPerform(sch, schedule.ScheduleActionIssueCreate, timeFromDay(time.Monday)); err != nil || perf == false {
 			t.Errorf("Expected to perform issue create %v", err)
 		}
 	})
 	t.Run("AllowNilDays", func(t *testing.T) {
-		sch := &schedule.ScheduleConfig{
-			Actions: schedule.ScheduleConfigActions{
-				schedule.ScheduleActionIssueCreate: false,
+		sch := &config.ScheduleConfig{
+			Actions: config.ScheduleConfigActions{
+				Issue: boolptr(false),
 			},
 		}
-		if perf, err := sch.ShouldPerform(schedule.ScheduleActionIssueCreate, timeFromDay(time.Monday)); err != nil || perf == false {
+		if perf, err := schedule.ShouldPerform(sch, schedule.ScheduleActionIssueCreate, timeFromDay(time.Monday)); err != nil || perf == false {
 			t.Errorf("Expected to perform issue create %v", err)
 		}
 	})
 	t.Run("AllowNilSchedule", func(t *testing.T) {
-		var sch *schedule.ScheduleConfig
-		if perf, err := sch.ShouldPerform(schedule.ScheduleActionIssueCreate, timeFromDay(time.Monday)); err != nil || perf == false {
+		var sch *config.ScheduleConfig
+		if perf, err := schedule.ShouldPerform(sch, schedule.ScheduleActionIssueCreate, timeFromDay(time.Monday)); err != nil || perf == false {
 			t.Errorf("Expected to perform issue create %v", err)
 		}
 	})
 	t.Run("DenyDay", func(t *testing.T) {
-		sch := &schedule.ScheduleConfig{
-			Actions: schedule.ScheduleConfigActions{
-				schedule.ScheduleActionIssuePing: false,
+		sch := &config.ScheduleConfig{
+			Actions: config.ScheduleConfigActions{
+				Ping: boolptr(false),
 			},
 			Days: []string{"monday", "tuesday"},
 		}
-		if perf, err := sch.ShouldPerform(schedule.ScheduleActionIssuePing, timeFromDay(time.Tuesday)); err != nil || perf == true {
+		if perf, err := schedule.ShouldPerform(sch, schedule.ScheduleActionIssuePing, timeFromDay(time.Tuesday)); err != nil || perf == true {
 			t.Errorf("Expected to not perform issue ping %v", err)
 		}
 	})
 	t.Run("DenyOverride", func(t *testing.T) {
-		sch := &schedule.ScheduleConfig{
-			Actions: schedule.ScheduleConfigActions{
-				schedule.ScheduleActionIssueCreate: false,
+		sch := &config.ScheduleConfig{
+			Actions: config.ScheduleConfigActions{
+				Issue: boolptr(false),
 			},
 			Days: []string{"monday", "wednesday"},
 		}
-		if perf, err := sch.ShouldPerform(schedule.ScheduleActionIssuePing, timeFromDay(time.Wednesday)); err != nil || perf == true {
+		if perf, err := schedule.ShouldPerform(sch, schedule.ScheduleActionIssuePing, timeFromDay(time.Wednesday)); err != nil || perf == true {
 			t.Errorf("Expected to not perform issue ping %v", err)
 		}
 	})
 }
 
 func TestMergeSchedules(t *testing.T) {
-	sch1 := &schedule.ScheduleConfig{}
-	sch2 := &schedule.ScheduleConfig{}
+	sch1 := &config.ScheduleConfig{}
+	sch2 := &config.ScheduleConfig{}
 	t.Run("Nil", func(t *testing.T) {
 		if schedule.MergeSchedules(nil, nil, nil) != nil {
 			t.Errorf("Expected nil config")
