@@ -63,7 +63,7 @@ func TestEnsure(t *testing.T) {
 	issueTitle := "Security Policy violation thispolicy"
 	closed := "closed"
 	open := "open"
-	body := "_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/) and refers to [/](https://github.com//)._\n\n**Security Policy Violation**\nStatus text\n\n---\n\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
+	body := "_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)._\n\n**Security Policy Violation**\nStatus text\n\n---\n\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
 	configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
 		return &config.OrgConfig{}, &config.RepoConfig{}, &config.RepoConfig{}
 	}
@@ -101,7 +101,7 @@ func TestEnsure(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
 			return &config.OrgConfig{IssueFooter: "CustomFooter"}, &config.RepoConfig{}, &config.RepoConfig{}
 		}
-		bodyWithFooter := "_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/) and refers to [/](https://github.com//)._\n\n**Security Policy Violation**\nStatus text\n\n---\n\nCustomFooter\n\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
+		bodyWithFooter := "_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)._\n\n**Security Policy Violation**\nStatus text\n\n---\n\nCustomFooter\n\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
 		listByRepo = func(ctx context.Context, owner string, repo string,
 			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
 			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
@@ -130,6 +130,9 @@ func TestEnsure(t *testing.T) {
 		if createCalled != true {
 			t.Error("Expected issue to be created")
 		}
+	}) //  and refers to [/](https://github.com//)
+	t.Run("NoIssueWithDifferentRepo", func(t *testing.T) {
+
 	})
 	t.Run("ClosedIssue", func(t *testing.T) {
 		listByRepo = func(ctx context.Context, owner string, repo string,
