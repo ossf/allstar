@@ -61,9 +61,11 @@ func (m mockIssues) CreateComment(ctx context.Context, owner string, repo string
 func TestEnsure(t *testing.T) {
 	//issueTitle := fmt.Sprintf(sameRepoTitle, "thispolicy")
 	issueTitle := "Security Policy violation thispolicy"
+	issueTitleOtherRepo := "Security Policy violation for repository \"\" thispolicy"
 	closed := "closed"
 	open := "open"
 	body := "_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)._\n\n**Security Policy Violation**\nStatus text\n\n---\n\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
+	bodyOtherRepo := "_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/) and refers to [/](https://github.com//)._\n\n**Security Policy Violation**\nStatus text\n\n---\n\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
 	configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
 		return &config.OrgConfig{}, &config.RepoConfig{}, &config.RepoConfig{}
 	}
@@ -83,6 +85,39 @@ func TestEnsure(t *testing.T) {
 			}
 			if *issue.Body != body {
 				t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), body)
+			}
+			createCalled = true
+			return nil, nil, nil
+		}
+		edit = nil
+		createComment = nil
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if createCalled != true {
+			t.Error("Expected issue to be created")
+		}
+	})
+	t.Run("NoIssueInAnotherRepo", func(t *testing.T) {
+		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+			return &config.OrgConfig{IssueRepo: "issuerepo"}, &config.RepoConfig{}, &config.RepoConfig{}
+		}
+		listByRepo = func(ctx context.Context, owner string, repo string,
+			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
+		}
+		createCalled := false
+		create = func(ctx context.Context, owner string, repo string,
+			issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+			if *issue.Title != issueTitleOtherRepo {
+				t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitleOtherRepo)
+			}
+			if (*issue.Labels)[0] != operator.GitHubIssueLabel {
+				t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
+			}
+			if *issue.Body != bodyOtherRepo {
+				t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), bodyOtherRepo)
 			}
 			createCalled = true
 			return nil, nil, nil
@@ -130,9 +165,6 @@ func TestEnsure(t *testing.T) {
 		if createCalled != true {
 			t.Error("Expected issue to be created")
 		}
-	}) //  and refers to [/](https://github.com//)
-	t.Run("NoIssueWithDifferentRepo", func(t *testing.T) {
-
 	})
 	t.Run("ClosedIssue", func(t *testing.T) {
 		listByRepo = func(ctx context.Context, owner string, repo string,
