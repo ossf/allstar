@@ -449,7 +449,7 @@ func TestCheck(t *testing.T) {
 					OptOutStrategy: true,
 				},
 				TestingOwnerlessAllowed: true,
-				Exemptions: OutsideExemptions{
+				Exemptions: []*OutsideExemption{
 					{
 						User:  alice,
 						Repo:  "thisrepo",
@@ -487,7 +487,7 @@ func TestCheck(t *testing.T) {
 					OptOutStrategy: true,
 				},
 				TestingOwnerlessAllowed: true,
-				Exemptions: OutsideExemptions{
+				Exemptions: []*OutsideExemption{
 					{
 						User:  alice,
 						Repo:  "thisrepo",
@@ -525,7 +525,7 @@ func TestCheck(t *testing.T) {
 					OptOutStrategy: true,
 				},
 				TestingOwnerlessAllowed: true,
-				Exemptions: OutsideExemptions{
+				Exemptions: []*OutsideExemption{
 					{
 						User: alice,
 						Repo: "thisrepo",
@@ -564,7 +564,7 @@ func TestCheck(t *testing.T) {
 					OptOutStrategy: true,
 				},
 				TestingOwnerlessAllowed: true,
-				Exemptions: OutsideExemptions{
+				Exemptions: []*OutsideExemption{
 					{
 						User: alice,
 						Repo: "thisrepo",
@@ -603,7 +603,7 @@ func TestCheck(t *testing.T) {
 					OptOutStrategy: true,
 				},
 				TestingOwnerlessAllowed: true,
-				Exemptions: OutsideExemptions{
+				Exemptions: []*OutsideExemption{
 					{
 						User:  alice,
 						Repo:  "this*",
@@ -638,7 +638,7 @@ func TestCheck(t *testing.T) {
 					OptOutStrategy: true,
 				},
 				TestingOwnerlessAllowed: true,
-				Exemptions: OutsideExemptions{
+				Exemptions: []*OutsideExemption{
 					{
 						User:  alice,
 						Repo:  "test*",
