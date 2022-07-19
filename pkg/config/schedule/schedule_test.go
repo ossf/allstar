@@ -33,30 +33,14 @@ func timeFromDay(weekday time.Weekday) time.Time {
 func TestShouldPerform(t *testing.T) {
 	t.Run("AllowDay", func(t *testing.T) {
 		sch := &config.ScheduleConfig{
-			Actions: config.ScheduleConfigActions{
-				Ping: boolptr(false),
-			},
 			Days: []string{"saturday", "sunday"},
 		}
 		if perf, err := schedule.ShouldPerform(sch, schedule.ScheduleActionIssuePing, timeFromDay(time.Monday)); err != nil || perf == false {
 			t.Errorf("Expected to perform issue ping %v", err)
 		}
 	})
-	t.Run("AllowDefault", func(t *testing.T) {
-		sch := &config.ScheduleConfig{
-			Actions: config.ScheduleConfigActions{},
-			Days:    []string{"monday", "tuesday"},
-		}
-		if perf, err := schedule.ShouldPerform(sch, schedule.ScheduleActionIssueCreate, timeFromDay(time.Monday)); err != nil || perf == false {
-			t.Errorf("Expected to perform issue create %v", err)
-		}
-	})
 	t.Run("AllowNilDays", func(t *testing.T) {
-		sch := &config.ScheduleConfig{
-			Actions: config.ScheduleConfigActions{
-				Issue: boolptr(false),
-			},
-		}
+		sch := &config.ScheduleConfig{}
 		if perf, err := schedule.ShouldPerform(sch, schedule.ScheduleActionIssueCreate, timeFromDay(time.Monday)); err != nil || perf == false {
 			t.Errorf("Expected to perform issue create %v", err)
 		}
@@ -69,9 +53,6 @@ func TestShouldPerform(t *testing.T) {
 	})
 	t.Run("DenyDay", func(t *testing.T) {
 		sch := &config.ScheduleConfig{
-			Actions: config.ScheduleConfigActions{
-				Ping: boolptr(false),
-			},
 			Days: []string{"monday", "tuesday"},
 		}
 		if perf, err := schedule.ShouldPerform(sch, schedule.ScheduleActionIssuePing, timeFromDay(time.Tuesday)); err != nil || perf == true {
@@ -80,9 +61,6 @@ func TestShouldPerform(t *testing.T) {
 	})
 	t.Run("DenyOverride", func(t *testing.T) {
 		sch := &config.ScheduleConfig{
-			Actions: config.ScheduleConfigActions{
-				Issue: boolptr(false),
-			},
 			Days: []string{"monday", "wednesday"},
 		}
 		if perf, err := schedule.ShouldPerform(sch, schedule.ScheduleActionIssuePing, timeFromDay(time.Wednesday)); err != nil || perf == true {

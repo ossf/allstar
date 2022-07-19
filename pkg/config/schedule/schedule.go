@@ -49,18 +49,6 @@ func ShouldPerform(sch *config.ScheduleConfig, action ScheduleAction, at time.Ti
 	if sch == nil {
 		return true, nil
 	}
-	// If issue disabled, ping should also be disabled
-	if sch.Actions.Issue != nil && !*sch.Actions.Issue {
-		falsebool := false
-		sch.Actions.Ping = &falsebool
-	}
-	// If action queried is always allowed by schedule, return true
-	if action == ScheduleActionIssueCreate && (sch.Actions.Issue == nil || *sch.Actions.Issue) {
-		return true, nil
-	}
-	if action == ScheduleActionIssuePing && (sch.Actions.Ping == nil || *sch.Actions.Ping) {
-		return true, nil
-	}
 	// Get the day in timezone specified or default "" => UTC
 	loc, err := time.LoadLocation(sch.Timezone)
 	if err != nil {
