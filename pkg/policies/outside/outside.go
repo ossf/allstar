@@ -85,7 +85,10 @@ type OrgConfig struct {
 	// Exemptions is a list of user-repo-access pairings to exempt.
 	// Exemptions are only defined at the org level because they should be made
 	// obvious to org security managers.
-	Exemptions OutsideExemptions `json:"exemptions"`
+	Exemptions []*OutsideExemption `json:"exemptions"`
+
+	// globCache is used to cache compiled globs for matching repos in the org.
+	globCache globCache
 }
 
 // RepoConfig is the repo-level config for Outside Collaborators security
@@ -112,10 +115,10 @@ type mergedConfig struct {
 	PushAllowed             bool
 	AdminAllowed            bool
 	TestingOwnerlessAllowed bool
-	Exemptions              OutsideExemptions
+	Exemptions              []*OutsideExemption
 }
 
-type OutsideExemptions []*OutsideExemption
+type globCache map[string]glob.Glob
 
 // OutsideExemption is an exemption entry for the Outside Collaborators policy.
 type OutsideExemption struct {
@@ -182,6 +185,7 @@ func (o Outside) Check(ctx context.Context, c *github.Client, owner,
 func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
+	oc.globCache = globCache{}
 	enabled, err := configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 	if err != nil {
 		return nil, err
@@ -207,11 +211,11 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	mc := mergeConfig(oc, orc, rc, repo)
 
 	var d details
-	outAdmins, err := getUsers(ctx, rep, owner, repo, "admin", "outside", mc.Exemptions)
+	outAdmins, err := getUsers(ctx, rep, owner, repo, "admin", "outside", mc.Exemptions, oc.globCache)
 	if err != nil {
 		return nil, err
 	}
-	outPushers, err := getUsers(ctx, rep, owner, repo, "push", "outside", mc.Exemptions)
+	outPushers, err := getUsers(ctx, rep, owner, repo, "push", "outside", mc.Exemptions, oc.globCache)
 	if err != nil {
 		return nil, err
 	}
@@ -220,7 +224,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	d.OutsidePushCount = len(outPushers)
 	d.OutsidePushers = outPushers
 
-	directAdmins, err := getUsers(ctx, rep, owner, repo, "admin", "direct", mc.Exemptions)
+	directAdmins, err := getUsers(ctx, rep, owner, repo, "admin", "direct", mc.Exemptions, oc.globCache)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +302,7 @@ func in(name string, list []string) bool {
 }
 
 func getUsers(ctx context.Context, r repositories, owner, repo, perm,
-	aff string, exemptions OutsideExemptions) ([]string, error) {
+	aff string, exemptions []*OutsideExemption, gc globCache) ([]string, error) {
 	opt := &github.ListCollaboratorsOptions{
 		ListOptions: github.ListOptions{
 			PerPage: 100,
@@ -321,7 +325,7 @@ func getUsers(ctx context.Context, r repositories, owner, repo, perm,
 	var rv []string
 	for _, u := range users {
 		if u.GetPermissions()[perm] {
-			if !exemptions.isExempt(repo, u.GetLogin(), perm) {
+			if !isExempt(repo, u.GetLogin(), perm, exemptions, gc) {
 				rv = append(rv, u.GetLogin())
 			}
 		}
@@ -329,12 +333,12 @@ func getUsers(ctx context.Context, r repositories, owner, repo, perm,
 	return rv, nil
 }
 
-func (ee OutsideExemptions) isExempt(repo, user, access string) bool {
+func isExempt(repo, user, access string, ee []*OutsideExemption, gc globCache) bool {
 	for _, e := range ee {
 		if !(((e.Push || e.Admin) && access == "push") || (e.Admin && access == "admin")) {
 			continue
 		}
-		if g, err := glob.Compile(e.Repo); err == nil {
+		if g, err := gc.compileGlob(e.Repo); err == nil {
 			if g.Match(repo) && e.User == user {
 				return true
 			}
@@ -434,4 +438,17 @@ func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedCon
 		mc.TestingOwnerlessAllowed = *rc.TestingOwnerlessAllowed
 	}
 	return mc
+}
+
+// compileGlob returns cached glob if present, otherwise attempts glob.Compile.
+func (g globCache) compileGlob(s string) (glob.Glob, error) {
+	if glob, ok := g[s]; ok {
+		return glob, nil
+	}
+	c, err := glob.Compile(s)
+	if err != nil {
+		return nil, err
+	}
+	g[s] = c
+	return c, nil
 }
