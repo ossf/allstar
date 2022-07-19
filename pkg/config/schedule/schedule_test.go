@@ -12,22 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package schedule_test
+package schedule
 
 import (
 	"testing"
 	"time"
 
 	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/config/schedule"
 )
 
-func boolptr(b bool) *bool {
-	return &b
+func timeFromDay(wd time.Weekday) time.Time {
+	return time.Date(1998, 9, 6+int(wd), 11, 0, 0, 0, time.UTC)
 }
 
-func timeFromDay(weekday time.Weekday) time.Time {
-	return time.Date(1998, 9, 6+int(weekday), 11, 0, 0, 0, time.UTC)
+func setDay(wd time.Weekday) {
+	timeNow = func() time.Time {
+		return timeFromDay(wd)
+	}
 }
 
 func TestShouldPerform(t *testing.T) {
@@ -35,36 +36,41 @@ func TestShouldPerform(t *testing.T) {
 		sch := &config.ScheduleConfig{
 			Days: []string{"saturday", "sunday"},
 		}
-		if perf, err := schedule.ShouldPerform(sch, schedule.ScheduleActionIssuePing, timeFromDay(time.Monday)); err != nil || perf == false {
-			t.Errorf("Expected to perform issue ping %v", err)
+		setDay(time.Monday)
+		if perf := ShouldPerform(sch); perf == false {
+			t.Errorf("Expected to perform issue ping")
 		}
 	})
 	t.Run("AllowNilDays", func(t *testing.T) {
 		sch := &config.ScheduleConfig{}
-		if perf, err := schedule.ShouldPerform(sch, schedule.ScheduleActionIssueCreate, timeFromDay(time.Monday)); err != nil || perf == false {
-			t.Errorf("Expected to perform issue create %v", err)
+		setDay(time.Monday)
+		if perf := ShouldPerform(sch); perf == false {
+			t.Errorf("Expected to perform issue create")
 		}
 	})
 	t.Run("AllowNilSchedule", func(t *testing.T) {
 		var sch *config.ScheduleConfig
-		if perf, err := schedule.ShouldPerform(sch, schedule.ScheduleActionIssueCreate, timeFromDay(time.Monday)); err != nil || perf == false {
-			t.Errorf("Expected to perform issue create %v", err)
+		setDay(time.Monday)
+		if perf := ShouldPerform(sch); perf == false {
+			t.Errorf("Expected to perform issue create")
 		}
 	})
 	t.Run("DenyDay", func(t *testing.T) {
 		sch := &config.ScheduleConfig{
 			Days: []string{"monday", "tuesday"},
 		}
-		if perf, err := schedule.ShouldPerform(sch, schedule.ScheduleActionIssuePing, timeFromDay(time.Tuesday)); err != nil || perf == true {
-			t.Errorf("Expected to not perform issue ping %v", err)
+		setDay(time.Tuesday)
+		if perf := ShouldPerform(sch); perf == true {
+			t.Errorf("Expected to not perform issue ping")
 		}
 	})
 	t.Run("DenyOverride", func(t *testing.T) {
 		sch := &config.ScheduleConfig{
 			Days: []string{"monday", "wednesday"},
 		}
-		if perf, err := schedule.ShouldPerform(sch, schedule.ScheduleActionIssuePing, timeFromDay(time.Wednesday)); err != nil || perf == true {
-			t.Errorf("Expected to not perform issue ping %v", err)
+		setDay(time.Wednesday)
+		if perf := ShouldPerform(sch); perf == true {
+			t.Errorf("Expected to not perform issue ping")
 		}
 	})
 }
@@ -73,32 +79,32 @@ func TestMergeSchedules(t *testing.T) {
 	sch1 := &config.ScheduleConfig{}
 	sch2 := &config.ScheduleConfig{}
 	t.Run("Nil", func(t *testing.T) {
-		if schedule.MergeSchedules(nil, nil, nil) != nil {
+		if MergeSchedules(nil, nil, nil) != nil {
 			t.Errorf("Expected nil config")
 		}
 	})
 	t.Run("oc", func(t *testing.T) {
-		if schedule.MergeSchedules(sch1, nil, nil) != sch1 {
+		if MergeSchedules(sch1, nil, nil) != sch1 {
 			t.Errorf("Expected sch1 config")
 		}
 	})
 	t.Run("orc", func(t *testing.T) {
-		if schedule.MergeSchedules(nil, sch1, nil) != sch1 {
+		if MergeSchedules(nil, sch1, nil) != sch1 {
 			t.Errorf("Expected sch1 config")
 		}
 	})
 	t.Run("rc", func(t *testing.T) {
-		if schedule.MergeSchedules(nil, nil, sch1) != sch1 {
+		if MergeSchedules(nil, nil, sch1) != sch1 {
 			t.Errorf("Expected sch1 config")
 		}
 	})
 	t.Run("oc-rc", func(t *testing.T) {
-		if schedule.MergeSchedules(sch1, nil, sch2) != sch2 {
+		if MergeSchedules(sch1, nil, sch2) != sch2 {
 			t.Errorf("Expected sch2 config")
 		}
 	})
 	t.Run("oc-orc", func(t *testing.T) {
-		if schedule.MergeSchedules(sch1, sch2, nil) != sch2 {
+		if MergeSchedules(sch1, sch2, nil) != sch2 {
 			t.Errorf("Expected sch2 config")
 		}
 	})

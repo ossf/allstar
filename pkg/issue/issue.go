@@ -44,11 +44,11 @@ type issues interface {
 }
 
 var configGetAppConfigs func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig)
-var timeNow func() time.Time
+var scheduleShouldPerform func(*config.ScheduleConfig) bool
 
 func init() {
 	configGetAppConfigs = config.GetAppConfigs
-	timeNow = time.Now
+	scheduleShouldPerform = schedule.ShouldPerform
 }
 
 func getPolicyIssue(ctx context.Context, issues issues, owner, repo, policy, title, label string) (*github.Issue, error) {
@@ -95,12 +95,12 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 	if err != nil {
 		return err
 	}
-	now := timeNow()
 	oc, orc, rc := configGetAppConfigs(ctx, c, owner, repo)
 	osc := schedule.MergeSchedules(oc.Schedule, orc.Schedule, rc.Schedule)
-	createIssue, _ := schedule.ShouldPerform(osc, schedule.ScheduleActionIssueCreate, now)
-	pingIssue, _ := schedule.ShouldPerform(osc, schedule.ScheduleActionIssuePing, now)
-	if issue == nil && createIssue {
+	if !scheduleShouldPerform(osc) {
+		return nil
+	}
+	if issue == nil {
 		var footer string
 		if oc.IssueFooter == "" {
 			footer = operator.GitHubIssueFooter
@@ -131,7 +131,7 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		}
 		return err
 	}
-	if issue.GetState() == "closed" && createIssue {
+	if issue.GetState() == "closed" {
 		state := "open"
 		update := &github.IssueRequest{
 			State: &state,
@@ -154,7 +154,7 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		_, _, err := issues.CreateComment(ctx, owner, issueRepo, issue.GetNumber(), comment)
 		return err
 	}
-	if issue.GetUpdatedAt().Before(time.Now().Add(-1*operator.NoticePingDuration)) && pingIssue {
+	if issue.GetUpdatedAt().Before(time.Now().Add(-1 * operator.NoticePingDuration)) {
 		body := "Updating issue after ping interval. Status:\n" + text
 		comment := &github.IssueComment{
 			Body: &body,

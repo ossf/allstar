@@ -21,16 +21,7 @@ import (
 	"time"
 
 	"github.com/ossf/allstar/pkg/config"
-)
-
-// ScheduleAction represents an action which can be configured in
-// config.ScheduleConfig.
-type ScheduleAction int
-
-const (
-	// ScheduleActionIssueCreate :
-	ScheduleActionIssueCreate ScheduleAction = iota
-	ScheduleActionIssuePing
+	"github.com/rs/zerolog/log"
 )
 
 var weekdayStrings = map[string]time.Weekday{
@@ -43,16 +34,26 @@ var weekdayStrings = map[string]time.Weekday{
 	"saturday":  time.Saturday,
 }
 
+var timeNow func() time.Time
+
+func init() {
+	timeNow = time.Now
+}
+
 // ShouldPerform determines whether an action should be performed based on sch.
 // The error may be ignored for default create behavior.
-func ShouldPerform(sch *config.ScheduleConfig, action ScheduleAction, at time.Time) (bool, error) {
+func ShouldPerform(sch *config.ScheduleConfig) bool {
+	at := timeNow()
 	if sch == nil {
-		return true, nil
+		return true
 	}
 	// Get the day in timezone specified or default "" => UTC
 	loc, err := time.LoadLocation(sch.Timezone)
 	if err != nil {
-		return true, err
+		log.Warn().
+			Str("tzstring", sch.Timezone).
+			Msg("Failed to load malformed timezone.")
+		return false
 	}
 	weekdayInLoc := at.In(loc).Weekday()
 	// Check if weekday match in days
@@ -64,11 +65,11 @@ func ShouldPerform(sch *config.ScheduleConfig, action ScheduleAction, at time.Ti
 		wds = strings.ToLower(wds)
 		if wd, ok := weekdayStrings[wds]; ok {
 			if wd == weekdayInLoc {
-				return false, nil
+				return false
 			}
 		}
 	}
-	return true, nil
+	return true
 }
 
 // MergeSchedules gets the preferred ScheduleConfig from the ScheduleConfigs provided
