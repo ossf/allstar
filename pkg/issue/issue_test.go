@@ -243,11 +243,7 @@ func TestEnsure(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
 			sch := &config.ScheduleConfig{
 				Timezone: "UTC",
-				Actions: config.ScheduleConfigActions{
-					Issue: boolptr(false),
-					Ping:  boolptr(true),
-				},
-				Days: []string{"not-a-day", "monday"},
+				Days:     []string{"not-a-day", "monday"},
 			}
 			return &config.OrgConfig{Schedule: nil}, &config.RepoConfig{Schedule: sch}, &config.RepoConfig{Schedule: nil}
 		}
@@ -281,55 +277,11 @@ func TestEnsure(t *testing.T) {
 			t.Error("Expected no issue to be created")
 		}
 	})
-	t.Run("NoIssueScheduleAllowsViaActions", func(t *testing.T) {
-		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
-			sch := &config.ScheduleConfig{
-				Timezone: "UTC",
-				Actions: config.ScheduleConfigActions{
-					Issue: boolptr(true),
-				},
-				Days: []string{"not-a-day", "wednesday"},
-			}
-			return &config.OrgConfig{Schedule: sch}, &config.RepoConfig{Schedule: nil}, &config.RepoConfig{Schedule: nil}
-		}
-		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
-			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
-		}
-		createCalled := false
-		create = func(ctx context.Context, owner string, repo string,
-			issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
-			if *issue.Title != issueTitle {
-				t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
-			}
-			if (*issue.Labels)[0] != operator.GitHubIssueLabel {
-				t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
-			}
-			if *issue.Body != body {
-				t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), body)
-			}
-			createCalled = true
-			return nil, nil, nil
-		}
-		edit = nil
-		createComment = nil
-		setDay(time.Wednesday)
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
-		if err != nil {
-			t.Fatalf("Unexpected error: %v", err)
-		}
-		if createCalled != true {
-			t.Error("Expected issue to be created")
-		}
-	})
 	t.Run("NoIssueScheduleAllowsViaDays", func(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
 			sch := &config.ScheduleConfig{
 				Timezone: "UTC",
-				Actions: config.ScheduleConfigActions{
-					Issue: boolptr(false),
-				},
-				Days: []string{"not-a-day", "tuesday"},
+				Days:     []string{"not-a-day", "tuesday"},
 			}
 			return &config.OrgConfig{Schedule: sch}, &config.RepoConfig{Schedule: nil}, &config.RepoConfig{Schedule: nil}
 		}
@@ -367,10 +319,7 @@ func TestEnsure(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
 			sch := &config.ScheduleConfig{
 				Timezone: "UTC",
-				Actions: config.ScheduleConfigActions{
-					Issue: boolptr(false),
-				},
-				Days: []string{"not-a-day", "wednesday"},
+				Days:     []string{"not-a-day", "wednesday"},
 			}
 			return &config.OrgConfig{Schedule: nil}, &config.RepoConfig{Schedule: nil}, &config.RepoConfig{Schedule: sch}
 		}
@@ -408,10 +357,7 @@ func TestEnsure(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
 			sch := &config.ScheduleConfig{
 				Timezone: "UTC",
-				Actions: config.ScheduleConfigActions{
-					Ping: boolptr(false),
-				},
-				Days: []string{"not-a-day", "sunday"},
+				Days:     []string{"not-a-day", "sunday"},
 			}
 			return &config.OrgConfig{Schedule: sch}, &config.RepoConfig{Schedule: nil}, &config.RepoConfig{Schedule: nil}
 		}
@@ -451,11 +397,7 @@ func TestEnsure(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
 			sch := &config.ScheduleConfig{
 				Timezone: "UTC",
-				Actions: config.ScheduleConfigActions{
-					Issue: boolptr(false),
-					Ping:  boolptr(true),
-				},
-				Days: []string{"not-a-day", "thursday"},
+				Days:     []string{"not-a-day", "thursday"},
 			}
 			return &config.OrgConfig{Schedule: nil}, &config.RepoConfig{Schedule: sch}, &config.RepoConfig{Schedule: nil}
 		}
@@ -495,10 +437,7 @@ func TestEnsure(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
 			sch := &config.ScheduleConfig{
 				Timezone: "UTC",
-				Actions: config.ScheduleConfigActions{
-					Issue: boolptr(false),
-				},
-				Days: []string{"not-a-day", "tuesday"},
+				Days:     []string{"not-a-day", "tuesday"},
 			}
 			return &config.OrgConfig{Schedule: nil}, &config.RepoConfig{Schedule: sch}, &config.RepoConfig{Schedule: nil}
 		}
