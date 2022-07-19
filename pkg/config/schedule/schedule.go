@@ -53,7 +53,7 @@ func ShouldPerform(sch *config.ScheduleConfig) bool {
 		log.Warn().
 			Str("tzstring", sch.Timezone).
 			Msg("Failed to load malformed timezone.")
-		return false
+		return true
 	}
 	weekdayInLoc := at.In(loc).Weekday()
 	// Check if weekday match in days

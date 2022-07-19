@@ -58,10 +58,6 @@ func (m mockIssues) CreateComment(ctx context.Context, owner string, repo string
 	return createComment(ctx, owner, repo, number, comment)
 }
 
-func boolptr(b bool) *bool {
-	return &b
-}
-
 func setShouldPerform(b bool) {
 	scheduleShouldPerform = func(*config.ScheduleConfig) bool {
 		return b
