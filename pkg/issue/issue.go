@@ -100,7 +100,7 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		} else {
 			footer = fmt.Sprintf("%v\n\n%v", oc.IssueFooter, operator.GitHubIssueFooter)
 		}
-		refersTo := ""
+		var refersTo string
 		if issueRepo != repo {
 			ownerRepo := fmt.Sprintf("%s/%s", owner, repo)
 			refersTo = fmt.Sprintf(" and refers to [%s](https://github.com/%s)", ownerRepo, ownerRepo)
