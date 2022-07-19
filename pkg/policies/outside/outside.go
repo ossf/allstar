@@ -86,9 +86,6 @@ type OrgConfig struct {
 	// Exemptions are only defined at the org level because they should be made
 	// obvious to org security managers.
 	Exemptions []*OutsideExemption `json:"exemptions"`
-
-	// globCache is used to cache compiled globs for matching repos in the org.
-	globCache globCache
 }
 
 // RepoConfig is the repo-level config for Outside Collaborators security
@@ -185,7 +182,6 @@ func (o Outside) Check(ctx context.Context, c *github.Client, owner,
 func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
-	oc.globCache = globCache{}
 	enabled, err := configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 	if err != nil {
 		return nil, err
@@ -210,12 +206,14 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 
 	mc := mergeConfig(oc, orc, rc, repo)
 
+	gc := globCache{}
+
 	var d details
-	outAdmins, err := getUsers(ctx, rep, owner, repo, "admin", "outside", mc.Exemptions, oc.globCache)
+	outAdmins, err := getUsers(ctx, rep, owner, repo, "admin", "outside", mc.Exemptions, gc)
 	if err != nil {
 		return nil, err
 	}
-	outPushers, err := getUsers(ctx, rep, owner, repo, "push", "outside", mc.Exemptions, oc.globCache)
+	outPushers, err := getUsers(ctx, rep, owner, repo, "push", "outside", mc.Exemptions, gc)
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +222,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	d.OutsidePushCount = len(outPushers)
 	d.OutsidePushers = outPushers
 
-	directAdmins, err := getUsers(ctx, rep, owner, repo, "admin", "direct", mc.Exemptions, oc.globCache)
+	directAdmins, err := getUsers(ctx, rep, owner, repo, "admin", "direct", mc.Exemptions, gc)
 	if err != nil {
 		return nil, err
 	}
