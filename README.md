@@ -72,7 +72,7 @@ Allstar is highly configurable. There are three main levels of controls:
    -  most repositories, except some that are opted out; 
    -  just a few repositories that are opted in. 
 
-These configurations are done in the organization's .`allstar` repository.
+These configurations are done in the organization's `.allstar` repository.
 
 - **Repo level:** Repository maintainers in an organization that uses
    Allstar can choose to opt their repository in or out of organization-level
@@ -171,12 +171,20 @@ policy violations by filing an issue. This is the quickest and easiest way to st
 
 Effort: very easy 
 
-Steps:   
-1) Install the [Allstar app](https://github.com/apps/allstar-app) (choose "All
-Repositories" under Repository Access, even if you plan to disable Allstar on some repositories later)  
-2) Fork the [sample repository
-](https://github.com/jeffmendoza/dot-allstar-quickstart) (simply click "Fork" button in the top right corner of the linked page) 
-3) Rename your fork to be `.allstar` instead of `dot-allstar-quickstart`
+Steps:
+
+1.  Install the Allstar app
+    1.  [Open the installation
+        page](https://github.com/apps/allstar-app) and click Configure
+    1.  If you have multiple organizations, select the one you want to
+        install Allstar on
+    1.  Select "All Repositories" under Repository Access, even if you
+        plan to disable Allstar on some repositories later
+1.  Fork the sample repository
+    1.  [Open the sample repository](https://github.com/jeffmendoza/dot-allstar-quickstart)
+        and click the "Use this template" button
+    1.  In the field for Repository Name, type `.allstar`
+    1.  Click "Create repository from template"
 
 That's it! All current Allstar [policies](#policies) are now enabled on all
 your repositories. Allstar will create an issue if a policy is violated. 
