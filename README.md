@@ -341,7 +341,6 @@ for more information on each check.
 
 - Ensure dependabot is enabled.
 - Check that dependencies are pinned/frozen.
-- More [checks from scorecard](https://github.com/ossf/scorecard/#scorecard-checks).
 
 ## **Example Config Repository**
 
