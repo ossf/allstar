@@ -18,6 +18,7 @@ package scorecard
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/config/operator"
@@ -83,10 +84,18 @@ type details struct {
 }
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
+var configIsEnabled func(context.Context, config.OrgOptConfig, config.RepoOptConfig, config.RepoOptConfig, *github.Client, string, string) (bool, error)
+var scorecardGet func(context.Context, string, http.RoundTripper) (*scorecard.ScClient, error)
+
 var doNothingOnOptOut = operator.DoNothingOnOptOut
+
+var checksAllChecks checker.CheckNameToFnMap
 
 func init() {
 	configFetchConfig = config.FetchConfig
+	configIsEnabled = config.IsEnabled
+	checksAllChecks = checks.AllChecks
+	scorecardGet = scorecard.Get
 }
 
 // Scorecard is the Security Scorecard policy object, implements
@@ -109,7 +118,8 @@ func (b Scorecard) Name() string {
 func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
-	enabled, err := config.IsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
+	enabled, err := configIsEnabled(ctx, oc.OptConfig, orc.OptConfig,
+		rc.OptConfig, c, owner, repo)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +144,7 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 
 	fullName := fmt.Sprintf("%s/%s", owner, repo)
 	tr := c.Client().Transport
-	scc, err := scorecard.Get(ctx, fullName, tr)
+	scc, err := scorecardGet(ctx, fullName, tr)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +163,7 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 			Dlogger:    l,
 		}
 
-		res := checks.AllChecks[n].Fn(cr)
+		res := checksAllChecks[n].Fn(cr)
 		if res.Error != nil {
 			// We are not sure that all checks are safe to run inside Allstar, some
 			// might error, and we don't want to abort a whole org enforcement loop
@@ -174,15 +184,15 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 		if len(logs) > 0 {
 			f[n] = logs
 		}
-		if res.Score < mc.Threshold {
+		if res.Score < mc.Threshold && res.Score != checker.InconclusiveResultScore {
 			pass = false
 			if notify == "" {
-				notify = fmt.Sprintf(`Project is out of compliance with Security Scorecards policy
+				notify = `Project is out of compliance with Security Scorecards policy
 
 **Rule Description**
 This is a generic passthrough policy that runs the configured checks from Security Scorecards. Please see the [Security Scorecards Documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md#dangerous-workflow) for more infomation on each check.
 
-`)
+`
 			}
 			if len(logs) > 10 {
 				notify += fmt.Sprintf(
@@ -190,7 +200,8 @@ This is a generic passthrough policy that runs the configured checks from Securi
 						"- Run a Scorecards scan to see full list.\n\n",
 					res.Name, res.Reason, listJoin(logs[:10]))
 			} else {
-				notify += fmt.Sprintf("**Results from policy: %v : %v **\n\n%v\n", res.Name, res.Reason, listJoin(logs))
+				notify += fmt.Sprintf("**Results from policy: %v : %v **\n\n%v\n",
+					res.Name, res.Reason, listJoin(logs))
 			}
 		}
 	}
