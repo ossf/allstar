@@ -22,7 +22,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v43/github"
-	"github.com/ossf/allstar/pkg/ghclients"
 	"github.com/ossf/allstar/pkg/policydef"
 )
 
@@ -191,7 +190,7 @@ func TestRunPolicies(t *testing.T) {
 			policy1Results = test.Res
 			action = test.Action
 
-			enforceResults, err := RunPolicies(context.Background(), nil, "", repo, true)
+			enforceResults, err := runPoliciesReal(context.Background(), nil, "", repo, true)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -224,7 +223,7 @@ func TestRunPolicies(t *testing.T) {
 }
 
 func TestRunPoliciesOnInstRepos(t *testing.T) {
-	isBotEnabled = func(ctx context.Context, c *github.Client, owner, repo string) bool {
+	configIsBotEnabled = func(ctx context.Context, c *github.Client, owner, repo string) bool {
 		return true
 	}
 
@@ -306,7 +305,7 @@ func TestEnforceAll(t *testing.T) {
 			pol2{},
 		}
 	}
-	getAppInstallations = func(ctx context.Context, ghc ghclients.GhClientsInterface) ([]*github.Installation, error) {
+	getAppInstallations = func(ctx context.Context, ac *github.Client) ([]*github.Installation, error) {
 		var insts []*github.Installation
 		appID := int64(123456)
 		inst := &github.Installation{
@@ -315,7 +314,7 @@ func TestEnforceAll(t *testing.T) {
 		insts = append(insts, inst)
 		return insts, nil
 	}
-	getAppInstallationRepos = func(ctx context.Context, ghc ghclients.GhClientsInterface, ic *github.Client) ([]*github.Repository, *github.Response, error) {
+	getAppInstallationRepos = func(ctx context.Context, ic *github.Client) ([]*github.Repository, *github.Response, error) {
 		var repos []*github.Repository
 		repo1Name := "repo1"
 		repo2Name := "repo2"
@@ -337,14 +336,14 @@ func TestEnforceAll(t *testing.T) {
 		repos = append(repos, newRepos...)
 		return repos, nil, nil
 	}
-	isBotEnabled = func(ctx context.Context, c *github.Client, owner, repo string) bool {
+	configIsBotEnabled = func(ctx context.Context, c *github.Client, owner, repo string) bool {
 		return true
 	}
 
 	mockGhc := &MockGhClients{}
 
 	// set back to real value to avoid test interference
-	runPolicies = RunPolicies
+	runPolicies = runPoliciesReal
 
 	type EnforceTest struct {
 		Name           string
