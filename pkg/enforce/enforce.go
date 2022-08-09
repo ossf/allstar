@@ -19,6 +19,7 @@ package enforce
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/ossf/allstar/pkg/config"
@@ -27,6 +28,7 @@ import (
 	"github.com/ossf/allstar/pkg/policies"
 	"github.com/ossf/allstar/pkg/policydef"
 	"github.com/ossf/allstar/pkg/scorecard"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/google/go-github/v43/github"
 	"github.com/rs/zerolog/log"
@@ -76,6 +78,10 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface) (EnforceA
 		Int("count", len(insts)).
 		Msg("Enforcing policies on installations.")
 
+	g, ctx := errgroup.WithContext(ctx)
+	g.SetLimit(5)
+	var mu sync.Mutex
+
 	for _, i := range insts {
 		ic, err := ghc.Get(*i.ID)
 		if err != nil {
@@ -85,45 +91,57 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface) (EnforceA
 				Msg("Unexpected error getting installation client.")
 			return nil, err
 		}
+		iid := *i.ID
 
-		repos, _, err := getAppInstallationRepos(ctx, ic)
-		// FIXME, not getting a rsp for this one, instead I think it is a special
-		// error that I need to introspect. just continue on all errors here
-		// temporarily to fix prod.
-		// if err != nil && rsp != nil && rsp.StatusCode == http.StatusForbidden {
-		// 	log.Error().
-		// 		Err(err).
-		// 		Msg("Skip installation, forbidden.")
-		// 	continue
-		// }
-		if err != nil {
-			log.Error().
-				Err(err).
-				Msg("Unexpected error listing installation repos.")
-			// return nil, err
-			continue
-		}
+		g.Go(func() error {
 
-		log.Info().
-			Str("area", "bot").
-			Int64("id", *i.ID).
-			Int("count", len(repos)).
-			Msg("Enforcing policies on repos of installation.")
-		repoCount = repoCount + len(repos)
-
-		instResults, err := runPoliciesOnInstRepos(ctx, repos, ic)
-		for policyName, results := range instResults {
-			if enforceAllResults[policyName] == nil {
-				enforceAllResults[policyName] = make(map[string]int)
+			repos, _, err := getAppInstallationRepos(ctx, ic)
+			// FIXME, not getting a rsp for this one, instead I think it is a special
+			// error that I need to introspect. just continue on all errors here
+			// temporarily to fix prod.
+			// if err != nil && rsp != nil && rsp.StatusCode == http.StatusForbidden {
+			// 	log.Error().
+			// 		Err(err).
+			// 		Msg("Skip installation, forbidden.")
+			// 	continue
+			// }
+			if err != nil {
+				log.Error().
+					Err(err).
+					Msg("Unexpected error listing installation repos.")
+				// return nil, err
+				return nil
 			}
-			enforceAllResults[policyName]["totalFailed"] += results["totalFailed"]
-		}
-		if err != nil {
-			log.Error().
-				Err(err).
-				Msg("Unexpected error running policies.")
-			continue
-		}
+
+			log.Info().
+				Str("area", "bot").
+				Int64("id", iid).
+				Int("count", len(repos)).
+				Msg("Enforcing policies on repos of installation.")
+
+			instResults, err := runPoliciesOnInstRepos(ctx, repos, ic)
+
+			mu.Lock()
+			repoCount = repoCount + len(repos)
+			for policyName, results := range instResults {
+				if enforceAllResults[policyName] == nil {
+					enforceAllResults[policyName] = make(map[string]int)
+				}
+				enforceAllResults[policyName]["totalFailed"] += results["totalFailed"]
+			}
+			mu.Unlock()
+
+			if err != nil {
+				log.Error().
+					Err(err).
+					Msg("Unexpected error running policies.")
+				return nil
+			}
+			return nil
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return enforceAllResults, err
 	}
 	ghc.LogCacheSize()
 	log.Info().
