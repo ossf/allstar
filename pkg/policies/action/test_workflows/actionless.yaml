@@ -1,0 +1,9 @@
+name: "Test Workflow"
+on: [push, pull_request]
+
+jobs:
+  validation:
+    name: "Build"
+    runs-on: ubuntu-latest
+    steps:
+      - run: "echo hi"

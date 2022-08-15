@@ -1,0 +1,10 @@
+name: "Test Workflow"
+on: [push, pull_request]
+
+jobs:
+  validation:
+    name: "Build"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: some/action@696c241da8ea301b3f1d2343c45c1e4aa38f90c7

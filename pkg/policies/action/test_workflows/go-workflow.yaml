@@ -1,0 +1,10 @@
+name: "Go Workflow"
+on: [push, pull_request]
+
+jobs:
+  gostuff:
+    name: "Go stuff"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: "ossf/go-action@commit-ref-1"

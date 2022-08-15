@@ -1,0 +1,4 @@
+name: "Invalid"
+on: [push, pull_request]
+
+this isn't valid yaml
