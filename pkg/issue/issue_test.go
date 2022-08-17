@@ -58,6 +58,10 @@ func (m mockIssues) CreateComment(ctx context.Context, owner string, repo string
 	return createComment(ctx, owner, repo, number, comment)
 }
 
+func defaultEdit(ctx context.Context, s1, s2 string, i int, ir *github.IssueRequest) (*github.Issue, *github.Response, error) {
+	return nil, nil, nil
+}
+
 func setShouldPerform(b bool) {
 	scheduleShouldPerform = func(*config.ScheduleConfig) bool {
 		return b
@@ -186,7 +190,7 @@ func TestEnsure(t *testing.T) {
 		editCalled := false
 		edit = func(ctx context.Context, owner string, repo string, number int,
 			issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
-			if issue.GetState() != "open" {
+			if issue.GetState() != "open" && issue.GetBody() == "" {
 				t.Errorf("Unexpected state: %v", issue.GetState())
 			}
 			editCalled = true
@@ -212,6 +216,70 @@ func TestEnsure(t *testing.T) {
 			t.Error("Expected comment to be left")
 		}
 	})
+	t.Run("EditFreshIssueBodyExpected", func(t *testing.T) {
+		now := time.Now()
+		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+			return &config.OrgConfig{}, &config.RepoConfig{}, &config.RepoConfig{}
+		}
+		listByRepo = func(ctx context.Context, owner string, repo string,
+			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			return []*github.Issue{
+				&github.Issue{
+					Title:     &issueTitle,
+					State:     &open,
+					UpdatedAt: &now,
+					Body:      &body,
+				},
+			}, &github.Response{NextPage: 0}, nil
+		}
+		// Expect to not call nil functions
+		create = nil
+		edit = func(ctx context.Context, s1, s2 string, i int, ir *github.IssueRequest) (*github.Issue, *github.Response, error) {
+			t.Errorf("edit body to: \"%s\"", ir.GetBody())
+			return nil, nil, nil
+		}
+		createComment = nil
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+	})
+	t.Run("EditFreshIssueBodyDifferent", func(t *testing.T) {
+		now := time.Now()
+		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+			return &config.OrgConfig{}, &config.RepoConfig{}, &config.RepoConfig{}
+		}
+		newBody := "_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)._\n\n**Security Policy Violation**\nStatus text 2\n\n---\n\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
+		listByRepo = func(ctx context.Context, owner string, repo string,
+			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			return []*github.Issue{
+				&github.Issue{
+					Title:     &issueTitle,
+					State:     &open,
+					UpdatedAt: &now,
+					Body:      &body,
+				},
+			}, &github.Response{NextPage: 0}, nil
+		}
+		editCalled := false
+		// Expect to not call nil functions
+		create = nil
+		edit = func(ctx context.Context, s1, s2 string, i int, ir *github.IssueRequest) (*github.Issue, *github.Response, error) {
+			if ir.GetBody() != newBody {
+				t.Errorf("edit body to: \"%s\"", ir.GetBody())
+			}
+			editCalled = true
+			return nil, nil, nil
+		}
+		createComment = nil
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text 2")
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if !editCalled {
+			t.Errorf("Expected issue body to be edited")
+		}
+	})
 	t.Run("OpenFreshIssue", func(t *testing.T) {
 		now := time.Now()
 		listByRepo = func(ctx context.Context, owner string, repo string,
@@ -224,9 +292,9 @@ func TestEnsure(t *testing.T) {
 				},
 			}, &github.Response{NextPage: 0}, nil
 		}
+		edit = defaultEdit
 		// Expect to not call nil functions
 		create = nil
-		edit = nil
 		createComment = nil
 		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
 		if err != nil {
@@ -254,9 +322,9 @@ func TestEnsure(t *testing.T) {
 			commentCalled = true
 			return nil, nil, nil
 		}
+		edit = defaultEdit
 		// Expect to not call nil functions
 		create = nil
-		edit = nil
 		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
@@ -286,7 +354,7 @@ func TestEnsure(t *testing.T) {
 			createCalled = true
 			return nil, nil, nil
 		}
-		edit = nil
+		edit = defaultEdit
 		createComment = nil
 		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
 		if err != nil {
@@ -352,9 +420,9 @@ func TestEnsure(t *testing.T) {
 			commentCalled = true
 			return nil, nil, nil
 		}
+		edit = defaultEdit
 		// Expect to not call nil functions
 		create = nil
-		edit = nil
 		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
@@ -387,7 +455,6 @@ func TestEnsure(t *testing.T) {
 		}
 		// Expect to not call nil functions
 		create = nil
-		edit = nil
 		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)

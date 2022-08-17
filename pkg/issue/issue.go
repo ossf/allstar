@@ -97,27 +97,21 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 	}
 	oc, orc, rc := configGetAppConfigs(ctx, c, owner, repo)
 	osc := schedule.MergeSchedules(oc.Schedule, orc.Schedule, rc.Schedule)
-	if !scheduleShouldPerform(osc) {
-		return nil
+	ping := scheduleShouldPerform(osc)
+	var footer string
+	if oc.IssueFooter == "" {
+		footer = operator.GitHubIssueFooter
+	} else {
+		footer = fmt.Sprintf("%v\n\n%v", oc.IssueFooter, operator.GitHubIssueFooter)
 	}
+	issueBody := createIssueBody(owner, repo, text, footer, issueRepo != repo)
 	if issue == nil {
-		var footer string
-		if oc.IssueFooter == "" {
-			footer = operator.GitHubIssueFooter
-		} else {
-			footer = fmt.Sprintf("%v\n\n%v", oc.IssueFooter, operator.GitHubIssueFooter)
+		if !ping {
+			return nil
 		}
-		var refersTo string
-		if issueRepo != repo {
-			ownerRepo := fmt.Sprintf("%s/%s", owner, repo)
-			refersTo = fmt.Sprintf(" and refers to [%s](https://github.com/%s)", ownerRepo, ownerRepo)
-		}
-		body := fmt.Sprintf("_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)%s._\n\n**Security Policy Violation**\n"+
-			"%v\n\n---\n\n%v",
-			refersTo, text, footer)
 		new := &github.IssueRequest{
 			Title:  &title,
-			Body:   &body,
+			Body:   &issueBody,
 			Labels: &[]string{label},
 		}
 		_, rsp, err := issues.Create(ctx, owner, issueRepo, new)
@@ -130,6 +124,26 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 			return nil
 		}
 		return err
+	}
+	// If issue body not updated, edit it
+	if issue.GetBody() != issueBody {
+		update := &github.IssueRequest{
+			Body: &issueBody,
+		}
+		if _, rsp, err := issues.Edit(ctx, owner, issueRepo, issue.GetNumber(), update); err != nil {
+			if rsp != nil && (rsp.StatusCode == http.StatusGone || rsp.StatusCode == http.StatusForbidden) {
+				log.Warn().
+					Str("org", owner).
+					Str("repo", repo).
+					Str("area", policy).
+					Msg("Attempted update issue due to body change, but issues are disabled.")
+			}
+		}
+	}
+	// Exit here if ping disabled.
+	// Below are reopen (pings) and reply (pings)
+	if !ping {
+		return nil
 	}
 	if issue.GetState() == "closed" {
 		state := "open"
@@ -234,4 +248,15 @@ func getIssueRepoTitle(ctx context.Context, c *github.Client, owner, repo, polic
 		return oc.IssueRepo, fmt.Sprintf(issueRepoTitle, repo, policy)
 	}
 	return repo, fmt.Sprintf(sameRepoTitle, policy)
+}
+
+func createIssueBody(owner, repo, text, footer string, isIssueRepo bool) string {
+	var refersTo string
+	if isIssueRepo {
+		ownerRepo := fmt.Sprintf("%s/%s", owner, repo)
+		refersTo = fmt.Sprintf(" and refers to [%s](https://github.com/%s)", ownerRepo, ownerRepo)
+	}
+	return fmt.Sprintf("_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)%s._\n\n**Security Policy Violation**\n"+
+		"%v\n\n---\n\n%v",
+		refersTo, text, footer)
 }
