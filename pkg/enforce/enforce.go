@@ -250,7 +250,13 @@ func runPoliciesReal(ctx context.Context, c *github.Client, owner, repo string, 
 	for _, p := range ps {
 		r, err := p.Check(ctx, c, owner, repo)
 		if err != nil {
-			return nil, err
+			log.Warn().
+				Str("org", owner).
+				Str("repo", repo).
+				Str("area", p.Name()).
+				Err(err).
+				Msg("Policy check failed.")
+			continue
 		}
 		log.Info().
 			Str("org", owner).
