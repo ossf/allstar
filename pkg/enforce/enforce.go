@@ -250,7 +250,7 @@ func runPoliciesReal(ctx context.Context, c *github.Client, owner, repo string, 
 	for _, p := range ps {
 		r, err := p.Check(ctx, c, owner, repo)
 		if err != nil {
-			log.Warn().
+			log.Error().
 				Str("org", owner).
 				Str("repo", repo).
 				Str("area", p.Name()).
