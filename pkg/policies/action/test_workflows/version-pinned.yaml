@@ -7,4 +7,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: some/action@696c241da8ea301b3f1d2343c45c1e4aa38f90c7
+      - uses: ossf/required-action@v3
+      - uses: ossf/test-action@696c241da8ea301b3f1d2343c45c1e4aa38f90c7

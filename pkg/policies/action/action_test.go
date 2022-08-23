@@ -648,7 +648,7 @@ func TestCheck(t *testing.T) {
 								Method: "require",
 								Actions: []*ActionSelector{
 									{
-										Name:    "some/action",
+										Name:    "ossf/test-action",
 										Version: ">= v1.0.0",
 									},
 								},
@@ -658,7 +658,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			Releases: map[string][]*github.RepositoryRelease{
-				"some/action": {
+				"ossf/test-action": {
 					{
 						TagName:         strptr("v1.2.0"),
 						TargetCommitish: strptr("696c241da8ea301b3f1d2343c45c1e4aa38f90c7"),
@@ -685,7 +685,7 @@ func TestCheck(t *testing.T) {
 								Method: "require",
 								Actions: []*ActionSelector{
 									{
-										Name:    "some/action",
+										Name:    "ossf/test-action",
 										Version: ">= v1.0.0",
 									},
 								},
@@ -695,7 +695,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			Releases: map[string][]*github.RepositoryRelease{
-				"some/action": {
+				"ossf/test-action": {
 					{
 						TagName:         strptr("v0.9.0"),
 						TargetCommitish: strptr("696c241da8ea301b3f1d2343c45c1e4aa38f90c7"),
@@ -709,7 +709,7 @@ func TestCheck(t *testing.T) {
 			},
 			ExpectPass: false,
 			ExpectMessage: []string{
-				`Update Action \"some/action\" to * ">= v1.0.0"`,
+				`Update Action \"ossf/test-action\" to * ">= v1.0.0"`,
 			},
 		},
 		{
@@ -820,20 +820,72 @@ func TestCheck(t *testing.T) {
 			},
 			ExpectPass: true,
 		},
+		{
+			Name: "Invalid workflow present along with workflow with denied Action",
+			Org: OrgConfig{
+				Action: "issue",
+				Groups: []*RuleGroup{
+					{
+						Rules: []*Rule{
+							{
+								Name:   "Deny ossf/test-action",
+								Method: "deny",
+								Actions: []*ActionSelector{
+									{
+										Name: "ossf/test-action",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Workflows: []testingWorkflowMetadata{
+				{
+					File: "invalid.yaml",
+				},
+				{
+					File: "version-pinned.yaml",
+				},
+			},
+			ExpectPass: false,
+		},
+		{
+			Name: "Required Action present in workflow without correct \"on\" values",
+			Org: OrgConfig{
+				Action: "issue",
+				Groups: []*RuleGroup{
+					{
+						Rules: []*Rule{
+							{
+								Name:   "Require ossf/required-action",
+								Method: "require",
+								Actions: []*ActionSelector{
+									{
+										Name: "ossf/required-action",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Workflows: []testingWorkflowMetadata{
+				{
+					File: "no-on.yaml",
+				},
+			},
+			ExpectPass: false,
+			ExpectMessage: []string{
+				`Enable workflow "Test Workflow 2" containing Action "oss* to run on pull_request and push.`,
+			},
+		},
 	}
 
 	a := NewAction()
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			// Set rule group to each rule's group
-
-			for _, g := range test.Org.Groups {
-				for _, r := range g.Rules {
-					r.group = g
-				}
-			}
-
 			// Override external functions
 
 			configFetchConfig = func(ctx context.Context, c *github.Client, owner, repo, path string,
@@ -845,8 +897,8 @@ func TestCheck(t *testing.T) {
 				return nil
 			}
 
-			listWorkflows = func(ctx context.Context, c *github.Client, owner, repo string,
-				on []string) ([]*workflowMetadata, error) {
+			listWorkflows = func(ctx context.Context, c *github.Client, owner, repo string) (
+				[]*workflowMetadata, error) {
 				var wfs []*workflowMetadata
 				for _, w := range test.Workflows {
 					d, err := ioutil.ReadFile(filepath.Join("test_workflows", w.File))
@@ -856,7 +908,7 @@ func TestCheck(t *testing.T) {
 					workflow, errs := actionlint.Parse(d)
 					if len(errs) > 0 {
 						for _, er := range errs {
-							t.Logf("parse err: %s", er.Error())
+							t.Logf("parse err on %s: %s", w.File, er.Error())
 						}
 					}
 					if workflow == nil {

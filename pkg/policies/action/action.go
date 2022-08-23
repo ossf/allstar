@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package actionuse implements the Interactions security policy.
+// Package action implements the GitHub Actions security policy.
 package action
 
 import (
@@ -98,13 +98,6 @@ type Rule struct {
 	// rather than just one.
 	// [For use with "require" method]
 	RequireAll bool `json:"requireAll"`
-
-	// group references the RuleGroup to which this rule belongs
-	group *RuleGroup
-
-	// priorityInt is an int corresponding to Priority.
-	// Lower number = higher priority
-	priorityInt int
 }
 
 // RepoSelector specifies a selection of repos
@@ -145,11 +138,44 @@ type actionMetadata struct {
 	version          string
 	workflowFilename string
 	workflowName     string
+	workflowOn       []actionlint.Event
+}
+
+// internalRuleGroup is a RuleGroup using internalRule
+type internalRuleGroup struct {
+	*RuleGroup
+
+	// Rules is the set of rules to apply for this RuleGroup.
+	// Rules are applied in order of priority, with allow/require rules
+	// evaluated before deny rules at each priority tier.
+	Rules []*internalRule `json:"rules"`
+}
+
+// internalRule is an Action Use rule with added internal fields
+type internalRule struct {
+	*Rule
+
+	// group references the RuleGroup to which this rule belongs
+	group *RuleGroup
+
+	// priorityInt is an int corresponding to Priority.
+	// Lower value = higher priority
+	priorityInt int
+}
+
+// internalOrgConfig is the org-level Actions policy config with internalGroup
+type internalOrgConfig struct {
+	// Action defines which action to take, default log, other: issue...
+	Action string `json:"action"`
+
+	// Groups is the set of RuleGroups to employ during Check.
+	// They are evaluated in order.
+	Groups []*internalRuleGroup `json:"groups"`
 }
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
 
-var listWorkflows func(ctx context.Context, c *github.Client, owner, repo string, on []string) ([]*workflowMetadata, error)
+var listWorkflows func(ctx context.Context, c *github.Client, owner, repo string) ([]*workflowMetadata, error)
 var listLanguages func(ctx context.Context, c *github.Client, owner, repo string) (map[string]int, error)
 var listWorkflowRunsByFilename func(ctx context.Context, c *github.Client, owner, repo string, workflowFilename string) ([]*github.WorkflowRun, error)
 var getLatestCommitHash func(ctx context.Context, c *github.Client, owner, repo string) (string, error)
@@ -157,15 +183,15 @@ var listReleases func(ctx context.Context, c *github.Client, owner, repo string)
 
 func init() {
 	configFetchConfig = config.FetchConfig
-	listWorkflows = githubListWorkflows
-	listLanguages = githubListLanguages
-	listWorkflowRunsByFilename = githubListWorkflowRunsByFilename
-	getLatestCommitHash = githubGetLatestCommitHash
-	listReleases = githubListReleases
+	listWorkflows = listWorkflowsReal
+	listLanguages = listLanguagesReal
+	listWorkflowRunsByFilename = listWorkflowRunsByFilenameReal
+	getLatestCommitHash = getLatestCommitHashReal
+	listReleases = listReleasesReal
 }
 
 // sortableRules is a sortable list of *Rule
-type sortableRules []*Rule
+type sortableRules []*internalRule
 
 // Action is the Action Use policy object, implements policydef.Policy.
 type Action bool
@@ -205,7 +231,7 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 	// Get workflows.
 	// Workflows should have push and pull_request listed as trigger events
 	// in order to qualify.
-	wfs, err := listWorkflows(ctx, c, owner, repo, []string{"push", "pull_request"})
+	wfs, err := listWorkflows(ctx, c, owner, repo)
 	if err != nil {
 		return nil, err
 	}
@@ -254,6 +280,7 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 					version:          version,
 					workflowFilename: wf.filename,
 					workflowName:     wf.workflow.Name.Value,
+					workflowOn:       wf.workflow.On,
 				})
 			}
 		}
@@ -276,12 +303,13 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 			match, err := rs.match(ctx, c, owner, repo, repoSelectorExcludeDepthLimit, gc, sc)
 
 			if err != nil {
-				log.Warn().
+				log.Info().
 					Str("org", owner).
 					Str("repo", repo).
 					Str("area", polName).
 					Err(err).
-					Msg("Skipping rule with invalid RepoSelector")
+					Msg("Invalid RepoSelector, will skip.")
+				continue
 			}
 
 			if match {
@@ -369,7 +397,7 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 	combinedExplain := ""
 
 	// Use this map to dedupe Rules
-	failedRules := map[*Rule]struct{}{}
+	failedRules := map[*internalRule]struct{}{}
 
 	for _, result := range results {
 		if !result.passed() {
@@ -383,7 +411,7 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 	}
 
 	for r, _ := range failedRules {
-		d.FailedRules = append(d.FailedRules, r)
+		d.FailedRules = append(d.FailedRules, r.Rule)
 	}
 
 	notifyText := fmt.Sprintf(failText, combinedExplain, polName)
@@ -418,7 +446,7 @@ func (a Action) GetAction(ctx context.Context, c *github.Client, owner, repo str
 	return oc.Action
 }
 
-func getConfig(ctx context.Context, c *github.Client, owner, repo string) *OrgConfig {
+func getConfig(ctx context.Context, c *github.Client, owner, repo string) *internalOrgConfig {
 	oc := &OrgConfig{ // Fill out non-zero defaults
 		Action: "log",
 	}
@@ -432,23 +460,34 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) *OrgCo
 			Err(err).
 			Msg("Unexpected config error, using defaults.")
 	}
+	var gs []*internalRuleGroup
 	// Initialize values in each rule
 	for _, g := range oc.Groups {
+		ig := &internalRuleGroup{
+			RuleGroup: g,
+			Rules:     nil,
+		}
 		for _, r := range g.Rules {
+			ir := &internalRule{Rule: r}
 			// Set each rule's group to its *RuleGroup
-			r.group = g
+			ir.group = g
 			// Set each rule's priorityInt to an int corresponding to Priority
 			if p, ok := priorities[r.Priority]; ok {
-				r.priorityInt = p
+				ir.priorityInt = p
 			} else {
-				r.priorityInt, ok = priorities["medium"]
+				ir.priorityInt, ok = priorities["medium"]
 				if !ok {
-					r.priorityInt = 2
+					ir.priorityInt = 2
 				}
 			}
+			ig.Rules = append(ig.Rules, ir)
 		}
+		gs = append(gs, ig)
 	}
-	return oc
+	return &internalOrgConfig{
+		Action: oc.Action,
+		Groups: gs,
+	}
 }
 
 // resolveVersion gets a *semver.Version given an actionMetadata.
@@ -610,10 +649,10 @@ func (s sortableRules) Swap(i, j int) {
 	s[j] = hold
 }
 
-// githubGetLatestCommitHash gets the latest commit hash for a repo's default
+// getLatestCommitHashReal gets the latest commit hash for a repo's default
 // branch using the GitHub API.
 // Docs: https://docs.github.com/en/rest/commits/commits#list-commits
-func githubGetLatestCommitHash(ctx context.Context, c *github.Client, owner, repo string) (string, error) {
+func getLatestCommitHashReal(ctx context.Context, c *github.Client, owner, repo string) (string, error) {
 	commits, _, err := c.Repositories.ListCommits(ctx, owner, repo, &github.CommitsListOptions{})
 	if err != nil {
 		return "", err
@@ -624,28 +663,32 @@ func githubGetLatestCommitHash(ctx context.Context, c *github.Client, owner, rep
 	return "", fmt.Errorf("repo has no commits: %w", err)
 }
 
-// githubListWorkflowRunsByFilename returns workflow runs for a repo by
+// listWorkflowRunsByFilenameReal returns workflow runs for a repo by
 // workflow filename.
 // Docs:
 // https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs
-func githubListWorkflowRunsByFilename(ctx context.Context, c *github.Client, owner, repo string, workflowFilename string) ([]*github.WorkflowRun, error) {
+func listWorkflowRunsByFilenameReal(ctx context.Context, c *github.Client, owner, repo string, workflowFilename string) ([]*github.WorkflowRun, error) {
 	runs, _, err := c.Actions.ListWorkflowRunsByFileName(ctx, owner, repo, workflowFilename, &github.ListWorkflowRunsOptions{
 		Event: "push",
 	})
 	return runs.WorkflowRuns, err
 }
 
-// githubListLanguages uses the GitHub API to list languages.
+// listLanguagesReal uses the GitHub API to list languages.
 // Docs: https://docs.github.com/en/rest/repos/repos#list-repository-languages
-func githubListLanguages(ctx context.Context, c *github.Client, owner, repo string) (map[string]int, error) {
+func listLanguagesReal(ctx context.Context, c *github.Client, owner, repo string) (map[string]int, error) {
 	l, _, err := c.Repositories.ListLanguages(ctx, owner, repo)
 	return l, err
 }
 
-// githubListWorkflows returns workflows for a repo. If on is specified, will
+// listWorkflowsReal returns workflows for a repo. If on is specified, will
 // filter to workflows with all trigger events listed in on.
 // Docs: https://docs.github.com/en/rest/repos/contents#get-repository-content
-func githubListWorkflows(ctx context.Context, c *github.Client, owner, repo string, on []string) ([]*workflowMetadata, error) {
+func listWorkflowsReal(ctx context.Context, c *github.Client, owner, repo string) ([]*workflowMetadata, error) {
+	// TODO add cacheable walk to workflows dir here.
+	// See pkg/config/contents.go for similar. The difference here is getting
+	// dir rather than file contents. Could be nice to modify config's
+	// implementation and make it public for use here.
 	_, workflowDirContents, resp, err := c.Repositories.GetContents(ctx, owner, repo, ".github/workflows", &github.RepositoryContentGetOptions{})
 	if err != nil {
 		if resp.StatusCode == 404 {
@@ -712,32 +755,6 @@ func githubListWorkflows(ctx context.Context, c *github.Client, owner, repo stri
 		if wf == nil {
 			continue
 		}
-		// Filter if required trigger events specified
-		if on != nil {
-			allowByOnFilter := true
-			for _, o := range on {
-				contains := false
-				for _, oa := range wf.On {
-					if o == oa.EventName() {
-						contains = true
-					}
-				}
-				if !contains {
-					allowByOnFilter = false
-					break
-				}
-			}
-			if !allowByOnFilter {
-				log.Info().
-					Str("org", owner).
-					Str("repo", repo).
-					Str("area", polName).
-					Str("path", wfc.GetPath()).
-					Strs("on", on).
-					Msg("Skipping workflow due to missing on trigger(s).")
-				continue
-			}
-		}
 		workflows = append(workflows, &workflowMetadata{
 			filename: wfc.GetName(),
 			workflow: wf,
@@ -746,9 +763,9 @@ func githubListWorkflows(ctx context.Context, c *github.Client, owner, repo stri
 	return workflows, nil
 }
 
-// githubListReleases uses the GitHub API to list releases for a repo.
+// listReleasesReal uses the GitHub API to list releases for a repo.
 // Docs: https://docs.github.com/en/rest/releases/releases#list-releases
-func githubListReleases(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryRelease, error) {
+func listReleasesReal(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryRelease, error) {
 	releases, _, err := c.Repositories.ListReleases(ctx, owner, repo, &github.ListOptions{})
 	if err != nil {
 		return nil, err

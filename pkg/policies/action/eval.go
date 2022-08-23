@@ -17,12 +17,13 @@ package action
 import (
 	"context"
 	"fmt"
-
 	"github.com/google/go-github/v43/github"
 )
 
+var requireWorkflowOnForRequire = []string{"pull_request", "push"}
+
 // evaluateActionDenied evaluates an Action against a set of Rules
-func evaluateActionDenied(ctx context.Context, c *github.Client, rules []*Rule, action *actionMetadata, gc globCache, sc semverCache) (*denyRuleEvaluationResult, []error) {
+func evaluateActionDenied(ctx context.Context, c *github.Client, rules []*internalRule, action *actionMetadata, gc globCache, sc semverCache) (*denyRuleEvaluationResult, []error) {
 	result := &denyRuleEvaluationResult{
 		denied:         false,
 		actionMetadata: action,
@@ -107,7 +108,7 @@ func evaluateActionDenied(ctx context.Context, c *github.Client, rules []*Rule, 
 }
 
 // evaluateRequireRule evaluates a require rule against a set of Actions
-func evaluateRequireRule(ctx context.Context, c *github.Client, owner, repo string, rule *Rule,
+func evaluateRequireRule(ctx context.Context, c *github.Client, owner, repo string, rule *internalRule,
 	actions []*actionMetadata, headSHA string, gc globCache, sc semverCache) (*requireRuleEvaluationResult, error) {
 	if rule.Method != "require" {
 		return nil, fmt.Errorf("rule is not a require rule")
@@ -149,6 +150,27 @@ func evaluateRequireRule(ctx context.Context, c *github.Client, owner, repo stri
 				}
 				// Name mismatch, keep looking
 				continue
+			}
+
+			on := map[string]struct{}{}
+			for _, o := range a.workflowOn {
+				on[o.EventName()] = struct{}{}
+			}
+			hasRequired := true
+			for _, requireOn := range requireWorkflowOnForRequire {
+				if _, ok := on[requireOn]; !ok {
+					hasRequired = false
+				}
+			}
+			if !hasRequired {
+				// Workflow does not have required "on" values
+				suggestedFix = &requireRuleEvaluationFix{
+					fixMethod:               requireRuleEvaluationFixMethodEnable,
+					actionName:              a.name,
+					actionVersionConstraint: ra.Version,
+					workflowName:            a.workflowName,
+				}
+				break
 			}
 
 			// Check if passing (if the Action is required to be)

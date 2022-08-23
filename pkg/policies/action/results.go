@@ -27,9 +27,9 @@ type ruleEvaluationResult interface {
 	// explain provides a string explanation for the outcome of the evaluation
 	explain() string
 
-	// relevantRule returns a key Rule to the result, if any.
+	// relevantRule returns a key internalRule to the result, if any.
 	// Should always be non-nil on passed = false
-	relevantRule() *Rule
+	relevantRule() *internalRule
 }
 
 // denyRuleEvaluationResult represents the result of a deny rule evaluation on
@@ -40,7 +40,7 @@ type denyRuleEvaluationResult struct {
 
 	// denyingRule is the rule which denied the Action, or nil if not
 	// denied.
-	denyingRule *Rule
+	denyingRule *internalRule
 
 	// actionMetadata is the metadata of the Action being evaluated.
 	actionMetadata *actionMetadata
@@ -68,7 +68,7 @@ type denyRuleEvaluationStepResult struct {
 	status denyRuleStepStatus
 
 	// rule is the rule being evaluated at this step.
-	rule *Rule
+	rule *internalRule
 
 	// ruleVersionConstraint is the version constraint for the evaluated Action
 	// within the rule evaluated on this step.
@@ -82,7 +82,7 @@ func (de *denyRuleEvaluationResult) passed() bool {
 
 func (de *denyRuleEvaluationResult) explain() string {
 	if de.denyingRule == nil {
-		de.denyingRule = &Rule{Name: "Name unknown"}
+		de.denyingRule = &internalRule{Rule: &Rule{Name: "Name unknown"}}
 	}
 	s := ""
 	if de.denied {
@@ -97,7 +97,7 @@ func (de *denyRuleEvaluationResult) explain() string {
 	return s
 }
 
-func (de *denyRuleEvaluationResult) relevantRule() *Rule {
+func (de *denyRuleEvaluationResult) relevantRule() *internalRule {
 	return de.denyingRule
 }
 
@@ -126,7 +126,7 @@ type requireRuleEvaluationResult struct {
 	numberRequired  int
 	numberSatisfied int
 
-	rule *Rule
+	rule *internalRule
 
 	fixes []*requireRuleEvaluationFix
 }
@@ -138,11 +138,14 @@ const (
 	requireRuleEvaluationFixMethodAdd requireRuleEvaluationFixMethod = iota
 	requireRuleEvaluationFixMethodFix
 	requireRuleEvaluationFixMethodUpdate
+	requireRuleEvaluationFixMethodEnable
 )
 
 // requireRuleEvaluationFix represents a fix option for a require rule evaluation
 type requireRuleEvaluationFix struct {
 	fixMethod requireRuleEvaluationFixMethod
+
+	workflowName string
 
 	actionName string
 
@@ -171,7 +174,7 @@ func (re *requireRuleEvaluationResult) explain() string {
 	return s
 }
 
-func (re *requireRuleEvaluationResult) relevantRule() *Rule {
+func (re *requireRuleEvaluationResult) relevantRule() *internalRule {
 	return re.rule
 }
 
@@ -183,12 +186,14 @@ func (rf *requireRuleEvaluationFix) string() string {
 		return fmt.Sprintf("Fix failing Action \"%s\"", rf.actionName)
 	case requireRuleEvaluationFixMethodUpdate:
 		return fmt.Sprintf("Update Action \"%s\" to version satisfying \"%s\"", rf.actionName, rf.actionVersionConstraint)
+	case requireRuleEvaluationFixMethodEnable:
+		return fmt.Sprintf("Enable workflow \"%s\" containing Action \"%s\" to run on %v.", rf.workflowName, rf.actionName, strings.Join(requireWorkflowOnForRequire, " and "))
 	default:
 		return "unknown require rule eval fix"
 	}
 }
 
-func (r *Rule) string(capitalize bool) string {
+func (r *internalRule) string(capitalize bool) string {
 	groupName := "Unknown"
 	if r.group != nil {
 		groupName = r.group.Name
