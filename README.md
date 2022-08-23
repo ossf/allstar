@@ -217,9 +217,10 @@ detects a repository to be out of compliance.
   only visible to the app operator, plans to expose these are under discussion.
 - `issue`: This action creates a GitHub issue. Only one issue is created per
   policy, and the text describes the details of the policy violation. If the
-  issue is already open, it is pinged with a comment every 24 hours (not
-  currently user configurable). Once the violation is addressed, the issue will
-  be automatically closed by Allstar within 5-10 minutes.
+  issue is already open, it is pinged with a comment every 24 hours without updates
+  (not currently user configurable). If the policy result changes, a new comment
+  will be left on the issue and linked in the issue body. Once the violation is
+  addressed, the issue will be automatically closed by Allstar within 5-10 minutes.
 - `fix`: This action is policy specific. The policy will make the changes to the
   GitHub settings to correct the policy violation. Not all policies will be able
   to support this (see below).
