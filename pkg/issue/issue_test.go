@@ -70,8 +70,8 @@ func TestEnsure(t *testing.T) {
 	issueTitleOtherRepo := "Security Policy violation for repository \"\" thispolicy"
 	closed := "closed"
 	open := "open"
-	body := "_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)._\n\n**Security Policy Violation**\nStatus text\n\n---\n\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
-	bodyOtherRepo := "_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/) and refers to [/](https://github.com//)._\n\n**Security Policy Violation**\nStatus text\n\n---\n\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
+	body := "_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)._\n\n**Security Policy Violation**\nStatus text\n\n---\n\n<!-- Edit section #updates --><!-- Current result text hash: 1ab61918ea1b7d10e20db2b40287c1a265a1617b998d87b28579a4462b2efac2 --><!-- Edit section #updates -->\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
+	bodyOtherRepo := "_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/) and refers to [/](https://github.com//)._\n\n**Security Policy Violation**\nStatus text\n\n---\n\n<!-- Edit section #updates --><!-- Current result text hash: 1ab61918ea1b7d10e20db2b40287c1a265a1617b998d87b28579a4462b2efac2 --><!-- Edit section #updates -->\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
 	configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
 		return &config.OrgConfig{}, &config.RepoConfig{}, &config.RepoConfig{}
 	}
@@ -142,7 +142,7 @@ func TestEnsure(t *testing.T) {
 		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
 			return &config.OrgConfig{IssueFooter: "CustomFooter"}, &config.RepoConfig{}, &config.RepoConfig{}
 		}
-		bodyWithFooter := "_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)._\n\n**Security Policy Violation**\nStatus text\n\n---\n\nCustomFooter\n\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
+		bodyWithFooter := "_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)._\n\n**Security Policy Violation**\nStatus text\n\n---\n\n<!-- Edit section #updates --><!-- Current result text hash: 1ab61918ea1b7d10e20db2b40287c1a265a1617b998d87b28579a4462b2efac2 --><!-- Edit section #updates -->\nCustomFooter\n\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
 		listByRepo = func(ctx context.Context, owner string, repo string,
 			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
 			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
@@ -202,6 +202,53 @@ func TestEnsure(t *testing.T) {
 			return nil, nil, nil
 		}
 		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+		if err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if editCalled != true {
+			t.Error("Expected issue to be re-opened")
+		}
+		if commentCalled != true {
+			t.Error("Expected comment to be left")
+		}
+	})
+	t.Run("ClosedIssueUpdatedText", func(t *testing.T) {
+		listByRepo = func(ctx context.Context, owner string, repo string,
+			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			return []*github.Issue{
+				&github.Issue{
+					Title: &issueTitle,
+					State: &closed,
+					Body:  &body,
+				},
+			}, &github.Response{NextPage: 0}, nil
+		}
+		create = nil
+		editCalled := false
+		edit = func(ctx context.Context, owner string, repo string, number int,
+			issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+			if issue.GetState() != "open" {
+				t.Errorf("Unexpected state: %v", issue.GetState())
+			}
+			if !strings.Contains(issue.GetBody(), "<!-- Current result text hash: 3079c555ed4ca1a5d828505dd39ed455313c07451755e380c36ee48a359038e9 -->") {
+				t.Errorf("Unexpected issue edit body (missing hash): %v", issue.GetBody())
+			}
+			if !strings.Contains(issue.GetBody(), "Click here to see the latest update") {
+				t.Errorf("Unexpected issue edit body (missing link to update): %v", issue.GetBody())
+			}
+			editCalled = true
+			return nil, nil, nil
+		}
+		commentCalled := false
+		createComment = func(ctx context.Context, owner string, repo string,
+			number int, comment *github.IssueComment) (*github.IssueComment, *github.Response, error) {
+			if !strings.HasPrefix(comment.GetBody(), "The policy result has been updated") {
+				t.Errorf("Unexpected comment: %v", comment.GetBody())
+			}
+			commentCalled = true
+			return nil, nil, nil
+		}
+		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "New status text")
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
