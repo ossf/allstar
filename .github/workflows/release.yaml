@@ -8,14 +8,14 @@ permissions:
   contents: write # To create a release
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-go@b22fbbc2921299758641fab08929b4ac52b32923
+    - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
+    - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f
       with:
-        go-version: 1.17
-    - uses: sigstore/cosign-installer@main
-    - run: go install github.com/google/ko@v0.10.0
+        go-version: 1.19
+    - uses: sigstore/cosign-installer@b3413d484cc23cf8778c3d2aa361568d4eb54679
+    - run: go install github.com/google/ko@v0.11.2
     - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.workflow }} --password-stdin
     - run: KO_DOCKER_REPO=ghcr.io/${{ github.repository_owner }} ko publish -B ./cmd/allstar > container
     - run: docker pull $(cat container)
