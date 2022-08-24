@@ -209,7 +209,6 @@ func getAppInstallationReposReal(ctx context.Context, ic *github.Client) ([]*git
 	var resp *github.Response
 	for {
 		var rs *github.ListRepositories
-		resp = nil
 		rs, resp, err = ic.Apps.ListRepos(ctx, opt)
 		if err != nil {
 			break
