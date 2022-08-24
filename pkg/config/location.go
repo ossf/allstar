@@ -17,6 +17,7 @@ package config
 import (
 	"context"
 	"net/http"
+	"sync"
 
 	"github.com/ossf/allstar/pkg/config/operator"
 )
@@ -28,33 +29,51 @@ type instLoc struct {
 }
 
 var instLocs map[string]*instLoc
+var mMutex sync.RWMutex
 
 // Function getInstLoc gets the location of org-level configuration for this
 // org/installation. The purpose is to only hit possible 404s once per run.
 func getInstLoc(ctx context.Context, r repositories, owner string) (*instLoc, error) {
+	mMutex.RLock()
 	if instLocs == nil {
+		mMutex.RUnlock()
+		mMutex.Lock()
 		instLocs = make(map[string]*instLoc)
+		mMutex.Unlock()
+	} else {
+		mMutex.RUnlock()
 	}
+	mMutex.RLock()
 	if il, ok := instLocs[owner]; ok {
+		mMutex.RUnlock()
 		return il, nil
 	}
+	mMutex.RUnlock()
 	il, err := createIl(ctx, r, owner)
 	if err != nil {
 		return nil, err
 	}
+	mMutex.Lock()
 	instLocs[owner] = il
+	mMutex.Unlock()
 	return il, nil
 }
 
 // Function ClearInstLoc clears any saved config locations for an org/installation
 func ClearInstLoc(owner string) {
+	mMutex.RLock()
 	if instLocs == nil {
+		mMutex.RUnlock()
 		return
 	}
 	if _, ok := instLocs[owner]; !ok {
+		mMutex.RUnlock()
 		return
 	}
+	mMutex.RUnlock()
+	mMutex.Lock()
 	delete(instLocs, owner)
+	mMutex.Unlock()
 }
 
 func createIl(ctx context.Context, r repositories, owner string) (*instLoc, error) {
