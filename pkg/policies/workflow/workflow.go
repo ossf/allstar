@@ -128,7 +128,19 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 
 	res := checks.DangerousWorkflow(cr)
 	if res.Error != nil {
-		return nil, res.Error
+		msg := "Error while running checks.DangerousWorkflow"
+		log.Warn().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("area", polName).
+			Err(res.Error).
+			Msg(msg)
+		return &policydef.Result{
+			Enabled:    enabled,
+			Pass:       true,
+			NotifyText: fmt.Sprintf("%s: %v", msg, res.Error),
+			Details:    details{},
+		}, nil
 	}
 
 	logs := convertLogs(l.Flush())
