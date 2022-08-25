@@ -411,7 +411,7 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 		}
 	}
 
-	for r, _ := range failedRules {
+	for r := range failedRules {
 		d.FailedRules = append(d.FailedRules, r.Rule)
 	}
 
