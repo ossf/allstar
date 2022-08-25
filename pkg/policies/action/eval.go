@@ -23,6 +23,10 @@ import (
 
 var requireWorkflowOnForRequire = []string{"pull_request", "push"}
 
+// acceptableRunStatuses is the et of workflow run statuses that are
+// acceptable when mustPass is true on a require rule.
+var acceptableRunStatuses = []string{"completed", "in_progress", "queued", "waiting", "requested"}
+
 // evaluateActionDenied evaluates an Action against a set of Rules
 func evaluateActionDenied(ctx context.Context, c *github.Client, rules []*internalRule, action *actionMetadata,
 	gc globCache, sc semverCache) (*denyRuleEvaluationResult, []error) {
@@ -238,8 +242,17 @@ func requireActionDetermineFix(ctx context.Context, c *github.Client, owner, rep
 				// Irrelevant run
 				continue
 			}
-			if run.Status != nil && *run.Status == "completed" {
-				return true, 0, nil
+			if run.Status != nil {
+				statusOK := false
+				for _, s := range acceptableRunStatuses {
+					if *run.Status == s {
+						statusOK = true
+					}
+				}
+				if statusOK {
+					// OK!
+					return true, 0, nil
+				}
 			}
 		}
 		if !passing {
