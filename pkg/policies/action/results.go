@@ -185,7 +185,7 @@ func (rf *requireRuleEvaluationFix) string() string {
 		}
 		return fmt.Sprintf("Add Action \"%s\"%s", rf.actionName, versionSatisfying)
 	case requireRuleEvaluationFixMethodFix:
-		return fmt.Sprintf("Fix failing Action \"%s\"", rf.actionName)
+		return fmt.Sprintf("Fix non-passing Action \"%s\" in workflow \"%s\"", rf.actionName, rf.workflowName)
 	case requireRuleEvaluationFixMethodUpdate:
 		return fmt.Sprintf("Update Action \"%s\" to version satisfying \"%s\"", rf.actionName, rf.actionVersionConstraint)
 	case requireRuleEvaluationFixMethodEnable:

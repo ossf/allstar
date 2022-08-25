@@ -489,6 +489,39 @@ func TestCheck(t *testing.T) {
 			ExpectPass:       true,
 		},
 		{
+			Name: "Require passing, pending on latest",
+			Org: OrgConfig{
+				Action: "issue",
+				Groups: []*RuleGroup{
+					{
+						Rules: []*Rule{
+							{
+								Name:     "Require Gradle Wrapper validation",
+								Method:   "require",
+								MustPass: true,
+								Actions: []*ActionSelector{
+									{
+										Name:    "gradle/wrapper-validation-action",
+										Version: ">= 1.0.4",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Workflows: []testingWorkflowMetadata{
+				{
+					File: "gradle-wrapper-validate.yaml",
+					Runs: []*github.WorkflowRun{
+						createWorkflowRun("sha-latest", "in_progress"),
+					},
+				},
+			},
+			LatestCommitHash: "sha-latest",
+			ExpectPass:       true,
+		},
+		{
 			Name: "Require passing, passing only on old commit",
 			Org: OrgConfig{
 				Action: "issue",
@@ -521,9 +554,9 @@ func TestCheck(t *testing.T) {
 			LatestCommitHash: "sha-latest",
 			ExpectPass:       false,
 			ExpectMessage: []string{
-				"Require rule \"Require * not satisfied",
-				"0 / 1 requisites met",
-				"Fix failing * \"gradle/wrapper*\"",
+				`Require rule "Require * not satisfied`,
+				`0 / 1 requisites met`,
+				`Fix non-passing Action "gradle/wrapper*" in workflow "GW Validate`,
 			},
 		},
 		{
@@ -561,7 +594,7 @@ func TestCheck(t *testing.T) {
 			ExpectMessage: []string{
 				"Require rule \"Require * not satisfied",
 				"0 / 1 requisites met",
-				"Fix failing * \"gradle/wrapper*\"",
+				"Fix non-passing * \"gradle/wrapper*\"",
 			},
 		},
 		{
