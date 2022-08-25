@@ -17,7 +17,7 @@ package action
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -1011,7 +1011,7 @@ func TestCheck(t *testing.T) {
 				[]*workflowMetadata, error) {
 				var wfs []*workflowMetadata
 				for _, w := range test.Workflows {
-					d, err := ioutil.ReadFile(filepath.Join("test_workflows", w.File))
+					d, err := os.ReadFile(filepath.Join("test_workflows", w.File))
 					if err != nil {
 						return nil, fmt.Errorf("failed to open test workflow file: %w", err)
 					}
