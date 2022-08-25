@@ -224,7 +224,7 @@ func TestCheck(t *testing.T) {
 					{
 						Rules: []*Rule{
 							{
-								Name:   "Allowlist trusted rules",
+								Name:   "Allowlist trusted Actions",
 								Method: "allow",
 								Actions: []*ActionSelector{
 									{
@@ -256,7 +256,7 @@ func TestCheck(t *testing.T) {
 					{
 						Rules: []*Rule{
 							{
-								Name:   "Allowlist trusted rules",
+								Name:   "Allowlist trusted Actions",
 								Method: "allow",
 								Actions: []*ActionSelector{
 									{
@@ -282,6 +282,47 @@ func TestCheck(t *testing.T) {
 			ExpectMessage: []string{
 				"does not meet version requirement \">= 2\" for allow rule \"Allowlist",
 				"denied by deny rule \"Deny default\"",
+			},
+		},
+		{
+			Name: "Allowlist new versions, new version and old version",
+			Org: OrgConfig{
+				Action: "issue",
+				Groups: []*RuleGroup{
+					{
+						Name: "RG1",
+						Rules: []*Rule{
+							{
+								Name:   "Allowlist trusted Actions",
+								Method: "allow",
+								Actions: []*ActionSelector{
+									{
+										Name: "actions/*",
+									},
+									{
+										Name:    "gradle/wrapper-validation-action",
+										Version: ">= 1.0.4",
+									},
+								},
+							},
+							denyAll,
+						},
+					},
+				},
+			},
+			Workflows: []testingWorkflowMetadata{
+				{
+					File: "gradle-wrapper-validate.yaml",
+				},
+				{
+					File: "gradle-wrapper-validate-outdated.yaml",
+				},
+			},
+			ExpectPass: false,
+			ExpectMessage: []string{
+				`version v1.0.3 hit deny rule "Deny default"`,
+				`does not meet version requirement ">= 1.0.4" * (member of rule group "RG1")`,
+				`denied by deny rule "Deny default" (member of rule group "RG1")`,
 			},
 		},
 		{
@@ -343,6 +384,75 @@ func TestCheck(t *testing.T) {
 				"Require rule \"Require Gradle * not satisfied",
 				"0 / 1 requisites met",
 				"Update *\"gradle/wrapper-val*\" to version satisfying \">= 2\"",
+			},
+		},
+		{
+			Name: "Require multiple, all present",
+			Org: OrgConfig{
+				Action: "issue",
+				Groups: []*RuleGroup{
+					{
+						Rules: []*Rule{
+							{
+								Name:       "Required Actions",
+								Method:     "require",
+								RequireAll: true,
+								Actions: []*ActionSelector{
+									{
+										Name: "gradle/wrapper-validation-action",
+									},
+									{
+										Name: "ossf/go-action",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Workflows: []testingWorkflowMetadata{
+				{
+					File: "gradle-wrapper-validate.yaml",
+				},
+				{
+					File: "go-workflow.yaml",
+				},
+			},
+			ExpectPass: true,
+		},
+		{
+			Name: "Require multiple, one present",
+			Org: OrgConfig{
+				Action: "issue",
+				Groups: []*RuleGroup{
+					{
+						Rules: []*Rule{
+							{
+								Name:       "Required Actions",
+								Method:     "require",
+								RequireAll: true,
+								Actions: []*ActionSelector{
+									{
+										Name: "gradle/wrapper-validation-action",
+									},
+									{
+										Name: "ossf/go-action",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Workflows: []testingWorkflowMetadata{
+				{
+					File: "gradle-wrapper-validate.yaml",
+				},
+			},
+			ExpectPass: false,
+			ExpectMessage: []string{
+				`1 / 2 requisites met`,
+				`Add Action "ossf/go-action"`,
 			},
 		},
 		{
