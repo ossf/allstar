@@ -179,7 +179,11 @@ func (re *requireRuleEvaluationResult) relevantRule() *internalRule {
 func (rf *requireRuleEvaluationFix) string() string {
 	switch rf.fixMethod {
 	case requireRuleEvaluationFixMethodAdd:
-		return fmt.Sprintf("Add Action \"%s\" with version satisfying \"%s\"", rf.actionName, rf.actionVersionConstraint)
+		versionSatisfying := fmt.Sprintf(" with version satisfying \"%s\"", rf.actionVersionConstraint)
+		if rf.actionVersionConstraint == "" {
+			versionSatisfying = ""
+		}
+		return fmt.Sprintf("Add Action \"%s\"%s", rf.actionName, versionSatisfying)
 	case requireRuleEvaluationFixMethodFix:
 		return fmt.Sprintf("Fix failing Action \"%s\"", rf.actionName)
 	case requireRuleEvaluationFixMethodUpdate:
