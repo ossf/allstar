@@ -91,7 +91,8 @@ type Rule struct {
 	Actions []*ActionSelector `json:"actions"`
 
 	// MustPass specifies whether the rule's Action(s) are required to
-	// be part of a passing workflow on latest commit
+	// be part of a passing workflow on latest commit.
+	// [For use with "require" method]
 	MustPass bool `json:"mustPass"`
 
 	// RequireAll specifies that all Actions listed should be required,

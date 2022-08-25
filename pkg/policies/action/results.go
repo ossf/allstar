@@ -121,8 +121,6 @@ func (des *denyRuleEvaluationStepResult) string() string {
 
 // requireRuleEvaluationResult represents the result of a require rule evaluation.
 type requireRuleEvaluationResult struct {
-	satisfied bool
-
 	numberRequired  int
 	numberSatisfied int
 
@@ -153,18 +151,18 @@ type requireRuleEvaluationFix struct {
 }
 
 func (re *requireRuleEvaluationResult) passed() bool {
-	return re.satisfied
+	return re.numberSatisfied >= re.numberRequired
 }
 
 func (re *requireRuleEvaluationResult) explain() string {
 	s := ""
-	if !re.satisfied {
+	if !re.passed() {
 		s = fmt.Sprintf("%s not satisfied:\n", re.rule.string(true))
 	} else {
 		s = fmt.Sprintf("%s satisfied:\n", re.rule.string(true))
 	}
 	s += fmt.Sprintf("-> %d / %d requisites met\n", re.numberSatisfied, re.numberRequired)
-	if re.satisfied {
+	if re.passed() {
 		return s
 	}
 	s += fmt.Sprintf("-> To resolve, do %d of the following:\n", re.numberRequired-re.numberSatisfied)

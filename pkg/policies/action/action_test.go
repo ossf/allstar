@@ -961,6 +961,7 @@ func TestCheck(t *testing.T) {
 
 			if res.Pass != test.ExpectPass {
 				t.Errorf("Expect pass = %t, got pass = %t", test.ExpectPass, res.Pass)
+				t.Logf("NotifyText:\n%s", res.NotifyText)
 			}
 
 			if !res.Pass {

@@ -17,13 +17,15 @@ package action
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/go-github/v43/github"
 )
 
 var requireWorkflowOnForRequire = []string{"pull_request", "push"}
 
 // evaluateActionDenied evaluates an Action against a set of Rules
-func evaluateActionDenied(ctx context.Context, c *github.Client, rules []*internalRule, action *actionMetadata, gc globCache, sc semverCache) (*denyRuleEvaluationResult, []error) {
+func evaluateActionDenied(ctx context.Context, c *github.Client, rules []*internalRule, action *actionMetadata,
+	gc globCache, sc semverCache) (*denyRuleEvaluationResult, []error) {
 	result := &denyRuleEvaluationResult{
 		denied:         false,
 		actionMetadata: action,
@@ -32,75 +34,80 @@ func evaluateActionDenied(ctx context.Context, c *github.Client, rules []*intern
 	var errs []error
 
 	for _, r := range rules {
+		// Check if the Action is matched by the rule's ActionSelectors
+		ruleMatch := false
+		errored := false
+
+		var ruleVersionConstraint string
+		versionMismatch := false
+
+		for _, a := range r.Actions {
+			match, matchName, _, err := a.match(ctx, c, action, gc, sc)
+			if err != nil {
+				errs = append(errs, err)
+				errored = true
+				break
+			}
+			if !match {
+				if matchName {
+					versionMismatch = true
+					ruleVersionConstraint = a.Version
+					continue
+				}
+				continue
+			}
+			// This is a denied Action
+			ruleMatch = true
+			break
+		}
+		if r.Actions == nil {
+			// All Actions qualified for this step
+			ruleMatch = true
+		}
 		stepResult := &denyRuleEvaluationStepResult{
-			status: denyRuleStepStatusError,
-			rule:   r,
+			status:                denyRuleStepStatusError,
+			rule:                  r,
+			ruleVersionConstraint: "",
+		}
+		if errored {
+			result.steps = append(result.steps, stepResult)
+			continue
 		}
 		switch r.Method {
 		case "allow":
 			fallthrough
 		case "require":
-			// Check if Action contained within allow or require
-			if r.Actions == nil {
-				// All Actions allowed by this step
+			if ruleMatch {
 				stepResult.status = denyRuleStepStatusAllowed
 				break
 			}
-			for _, a := range r.Actions {
-				match, matchName, _, err := a.match(ctx, c, action, gc, sc)
-				if err != nil {
-					errs = append(errs, err)
-					stepResult.status = denyRuleStepStatusError
-					continue
-				}
-				if !match {
-					if matchName {
-						stepResult.status = denyRuleStepStatusActionVersionMismatch
-						stepResult.ruleVersionConstraint = a.Version
-						continue
-					}
-					stepResult.status = denyRuleStepStatusMissingAction
-					continue
-				}
-				// This is a permissible Action
-				stepResult.status = denyRuleStepStatusAllowed
+			if versionMismatch {
+				stepResult.status = denyRuleStepStatusActionVersionMismatch
+				stepResult.ruleVersionConstraint = ruleVersionConstraint
 				break
 			}
+			stepResult.status = denyRuleStepStatusMissingAction
 		case "deny":
-			// Check if Action is denied
-			if r.Actions == nil {
+			if ruleMatch {
 				stepResult.status = denyRuleStepStatusDenied
 				result.denied = true
 				result.denyingRule = r
 				break
 			}
-			for _, a := range r.Actions {
-				match, _, _, err := a.match(ctx, c, action, gc, sc)
-				if err != nil {
-					errs = append(errs, err)
-					stepResult.status = denyRuleStepStatusError
-					break
-				}
-				if !match {
-					stepResult.status = denyRuleStepStatusMissingAction
-					continue
-				}
-				// This is a denied Action
-				stepResult.status = denyRuleStepStatusDenied
-				result.denied = true
-				result.denyingRule = r
+			if versionMismatch {
+				stepResult.status = denyRuleStepStatusActionVersionMismatch
+				stepResult.ruleVersionConstraint = ruleVersionConstraint
 				break
 			}
-		default:
-			continue
+			stepResult.status = denyRuleStepStatusMissingAction
 		}
+
 		result.steps = append(result.steps, stepResult)
-		if len(result.steps) > 0 {
-			// Exit if previous step has specifically allowed or denied the Action.
-			lastStatus := result.steps[len(result.steps)-1].status
-			if lastStatus == denyRuleStepStatusAllowed || lastStatus == denyRuleStepStatusDenied {
-				break
-			}
+
+		// Exit if previous step has specifically allowed or denied the Action.
+		lastStatus := stepResult.status
+		if lastStatus == denyRuleStepStatusAllowed || lastStatus == denyRuleStepStatusDenied {
+			break
 		}
 	}
 
@@ -119,96 +126,48 @@ func evaluateRequireRule(ctx context.Context, c *github.Client, owner, repo stri
 	}
 
 	result := &requireRuleEvaluationResult{
-		satisfied: false,
-
 		numberRequired:  useCount,
 		numberSatisfied: 0,
 
 		rule: rule,
+
+		fixes: nil,
 	}
 
 	for _, ra := range rule.Actions {
-		// Check if this rule is satisfied
+		// Check if this ActionSelector is satisfied
 
-		satisfied := false
+		actionSelectorSatisfied := false
 		var suggestedFix *requireRuleEvaluationFix
 
+		// Find Action matching selector ra
 		for _, a := range actions {
-			match, matchName, _, err := ra.match(ctx, c, a, gc, sc)
+			match, fixMethod, err := requireActionDetermineFix(ctx, c, owner, repo, ra, a, rule.MustPass, headSHA, gc, sc)
+
 			if err != nil {
 				return nil, err
 			}
-			if !match {
-				if matchName {
-					// Version mismatch
-					suggestedFix = &requireRuleEvaluationFix{
-						fixMethod:               requireRuleEvaluationFixMethodUpdate,
-						actionName:              a.name,
-						actionVersionConstraint: ra.Version,
-					}
-					break
-				}
-				// Name mismatch, keep looking
-				continue
-			}
 
-			on := map[string]struct{}{}
-			for _, o := range a.workflowOn {
-				on[o.EventName()] = struct{}{}
-			}
-			hasRequired := true
-			for _, requireOn := range requireWorkflowOnForRequire {
-				if _, ok := on[requireOn]; !ok {
-					hasRequired = false
-				}
-			}
-			if !hasRequired {
-				// Workflow does not have required "on" values
-				suggestedFix = &requireRuleEvaluationFix{
-					fixMethod:               requireRuleEvaluationFixMethodEnable,
-					actionName:              a.name,
-					actionVersionConstraint: ra.Version,
-					workflowName:            a.workflowName,
-				}
+			if match {
+				actionSelectorSatisfied = true
 				break
 			}
 
-			// Check if passing (if the Action is required to be)
+			// Not matching
 
-			if rule.MustPass {
-				passing := false
-				runs, err := listWorkflowRunsByFilename(ctx, c, owner, repo, a.workflowFilename)
-				if err != nil {
-					return nil, err
+			// Break if this fix is final (eg. match was close enough)
+			if fixMethod != requireRuleEvaluationFixMethodAdd {
+				suggestedFix = &requireRuleEvaluationFix{
+					fixMethod:               fixMethod,
+					workflowName:            a.workflowName,
+					actionName:              ra.Name,
+					actionVersionConstraint: ra.Version,
 				}
-				for _, run := range runs {
-					if run.HeadSHA == nil || *run.HeadSHA != headSHA {
-						// Irrelevant run
-						continue
-					}
-					if run.Status != nil && *run.Status == "completed" {
-						passing = true
-					}
-				}
-				if !passing {
-					// Not passing. Suggest fix.
-					if suggestedFix == nil {
-						suggestedFix = &requireRuleEvaluationFix{
-							fixMethod:               requireRuleEvaluationFixMethodFix,
-							actionName:              a.name,
-							actionVersionConstraint: ra.Version,
-						}
-					}
-					break
-				}
+				break
 			}
-
-			// Satisfied!
-			satisfied = true
-			break
 		}
 
-		if satisfied {
+		if actionSelectorSatisfied {
 			result.numberSatisfied++
 			continue
 		}
@@ -226,9 +185,69 @@ func evaluateRequireRule(ctx context.Context, c *github.Client, owner, repo stri
 		result.fixes = append(result.fixes, suggestedFix)
 	}
 
-	if result.numberSatisfied == result.numberRequired {
-		result.satisfied = true
+	return result, nil
+}
+
+// requireActionDetermineFix determines whether an actionMetadata matches
+// an ActionSelector and, if not, provides a fix method.
+//
+// Note that:
+//   - if the actionMetadata doesn't have the same Action name as the
+//     selector, the returned fix will be requireRuleEvaluationFixMethodAdd.
+//   - on error, the match bool is false AND fix method will not be usable.
+//   - on match true, the fix method is not to be used.
+func requireActionDetermineFix(ctx context.Context, c *github.Client, owner, repo string, ra *ActionSelector, a *actionMetadata,
+	mustPass bool, headSHA string, gc globCache, sc semverCache) (match bool, fix requireRuleEvaluationFixMethod, err error) {
+	match, matchName, _, err := ra.match(ctx, c, a, gc, sc)
+	if err != nil {
+		return false, 0, err
+	}
+	if !match {
+		if matchName {
+			// Version mismatch
+			return false, requireRuleEvaluationFixMethodUpdate, nil
+		}
+		// Name mismatch, keep looking
+		return false, requireRuleEvaluationFixMethodAdd, nil
 	}
 
-	return result, nil
+	on := map[string]struct{}{}
+	for _, o := range a.workflowOn {
+		on[o.EventName()] = struct{}{}
+	}
+	hasRequired := true
+	for _, requireOn := range requireWorkflowOnForRequire {
+		if _, ok := on[requireOn]; !ok {
+			hasRequired = false
+		}
+	}
+	if !hasRequired {
+		// Workflow does not have required "on" values
+		return false, requireRuleEvaluationFixMethodEnable, nil
+	}
+
+	// Check if passing (if the Action is required to be)
+	if mustPass {
+		passing := false
+		runs, err := listWorkflowRunsByFilename(ctx, c, owner, repo, a.workflowFilename)
+		if err != nil {
+			return false, 0, err
+		}
+		for _, run := range runs {
+			if run.HeadSHA == nil || *run.HeadSHA != headSHA {
+				// Irrelevant run
+				continue
+			}
+			if run.Status != nil && *run.Status == "completed" {
+				return true, 0, nil
+			}
+		}
+		if !passing {
+			// Not passing. Suggest fix.
+			return false, requireRuleEvaluationFixMethodFix, nil
+		}
+	}
+
+	// Keep looking otherwise. Return add still
+	return true, 0, nil
 }
