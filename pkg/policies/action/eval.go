@@ -23,9 +23,10 @@ import (
 
 var requireWorkflowOnForRequire = []string{"pull_request", "push"}
 
-// acceptableRunStatuses is the et of workflow run statuses that are
-// acceptable when mustPass is true on a require rule.
-var acceptableRunStatuses = []string{"completed", "in_progress", "queued", "waiting", "requested"}
+// runInProgressStatuses is the set of workflow run statuses that are
+// acceptable when mustPass is true on a require rule and the conclusion is
+// not success.
+var runInProgressStatuses = []string{"in_progress", "queued", "waiting", "requested"}
 
 // evaluateActionDenied evaluates an Action against a set of Rules
 func evaluateActionDenied(ctx context.Context, c *github.Client, rules []*internalRule, action *actionMetadata,
@@ -230,37 +231,38 @@ func requireActionDetermineFix(ctx context.Context, c *github.Client, owner, rep
 		return false, requireRuleEvaluationFixMethodEnable, nil
 	}
 
-	// Check if passing (if the Action is required to be)
-	if mustPass {
-		passing := false
-		runs, err := listWorkflowRunsByFilename(ctx, c, owner, repo, a.workflowFilename)
-		if err != nil {
-			return false, 0, err
-		}
-		for _, run := range runs {
-			if run.HeadSHA == nil || *run.HeadSHA != headSHA {
-				// Irrelevant run
-				continue
-			}
-			if run.Status != nil {
-				statusOK := false
-				for _, s := range acceptableRunStatuses {
-					if *run.Status == s {
-						statusOK = true
-					}
-				}
-				if statusOK {
-					// OK!
-					return true, 0, nil
-				}
-			}
-		}
-		if !passing {
-			// Not passing. Suggest fix.
-			return false, requireRuleEvaluationFixMethodFix, nil
-		}
+	if !mustPass {
+		// This action matches and is not required to pass
+		return true, 0, nil
 	}
 
-	// Keep looking otherwise. Return add still
-	return true, 0, nil
+	// Check if passing (if the Action is required to be)
+	runs, err := listWorkflowRunsByFilename(ctx, c, owner, repo, a.workflowFilename)
+	if err != nil {
+		return false, 0, err
+	}
+	for _, run := range runs {
+		if run.GetHeadSHA() != headSHA {
+			// Irrelevant run
+			continue
+		}
+		inProgress := false
+		for _, s := range runInProgressStatuses {
+			if run.GetStatus() == s {
+				inProgress = true
+			}
+		}
+		if inProgress {
+			// The check run isn't complete, so OK for now
+			return true, 0, nil
+		}
+		if run.GetConclusion() == "success" {
+			// The run is completed and passing!
+			return true, 0, nil
+		}
+		// Not passing and this was the matching commit
+		break
+	}
+	// Not passing. Suggest fix.
+	return false, requireRuleEvaluationFixMethodFix, nil
 }

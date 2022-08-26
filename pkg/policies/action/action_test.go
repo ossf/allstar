@@ -28,11 +28,26 @@ import (
 )
 
 func TestCheck(t *testing.T) {
-	createWorkflowRun := func(sha, status string) *github.WorkflowRun {
-		return &github.WorkflowRun{
-			HeadSHA: &sha,
-			Status:  &status,
+	createWorkflowRun := func(sha string, complete bool, passing *bool) *github.WorkflowRun {
+		status := "completed"
+		if !complete {
+			status = "queued"
 		}
+		conc := "failure"
+		if passing == nil {
+			conc = ""
+		} else if *passing {
+			conc = "success"
+		}
+		return &github.WorkflowRun{
+			HeadSHA:    &sha,
+			Status:     &status,
+			Conclusion: &conc,
+		}
+	}
+
+	boolptr := func(b bool) *bool {
+		return &b
 	}
 
 	strptr := func(s string) *string {
@@ -481,7 +496,7 @@ func TestCheck(t *testing.T) {
 				{
 					File: "gradle-wrapper-validate.yaml",
 					Runs: []*github.WorkflowRun{
-						createWorkflowRun("sha-latest", "completed"),
+						createWorkflowRun("sha-latest", true, boolptr(true)),
 					},
 				},
 			},
@@ -514,7 +529,7 @@ func TestCheck(t *testing.T) {
 				{
 					File: "gradle-wrapper-validate.yaml",
 					Runs: []*github.WorkflowRun{
-						createWorkflowRun("sha-latest", "in_progress"),
+						createWorkflowRun("sha-latest", false, nil),
 					},
 				},
 			},
@@ -547,7 +562,7 @@ func TestCheck(t *testing.T) {
 				{
 					File: "gradle-wrapper-validate.yaml",
 					Runs: []*github.WorkflowRun{
-						createWorkflowRun("sha-old", "completed"),
+						createWorkflowRun("sha-old", true, boolptr(true)),
 					},
 				},
 			},
@@ -585,7 +600,7 @@ func TestCheck(t *testing.T) {
 				{
 					File: "gradle-wrapper-validate.yaml",
 					Runs: []*github.WorkflowRun{
-						createWorkflowRun("sha-latest", "failure"),
+						createWorkflowRun("sha-latest", true, boolptr(false)),
 					},
 				},
 			},
