@@ -338,6 +338,17 @@ the [Security Scorecards
 Documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md)
 for more information on each check.
 
+### GitHub Actions
+
+This policy's config file is named `actions.yaml`, and the [config definitions
+are
+here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/action#OrgConfig).
+
+This policy checks the GitHub Actions workflow configuration files
+(`.github/workflows`) (and workflow runs in some cases) in each repo to ensure
+they are in line with rules (eg. require, deny) defined in the
+organization-level config for the policy.
+
 ### Future Policies
 
 - Ensure dependabot is enabled.
