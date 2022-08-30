@@ -180,7 +180,7 @@ var listWorkflows func(ctx context.Context, c *github.Client, owner, repo string
 var listLanguages func(ctx context.Context, c *github.Client, owner, repo string) (map[string]int, error)
 var listWorkflowRunsByFilename func(ctx context.Context, c *github.Client, owner, repo string, workflowFilename string) ([]*github.WorkflowRun, error)
 var getLatestCommitHash func(ctx context.Context, c *github.Client, owner, repo string) (string, error)
-var listReleases func(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryRelease, error)
+var listTags func(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryTag, error)
 
 func init() {
 	configFetchConfig = config.FetchConfig
@@ -188,7 +188,7 @@ func init() {
 	listLanguages = listLanguagesReal
 	listWorkflowRunsByFilename = listWorkflowRunsByFilenameReal
 	getLatestCommitHash = getLatestCommitHashReal
-	listReleases = listReleasesReal
+	listTags = listTagsReal
 }
 
 // sortableRules is a sortable list of *Rule
@@ -492,29 +492,29 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) *inter
 }
 
 // resolveVersion gets a *semver.Version given an actionMetadata.
-// It will use release tags of the Action repo if necessary.
+// It will use tags of the Action repo if necessary.
 func resolveVersion(ctx context.Context, c *github.Client, m *actionMetadata, gc globCache, sc semverCache) (*semver.Version, error) {
 	version, err := sc.compileVersion(m.version)
 	if err == nil {
 		return version, nil
 	}
 	errPrefix := fmt.Sprintf("while resolving version for commit ref \"%s\" in repo \"%s\"", m.version, m.name)
-	// On error, attempt locate release tag (assume m.version is a commit ref)
+	// On error, attempt locate tag (assume m.version is a commit ref)
 	ownerRepo := strings.Split(m.name, "/")
 	if len(ownerRepo) != 2 {
 		return nil, fmt.Errorf("%s: invalid name \"%s\"", errPrefix, m.name)
 	}
-	rels, err := listReleases(ctx, c, ownerRepo[0], ownerRepo[1])
+	tags, err := listTags(ctx, c, ownerRepo[0], ownerRepo[1])
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", errPrefix, err)
 	}
-	for _, rel := range rels {
-		if rel.GetTargetCommitish() == m.version {
-			version, err := sc.compileVersion(rel.GetTagName())
+	for _, tag := range tags {
+		if tag.GetCommit().GetSHA() == m.version {
+			version, err := sc.compileVersion(tag.GetName())
 			return version, err
 		}
 	}
-	return nil, fmt.Errorf("%s: no corresponding release found", errPrefix)
+	return nil, fmt.Errorf("%s: no corresponding tag found", errPrefix)
 }
 
 // match checks if an ActionSelector matches an actionMetadata.
@@ -764,12 +764,12 @@ func listWorkflowsReal(ctx context.Context, c *github.Client, owner, repo string
 	return workflows, nil
 }
 
-// listReleasesReal uses the GitHub API to list releases for a repo.
-// Docs: https://docs.github.com/en/rest/releases/releases#list-releases
-func listReleasesReal(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryRelease, error) {
-	releases, _, err := c.Repositories.ListReleases(ctx, owner, repo, &github.ListOptions{})
+// listTagsReal uses the GitHub API to list tags for a repo.
+// Docs: https://docs.github.com/en/rest/repos/repos#list-repository-tags
+func listTagsReal(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryTag, error) {
+	tags, _, err := c.Repositories.ListTags(ctx, owner, repo, &github.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
-	return releases, nil
+	return tags, nil
 }
