@@ -92,8 +92,8 @@ func TestCheck(t *testing.T) {
 
 		Langs map[string]int
 
-		// Releases is a map of "owner/repo" to []*github.RepositoryRelease
-		Releases map[string][]*github.RepositoryRelease
+		// Tags is a map of "owner/repo" to []*github.RepositoryTag
+		Tags map[string][]*github.RepositoryTag
 
 		ExpectMessage []string
 		ExpectPass    bool
@@ -815,11 +815,13 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			Releases: map[string][]*github.RepositoryRelease{
+			Tags: map[string][]*github.RepositoryTag{
 				"ossf/test-action": {
 					{
-						TagName:         strptr("v1.2.0"),
-						TargetCommitish: strptr("696c241da8ea301b3f1d2343c45c1e4aa38f90c7"),
+						Name: strptr("v1.2.0"),
+						Commit: &github.Commit{
+							SHA: strptr("696c241da8ea301b3f1d2343c45c1e4aa38f90c7"),
+						},
 					},
 				},
 			},
@@ -852,11 +854,13 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			Releases: map[string][]*github.RepositoryRelease{
+			Tags: map[string][]*github.RepositoryTag{
 				"ossf/test-action": {
 					{
-						TagName:         strptr("v0.9.0"),
-						TargetCommitish: strptr("696c241da8ea301b3f1d2343c45c1e4aa38f90c7"),
+						Name: strptr("v0.9.0"),
+						Commit: &github.Commit{
+							SHA: strptr("696c241da8ea301b3f1d2343c45c1e4aa38f90c7"),
+						},
 					},
 				},
 			},
@@ -1099,14 +1103,14 @@ func TestCheck(t *testing.T) {
 				return test.LatestCommitHash, nil
 			}
 
-			listReleases = func(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryRelease, error) {
+			listTags = func(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryTag, error) {
 				ownerRepo := fmt.Sprintf("%s/%s", owner, repo)
-				var releases []*github.RepositoryRelease
+				var tags []*github.RepositoryTag
 				var ok bool
-				if releases, ok = test.Releases[ownerRepo]; !ok {
-					t.Fatalf("tried to find releases for \"%s\", they were not specified in test", ownerRepo)
+				if tags, ok = test.Tags[ownerRepo]; !ok {
+					t.Fatalf("tried to find tags for \"%s\", they were not specified in test", ownerRepo)
 				}
-				return releases, nil
+				return tags, nil
 			}
 
 			res, err := a.Check(context.Background(), nil, "thisorg", "thisrepo")
