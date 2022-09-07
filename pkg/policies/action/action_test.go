@@ -50,16 +50,21 @@ func TestCheck(t *testing.T) {
 		return &b
 	}
 
-	strptr := func(s string) *string {
-		return &s
-	}
-
 	type testingWorkflowMetadata struct {
 		// File is the actual filename of the workflow to load.
 		// Will be loaded from test_workflows/ directory.
 		File string
 
 		Runs []*github.WorkflowRun
+	}
+
+	type testingCommitMetadata struct {
+		SHA string
+
+		Tag    []string
+		Branch []string
+
+		Parents []string
 	}
 
 	denyAll := &Rule{
@@ -79,6 +84,38 @@ func TestCheck(t *testing.T) {
 		RequireAll: true,
 	}
 
+	commitsWrapperValidateWorkflow := map[string][]*testingCommitMetadata{
+		"actions/checkout": {
+			{
+				SHA:     "Commit-A-1",
+				Tag:     []string{"v2.0.0"},
+				Parents: []string{"Commit-A-1"},
+			},
+		},
+		"gradle/wrapper-validation-action": {
+			{
+				SHA:     "Commit-B-4",
+				Tag:     []string{},
+				Parents: []string{"Commit-B-3"},
+			},
+			{
+				SHA:     "Commit-B-3",
+				Tag:     []string{"v2.0.0"},
+				Parents: []string{"Commit-B-2"},
+			},
+			{
+				SHA:     "Commit-B-2",
+				Tag:     []string{"v1.0.4"},
+				Parents: []string{"Commit-B-1"},
+			},
+			{
+				SHA:     "Commit-B-1",
+				Tag:     []string{"v1.0.0"},
+				Parents: []string{"Commit-B-1"},
+			},
+		},
+	}
+
 	tests := []struct {
 		Name string
 
@@ -92,8 +129,8 @@ func TestCheck(t *testing.T) {
 
 		Langs map[string]int
 
-		// Tags is a map of "owner/repo" to []*github.RepositoryTag
-		Tags map[string][]*github.RepositoryTag
+		// Commits is a map of "owner/repo" to list of *testingCommitMetadata
+		Commits map[string][]*testingCommitMetadata
 
 		ExpectMessage []string
 		ExpectPass    bool
@@ -247,7 +284,7 @@ func TestCheck(t *testing.T) {
 									},
 									{
 										Name:    "gradle/wrapper-validation-action",
-										Version: ">= 1",
+										Version: ">= v1.0.0",
 									},
 								},
 							},
@@ -261,6 +298,7 @@ func TestCheck(t *testing.T) {
 					File: "gradle-wrapper-validate.yaml",
 				},
 			},
+			Commits:    commitsWrapperValidateWorkflow,
 			ExpectPass: true,
 		},
 		{
@@ -279,7 +317,7 @@ func TestCheck(t *testing.T) {
 									},
 									{
 										Name:    "gradle/wrapper-validation-action",
-										Version: ">= 2",
+										Version: ">= v2.0.0",
 									},
 								},
 							},
@@ -293,11 +331,115 @@ func TestCheck(t *testing.T) {
 					File: "gradle-wrapper-validate.yaml",
 				},
 			},
+			Commits:    commitsWrapperValidateWorkflow,
 			ExpectPass: false,
 			ExpectMessage: []string{
-				"does not meet version requirement \">= 2\" for allow rule \"Allowlist",
+				"does not meet version requirement \">= v2.0.0\" for allow rule \"Allowlist",
 				"denied by deny rule \"Deny default\"",
 			},
+		},
+		{
+			Name: "Allowlist lt newer version",
+			Org: OrgConfig{
+				Action: "issue",
+				Groups: []*RuleGroup{
+					{
+						Rules: []*Rule{
+							{
+								Name:   "Allowlist trusted Actions",
+								Method: "allow",
+								Actions: []*ActionSelector{
+									{
+										Name: "actions/*",
+									},
+									{
+										Name:    "gradle/wrapper-validation-action",
+										Version: "< v2.0.0",
+									},
+								},
+							},
+							denyAll,
+						},
+					},
+				},
+			},
+			Workflows: []testingWorkflowMetadata{
+				{
+					File: "gradle-wrapper-validate.yaml",
+				},
+			},
+			Commits:    commitsWrapperValidateWorkflow,
+			ExpectPass: true,
+		},
+		{
+			Name: "Allowlist lt and gt current version",
+			Org: OrgConfig{
+				Action: "issue",
+				Groups: []*RuleGroup{
+					{
+						Rules: []*Rule{
+							{
+								Name:   "Allowlist trusted Actions",
+								Method: "allow",
+								Actions: []*ActionSelector{
+									{
+										Name: "actions/*",
+									},
+									{
+										Name:    "gradle/wrapper-validation-action",
+										Version: "< v1.0.4",
+									},
+									{
+										Name:    "gradle/wrapper-validation-action",
+										Version: "> v1.0.4",
+									},
+								},
+							},
+							denyAll,
+						},
+					},
+				},
+			},
+			Workflows: []testingWorkflowMetadata{
+				{
+					File: "gradle-wrapper-validate.yaml",
+				},
+			},
+			Commits:    commitsWrapperValidateWorkflow,
+			ExpectPass: false,
+		},
+		{
+			Name: "Allowlist lte current version",
+			Org: OrgConfig{
+				Action: "issue",
+				Groups: []*RuleGroup{
+					{
+						Rules: []*Rule{
+							{
+								Name:   "Allowlist trusted Actions",
+								Method: "allow",
+								Actions: []*ActionSelector{
+									{
+										Name: "actions/*",
+									},
+									{
+										Name:    "gradle/wrapper-validation-action",
+										Version: "<= v1.0.4",
+									},
+								},
+							},
+							denyAll,
+						},
+					},
+				},
+			},
+			Workflows: []testingWorkflowMetadata{
+				{
+					File: "gradle-wrapper-validate.yaml",
+				},
+			},
+			Commits:    commitsWrapperValidateWorkflow,
+			ExpectPass: true,
 		},
 		{
 			Name: "Allowlist new versions, new version and old version",
@@ -316,7 +458,7 @@ func TestCheck(t *testing.T) {
 									},
 									{
 										Name:    "gradle/wrapper-validation-action",
-										Version: ">= 1.0.4",
+										Version: ">= v1.0.4",
 									},
 								},
 							},
@@ -333,10 +475,11 @@ func TestCheck(t *testing.T) {
 					File: "gradle-wrapper-validate-outdated.yaml",
 				},
 			},
+			Commits:    commitsWrapperValidateWorkflow,
 			ExpectPass: false,
 			ExpectMessage: []string{
-				`version v1.0.3 hit deny rule "Deny default"`,
-				`does not meet version requirement ">= 1.0.4" * (member of rule group "RG1")`,
+				`version v1.0.0 hit deny rule "Deny default"`,
+				`does not meet version requirement ">= v1.0.4" * (member of rule group "RG1")`,
 				`denied by deny rule "Deny default" (member of rule group "RG1")`,
 			},
 		},
@@ -353,7 +496,7 @@ func TestCheck(t *testing.T) {
 								Actions: []*ActionSelector{
 									{
 										Name:    "gradle/wrapper-validation-action",
-										Version: ">= 1.0.4",
+										Version: ">= v1.0.4",
 									},
 								},
 							},
@@ -366,6 +509,65 @@ func TestCheck(t *testing.T) {
 					File: "gradle-wrapper-validate.yaml",
 				},
 			},
+			Commits:    commitsWrapperValidateWorkflow,
+			ExpectPass: true,
+		},
+		{
+			Name: "Require new version by tag, use untagged new version",
+			Org: OrgConfig{
+				Action: "issue",
+				Groups: []*RuleGroup{
+					{
+						Rules: []*Rule{
+							{
+								Name:   "Require Gradle Wrapper validation",
+								Method: "require",
+								Actions: []*ActionSelector{
+									{
+										Name:    "gradle/wrapper-validation-action",
+										Version: ">= v1.0.4",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Workflows: []testingWorkflowMetadata{
+				{
+					File: "gradle-wrapper-validate-version-new-untagged.yaml",
+				},
+			},
+			Commits:    commitsWrapperValidateWorkflow,
+			ExpectPass: false,
+		},
+		{
+			Name: "Require new version by commit, use untagged new version",
+			Org: OrgConfig{
+				Action: "issue",
+				Groups: []*RuleGroup{
+					{
+						Rules: []*Rule{
+							{
+								Name:   "Require Gradle Wrapper validation",
+								Method: "require",
+								Actions: []*ActionSelector{
+									{
+										Name:    "gradle/wrapper-validation-action",
+										Version: ">= Commit-B-3",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Workflows: []testingWorkflowMetadata{
+				{
+					File: "gradle-wrapper-validate-version-new-untagged.yaml",
+				},
+			},
+			Commits:    commitsWrapperValidateWorkflow,
 			ExpectPass: true,
 		},
 		{
@@ -381,7 +583,7 @@ func TestCheck(t *testing.T) {
 								Actions: []*ActionSelector{
 									{
 										Name:    "gradle/wrapper-validation-action",
-										Version: ">= 2",
+										Version: ">= v2.0.0",
 									},
 								},
 							},
@@ -394,11 +596,12 @@ func TestCheck(t *testing.T) {
 					File: "gradle-wrapper-validate.yaml",
 				},
 			},
+			Commits:    commitsWrapperValidateWorkflow,
 			ExpectPass: false,
 			ExpectMessage: []string{
 				"Require rule \"Require Gradle * not satisfied",
 				"0 / 1 requisites met",
-				"Update *\"gradle/wrapper-val*\" to version satisfying \">= 2\"",
+				"Update *\"gradle/wrapper-val*\" to version satisfying \">= v2.0.0\"",
 			},
 		},
 		{
@@ -484,7 +687,7 @@ func TestCheck(t *testing.T) {
 								Actions: []*ActionSelector{
 									{
 										Name:    "gradle/wrapper-validation-action",
-										Version: ">= 1.0.4",
+										Version: ">= v1.0.4",
 									},
 								},
 							},
@@ -500,6 +703,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
+			Commits:          commitsWrapperValidateWorkflow,
 			LatestCommitHash: "sha-latest",
 			ExpectPass:       true,
 		},
@@ -517,7 +721,7 @@ func TestCheck(t *testing.T) {
 								Actions: []*ActionSelector{
 									{
 										Name:    "gradle/wrapper-validation-action",
-										Version: ">= 1.0.4",
+										Version: ">= v1.0.4",
 									},
 								},
 							},
@@ -533,6 +737,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
+			Commits:          commitsWrapperValidateWorkflow,
 			LatestCommitHash: "sha-latest",
 			ExpectPass:       true,
 		},
@@ -550,7 +755,7 @@ func TestCheck(t *testing.T) {
 								Actions: []*ActionSelector{
 									{
 										Name:    "gradle/wrapper-validation-action",
-										Version: ">= 1.0.4",
+										Version: ">= v1.0.4",
 									},
 								},
 							},
@@ -567,6 +772,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			LatestCommitHash: "sha-latest",
+			Commits:          commitsWrapperValidateWorkflow,
 			ExpectPass:       false,
 			ExpectMessage: []string{
 				`Require rule "Require * not satisfied`,
@@ -588,7 +794,7 @@ func TestCheck(t *testing.T) {
 								Actions: []*ActionSelector{
 									{
 										Name:    "gradle/wrapper-validation-action",
-										Version: ">= 1.0.4",
+										Version: ">= v1.0.4",
 									},
 								},
 							},
@@ -605,6 +811,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			LatestCommitHash: "sha-latest",
+			Commits:          commitsWrapperValidateWorkflow,
 			ExpectPass:       false,
 			ExpectMessage: []string{
 				"Require rule \"Require * not satisfied",
@@ -625,7 +832,7 @@ func TestCheck(t *testing.T) {
 								Actions: []*ActionSelector{
 									{
 										Name:    "gradle/wrapper-validation-action",
-										Version: ">= 1.0.4",
+										Version: ">= v1.0.4",
 									},
 								},
 							},
@@ -643,7 +850,7 @@ func TestCheck(t *testing.T) {
 			ExpectMessage: []string{
 				"Require rule \"Require * not satisfied",
 				"0 / 1 requisites met",
-				"Add Action \"gradle/wrapper*\" with version satisfying \">= 1.0.4\"",
+				"Add Action \"gradle/wrapper*\" with version satisfying \">= v1.0.4\"",
 			},
 		},
 		{
@@ -815,13 +1022,16 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			Tags: map[string][]*github.RepositoryTag{
+			Commits: map[string][]*testingCommitMetadata{
 				"ossf/test-action": {
 					{
-						Name: strptr("v1.2.0"),
-						Commit: &github.Commit{
-							SHA: strptr("696c241da8ea301b3f1d2343c45c1e4aa38f90c7"),
-						},
+						SHA:     "696c241da8ea301b3f1d2343c45c1e4aa38f90c7",
+						Tag:     []string{"v1.2.0"},
+						Parents: []string{"another sha"},
+					},
+					{
+						SHA: "another sha",
+						Tag: []string{"v1.0.0"},
 					},
 				},
 			},
@@ -846,7 +1056,7 @@ func TestCheck(t *testing.T) {
 								Actions: []*ActionSelector{
 									{
 										Name:    "ossf/test-action",
-										Version: ">= v1.0.0",
+										Version: ">= v1.2.0",
 									},
 								},
 							},
@@ -854,13 +1064,17 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			Tags: map[string][]*github.RepositoryTag{
+			Commits: map[string][]*testingCommitMetadata{
 				"ossf/test-action": {
 					{
-						Name: strptr("v0.9.0"),
-						Commit: &github.Commit{
-							SHA: strptr("696c241da8ea301b3f1d2343c45c1e4aa38f90c7"),
-						},
+						SHA:     "another sha",
+						Tag:     []string{"v1.2.0"},
+						Parents: []string{"696c241da8ea301b3f1d2343c45c1e4aa38f90c7"},
+					},
+					{
+						SHA:     "696c241da8ea301b3f1d2343c45c1e4aa38f90c7",
+						Tag:     []string{"v0.9.0"},
+						Parents: []string{"696c241da8ea301b3f1d2343c45c1e4aa38f90c7"},
 					},
 				},
 			},
@@ -871,7 +1085,7 @@ func TestCheck(t *testing.T) {
 			},
 			ExpectPass: false,
 			ExpectMessage: []string{
-				`Update Action \"ossf/test-action\" to * ">= v1.0.0"`,
+				`Update Action "ossf/test-action" to * ">= v1.2.0"`,
 			},
 		},
 		{
@@ -1106,11 +1320,66 @@ func TestCheck(t *testing.T) {
 			listTags = func(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryTag, error) {
 				ownerRepo := fmt.Sprintf("%s/%s", owner, repo)
 				var tags []*github.RepositoryTag
-				var ok bool
-				if tags, ok = test.Tags[ownerRepo]; !ok {
-					t.Fatalf("tried to find tags for \"%s\", they were not specified in test", ownerRepo)
+				commits, ok := test.Commits[ownerRepo]
+				if !ok {
+					t.Logf("tried to find tags for \"%s\", but commits were not specified in test", ownerRepo)
+					return nil, nil
+				}
+				for _, c := range commits {
+					for _, t := range c.Tag {
+						tags = append(tags, &github.RepositoryTag{
+							Name: &t,
+							Commit: &github.Commit{
+								SHA: &c.SHA,
+							},
+						})
+					}
 				}
 				return tags, nil
+			}
+
+			listBranches = func(ctx context.Context, c *github.Client, owner, repo string) ([]*github.Branch, error) {
+				ownerRepo := fmt.Sprintf("%s/%s", owner, repo)
+				var branches []*github.Branch
+				commits, ok := test.Commits[ownerRepo]
+				if !ok {
+					t.Logf("tried to find branches for \"%s\", but commits were not specified in test", ownerRepo)
+					return nil, nil
+				}
+				for _, c := range commits {
+					for _, t := range c.Branch {
+						branches = append(branches, &github.Branch{
+							Name: &t,
+							Commit: &github.RepositoryCommit{
+								SHA: &c.SHA,
+							},
+						})
+					}
+				}
+				return branches, nil
+			}
+
+			listCommits = func(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryCommit, error) {
+				ownerRepo := fmt.Sprintf("%s/%s", owner, repo)
+				var commits []*github.RepositoryCommit
+				cms, ok := test.Commits[ownerRepo]
+				if !ok {
+					t.Logf("tried to find commits for \"%s\", but commits were not specified in test", ownerRepo)
+					return nil, nil
+				}
+				for _, c := range cms {
+					var parents []*github.Commit
+					for _, p := range c.Parents {
+						parents = append(parents, &github.Commit{
+							SHA: &p,
+						})
+					}
+					commits = append(commits, &github.RepositoryCommit{
+						SHA:     &c.SHA,
+						Parents: parents,
+					})
+				}
+				return commits, nil
 			}
 
 			res, err := a.Check(context.Background(), nil, "thisorg", "thisrepo")

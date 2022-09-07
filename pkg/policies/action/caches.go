@@ -15,7 +15,6 @@
 package action
 
 import (
-	"github.com/Masterminds/semver/v3"
 	"github.com/gobwas/glob"
 )
 
@@ -38,47 +37,4 @@ func (g globCache) compileGlob(s string) (glob.Glob, error) {
 	}
 	g[s] = c
 	return c, nil
-}
-
-// semverCache is a cache for compiled versions & constraints
-// globCache is a cache for compiled globs
-type semverCache struct {
-	version     map[string]*semver.Version
-	constraints map[string]*semver.Constraints
-}
-
-// newSemverCache returns a new semverCache
-func newSemverCache() semverCache {
-	return semverCache{
-		version:     map[string]*semver.Version{},
-		constraints: map[string]*semver.Constraints{},
-	}
-}
-
-// compileVersion returns cached Version if present, otherwise attempts
-// semver.NewVersion.
-func (c semverCache) compileVersion(s string) (*semver.Version, error) {
-	if v, ok := c.version[s]; ok {
-		return v, nil
-	}
-	nv, err := semver.NewVersion(s)
-	if err != nil {
-		return nil, err
-	}
-	c.version[s] = nv
-	return nv, nil
-}
-
-// compileVersion returns cached Constraints if present, otherwise attempts
-// semver.NewConstraint.
-func (c semverCache) compileConstraints(s string) (*semver.Constraints, error) {
-	if v, ok := c.constraints[s]; ok {
-		return v, nil
-	}
-	nc, err := semver.NewConstraint(s)
-	if err != nil {
-		return nil, err
-	}
-	c.constraints[s] = nc
-	return nc, nil
 }

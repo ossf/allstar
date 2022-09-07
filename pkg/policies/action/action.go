@@ -22,7 +22,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
 	"github.com/rhysd/actionlint"
@@ -120,7 +119,10 @@ type ActionSelector struct {
 	// Name is the Action name in glob format
 	Name string `json:"name"`
 
-	// Version is a semver condition or commit ref
+	// Version is a version constraint using either a commit, tag, or branch
+	// ref.
+	// Examples: ">= 696c241da8ea301b3f1d2343c45c1e4aa38f90c7" ">= v1.0.0",
+	// "< v2.2.0"
 	// Default "" targets any version
 	Version string `json:"version"`
 }
@@ -181,6 +183,8 @@ var listLanguages func(ctx context.Context, c *github.Client, owner, repo string
 var listWorkflowRunsByFilename func(ctx context.Context, c *github.Client, owner, repo string, workflowFilename string) ([]*github.WorkflowRun, error)
 var getLatestCommitHash func(ctx context.Context, c *github.Client, owner, repo string) (string, error)
 var listTags func(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryTag, error)
+var listBranches func(ctx context.Context, c *github.Client, owner, repo string) ([]*github.Branch, error)
+var listCommits func(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryCommit, error)
 
 func init() {
 	configFetchConfig = config.FetchConfig
@@ -189,6 +193,8 @@ func init() {
 	listWorkflowRunsByFilename = listWorkflowRunsByFilenameReal
 	getLatestCommitHash = getLatestCommitHashReal
 	listTags = listTagsReal
+	listBranches = listBranchesReal
+	listCommits = listCommitsReal
 }
 
 // sortableRules is a sortable list of *Rule
@@ -290,7 +296,6 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 	// Init caches
 
 	gc := newGlobCache()
-	sc := newSemverCache()
 
 	// Determine applicable rules
 
@@ -301,7 +306,7 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 		groupMatch := false
 		for _, rs := range g.Repos {
 			// Ignore error while checking match. Match will be false on error.
-			match, err := rs.match(ctx, c, owner, repo, repoSelectorExcludeDepthLimit, gc, sc)
+			match, err := rs.match(ctx, c, owner, repo, repoSelectorExcludeDepthLimit, gc)
 
 			if err != nil {
 				log.Warn().
@@ -339,7 +344,7 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 	// Note: deny rules are evaluated Action-wise
 
 	for _, a := range actions {
-		denyResult, errors := evaluateActionDenied(ctx, c, applicableRules, a, gc, sc)
+		denyResult, errors := evaluateActionDenied(ctx, c, applicableRules, a, gc)
 		// errors are often parse errors (user-created) and are reflected in
 		// denyResult steps
 
@@ -378,7 +383,7 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 				headSHA = hash
 			}
 
-			result, err := evaluateRequireRule(ctx, c, owner, repo, r, actions, headSHA, gc, sc)
+			result, err := evaluateRequireRule(ctx, c, owner, repo, r, actions, headSHA, gc)
 			if err != nil {
 				log.Warn().
 					Str("org", owner).
@@ -491,34 +496,9 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) *inter
 	}
 }
 
-// resolveVersion gets a *semver.Version given an actionMetadata.
-// It will use tags of the Action repo if necessary.
-func resolveVersion(ctx context.Context, c *github.Client, m *actionMetadata, gc globCache, sc semverCache) (*semver.Version, error) {
-	version, err := sc.compileVersion(m.version)
-	if err == nil {
-		return version, nil
-	}
-	errPrefix := fmt.Sprintf("while resolving version for commit ref \"%s\" in repo \"%s\"", m.version, m.name)
-	// On error, attempt locate tag (assume m.version is a commit ref)
-	ownerRepo := strings.Split(m.name, "/")
-	if len(ownerRepo) != 2 {
-		return nil, fmt.Errorf("%s: invalid name \"%s\"", errPrefix, m.name)
-	}
-	tags, err := listTags(ctx, c, ownerRepo[0], ownerRepo[1])
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", errPrefix, err)
-	}
-	for _, tag := range tags {
-		if tag.GetCommit().GetSHA() == m.version {
-			version, err := sc.compileVersion(tag.GetName())
-			return version, err
-		}
-	}
-	return nil, fmt.Errorf("%s: no corresponding tag found", errPrefix)
-}
-
 // match checks if an ActionSelector matches an actionMetadata.
-func (as *ActionSelector) match(ctx context.Context, c *github.Client, m *actionMetadata, gc globCache, sc semverCache) (match, matchName, matchVersion bool, err error) {
+func (as *ActionSelector) match(ctx context.Context, c *github.Client, m *actionMetadata, gc globCache) (match, matchName, matchVersion bool, err error) {
+	errPrefix := "while matching ActionSelector"
 	if as.Name != "" {
 		nameGlob, err := gc.compileGlob(as.Name)
 		if err != nil {
@@ -534,27 +514,37 @@ func (as *ActionSelector) match(ctx context.Context, c *github.Client, m *action
 	if as.Version == m.version {
 		return true, true, true, nil
 	}
-	if as.Version != "" {
-		constraint, err := sc.compileConstraints(as.Version)
-		if err != nil {
-			// on error, assume this is a ref
-			// (we know it doesn't match because not equal above)
-			return false, true, false, nil
-		}
-		version, err := resolveVersion(ctx, c, m, gc, sc)
-		if err != nil {
-			return false, true, false, err
-		}
-		if !constraint.Check(version) {
-			return false, true, false, nil
-		}
+	if as.Version == "" {
+		return true, true, true, nil
+	}
+	// Attempt more comprehensive version match
+	ownerRepo := strings.Split(m.name, "/")
+	if len(ownerRepo) != 2 {
+		return false, true, false, fmt.Errorf("%s: invalid ownerRepo \"%s\"", errPrefix, m.name)
+	}
+	owner := ownerRepo[0]
+	repo := ownerRepo[1]
+	constraint, err := parseVersionConstraint(ctx, c, owner, repo, as.Version)
+	if err != nil {
+		return false, true, false, fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	version, _, err := newVersionFromVersionish(ctx, c, owner, repo, m.version)
+	if err != nil {
+		return false, true, false, fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	matchRes, err := constraint.Match(ctx, c, owner, repo, version)
+	if err != nil {
+		return false, true, false, fmt.Errorf("%s: %v", errPrefix, err)
+	}
+	if !matchRes {
+		return false, true, false, nil
 	}
 	return true, true, true, nil
 }
 
 // match checks if a repo matches a RepoSelector.
 // Set excludeDepth to > 0 for exclusion depth limit, or < 0 for no depth limit.
-func (rs *RepoSelector) match(ctx context.Context, c *github.Client, owner, repo string, excludeDepth int, gc globCache, sc semverCache) (bool, error) {
+func (rs *RepoSelector) match(ctx context.Context, c *github.Client, owner, repo string, excludeDepth int, gc globCache) (bool, error) {
 	if rs == nil {
 		return true, nil
 	}
@@ -579,7 +569,7 @@ func (rs *RepoSelector) match(ctx context.Context, c *github.Client, owner, repo
 	// Check if covered by exclusion case
 	if excludeDepth != 0 {
 		for _, exc := range rs.Exclude {
-			match, err := exc.match(ctx, c, owner, repo, excludeDepth-1, gc, sc)
+			match, err := exc.match(ctx, c, owner, repo, excludeDepth-1, gc)
 			if err != nil {
 				// API error? Ignore exclusion
 				continue
@@ -768,8 +758,19 @@ func listWorkflowsReal(ctx context.Context, c *github.Client, owner, repo string
 // Docs: https://docs.github.com/en/rest/repos/repos#list-repository-tags
 func listTagsReal(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryTag, error) {
 	tags, _, err := c.Repositories.ListTags(ctx, owner, repo, &github.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	return tags, nil
+	return tags, err
+}
+
+// listBranchesReal uses the GitHub API to list tags for a repo.
+// Docs: https://docs.github.com/en/rest/branches/branches#list-branches
+func listBranchesReal(ctx context.Context, c *github.Client, owner, repo string) ([]*github.Branch, error) {
+	branches, _, err := c.Repositories.ListBranches(ctx, owner, repo, &github.BranchListOptions{})
+	return branches, err
+}
+
+// listCommitsReal uses the GitHub API to list commits for a repo.
+// Docs: https://docs.github.com/en/rest/commits/commits#list-commits
+func listCommitsReal(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryCommit, error) {
+	commits, _, err := c.Repositories.ListCommits(ctx, owner, repo, &github.CommitsListOptions{})
+	return commits, err
 }
