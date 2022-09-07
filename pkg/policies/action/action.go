@@ -757,20 +757,60 @@ func listWorkflowsReal(ctx context.Context, c *github.Client, owner, repo string
 // listTagsReal uses the GitHub API to list tags for a repo.
 // Docs: https://docs.github.com/en/rest/repos/repos#list-repository-tags
 func listTagsReal(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryTag, error) {
-	tags, _, err := c.Repositories.ListTags(ctx, owner, repo, &github.ListOptions{})
-	return tags, err
+	var tags []*github.RepositoryTag
+	listopt := &github.ListOptions{
+		Page:    1,
+		PerPage: 100,
+	}
+	for listopt.Page != 0 {
+		ptags, resp, err := c.Repositories.ListTags(ctx, owner, repo, &github.ListOptions{})
+		if err != nil {
+			return nil, err
+		}
+		tags = append(tags, ptags...)
+		listopt.Page = resp.NextPage
+	}
+	return tags, nil
 }
 
 // listBranchesReal uses the GitHub API to list tags for a repo.
 // Docs: https://docs.github.com/en/rest/branches/branches#list-branches
 func listBranchesReal(ctx context.Context, c *github.Client, owner, repo string) ([]*github.Branch, error) {
-	branches, _, err := c.Repositories.ListBranches(ctx, owner, repo, &github.BranchListOptions{})
-	return branches, err
+	var branches []*github.Branch
+	listopt := github.ListOptions{
+		Page:    1,
+		PerPage: 100,
+	}
+	for listopt.Page != 0 {
+		pbranches, resp, err := c.Repositories.ListBranches(ctx, owner, repo, &github.BranchListOptions{
+			ListOptions: listopt,
+		})
+		if err != nil {
+			return nil, err
+		}
+		branches = append(branches, pbranches...)
+		listopt.Page = resp.NextPage
+	}
+	return branches, nil
 }
 
 // listCommitsReal uses the GitHub API to list commits for a repo.
 // Docs: https://docs.github.com/en/rest/commits/commits#list-commits
 func listCommitsReal(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryCommit, error) {
-	commits, _, err := c.Repositories.ListCommits(ctx, owner, repo, &github.CommitsListOptions{})
-	return commits, err
+	var commits []*github.RepositoryCommit
+	listopt := github.ListOptions{
+		Page:    1,
+		PerPage: 100,
+	}
+	for listopt.Page != 0 {
+		pcommits, resp, err := c.Repositories.ListCommits(ctx, owner, repo, &github.CommitsListOptions{
+			ListOptions: listopt,
+		})
+		if err != nil {
+			return nil, err
+		}
+		commits = append(commits, pcommits...)
+		listopt.Page = resp.NextPage
+	}
+	return commits, nil
 }
