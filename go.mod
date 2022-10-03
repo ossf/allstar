@@ -14,7 +14,7 @@ require (
 	github.com/rhysd/actionlint v1.6.15
 	github.com/rs/zerolog v1.27.0
 	github.com/shurcooL/githubv4 v0.0.0-20210725200734-83ba7b4c9228
-	gocloud.dev v0.26.0
+	gocloud.dev v0.27.0
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	sigs.k8s.io/yaml v1.3.0
 )
