@@ -10,7 +10,8 @@ require (
 	github.com/google/go-cmp v0.5.8
 	github.com/google/go-github/v43 v43.0.0
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79
-	github.com/ossf/scorecard/v4 v4.5.0
+	github.com/mattn/go-ieproxy v0.0.3 // indirect
+	github.com/ossf/scorecard/v4 v4.8.0
 	github.com/rhysd/actionlint v1.6.15
 	github.com/rs/zerolog v1.27.0
 	github.com/shurcooL/githubv4 v0.0.0-20210725200734-83ba7b4c9228
