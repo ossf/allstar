@@ -83,15 +83,24 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface) (EnforceA
 	var mu sync.Mutex
 
 	for _, i := range insts {
-		ic, err := ghc.Get(*i.ID)
+		if i.SuspendedAt != nil {
+			log.Info().
+				Str("area", "bot").
+				Int64("instId", i.GetID()).
+				Str("instTarget", i.GetAccount().GetLogin()).
+				Msg("Installation is suspended, skipping.")
+			continue
+		}
+		ic, err := ghc.Get(i.GetID())
 		if err != nil {
 			log.Error().
 				Err(err).
-				Int64("instId", *i.ID).
+				Int64("instId", i.GetID()).
+				Str("instTarget", i.GetAccount().GetLogin()).
 				Msg("Unexpected error getting installation client.")
 			return nil, err
 		}
-		iid := *i.ID
+		iid := i.GetID()
 
 		g.Go(func() error {
 
