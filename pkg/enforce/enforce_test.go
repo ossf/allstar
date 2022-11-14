@@ -494,3 +494,40 @@ func TestEnforceAll(t *testing.T) {
 		})
 	}
 }
+
+func TestSuspendedEnforce(t *testing.T) {
+	var suspended bool
+	var gaicalled bool
+	getAppInstallations = func(ctx context.Context, ac *github.Client) ([]*github.Installation, error) {
+		var insts []*github.Installation
+		appID := int64(123456)
+		inst := &github.Installation{
+			ID: &appID,
+		}
+		if suspended {
+			inst.SuspendedAt = &github.Timestamp{}
+		}
+		insts = append(insts, inst)
+		return insts, nil
+	}
+	getAppInstallationRepos = func(ctx context.Context, ic *github.Client) ([]*github.Repository, *github.Response, error) {
+		gaicalled = true
+		return nil, nil, nil
+	}
+	suspended = false
+	gaicalled = false
+	if _, err := EnforceAll(context.Background(), &MockGhClients{}); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !gaicalled {
+		t.Errorf("Expected getAppInstallationRepos() to be called, but wasn't")
+	}
+	suspended = true
+	gaicalled = false
+	if _, err := EnforceAll(context.Background(), &MockGhClients{}); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if gaicalled {
+		t.Errorf("Expected getAppInstallationRepos() to not be called, but was")
+	}
+}
