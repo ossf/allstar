@@ -52,7 +52,7 @@ type GhClientsInterface interface {
 	LogCacheSize()
 }
 
-// GHClients stores clients per-installation for re-use througout a process.
+// GHClients stores clients per-installation for re-use throughout a process.
 type GHClients struct {
 	clients map[int64]*github.Client
 	tr      http.RoundTripper
