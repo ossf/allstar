@@ -66,7 +66,7 @@ type OrgConfig struct {
 	Schedule *ScheduleConfig `json:"schedule"`
 }
 
-// OrgOptConfig is used in Allstar and policy-secific org-level config to
+// OrgOptConfig is used in Allstar and policy-specific org-level config to
 // define the opt in/out configuration.
 type OrgOptConfig struct {
 	// OptOutStrategy : set to true to change from opt-in to opt-out.
