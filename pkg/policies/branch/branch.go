@@ -189,7 +189,7 @@ func init() {
 // Branch is the Branch Protection policy object, implements policydef.Policy.
 type Branch bool
 
-// NewBranch returns a new BranchProtection polcy.
+// NewBranch returns a new BranchProtection policy.
 func NewBranch() policydef.Policy {
 	var b Branch
 	return b
@@ -215,7 +215,7 @@ type repositories interface {
 		*github.SignaturesProtectedBranch, *github.Response, error)
 }
 
-// Check performs the polcy check for Branch Protection based on the
+// Check performs the policy check for Branch Protection based on the
 // configuration stored in the org/repo, implementing policydef.Policy.Check()
 func (b Branch) Check(ctx context.Context, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {

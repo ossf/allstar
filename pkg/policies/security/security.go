@@ -96,7 +96,7 @@ func (s Security) Name() string {
 	return polName
 }
 
-// Check performs the polcy check for SECURITY.md policy based on the
+// Check performs the policy check for SECURITY.md policy based on the
 // configuration stored in the org/repo, implementing policydef.Policy.Check()
 func (s Security) Check(ctx context.Context, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {

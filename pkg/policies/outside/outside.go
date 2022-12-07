@@ -172,7 +172,7 @@ type repositories interface {
 		[]*github.Team, *github.Response, error)
 }
 
-// Check performs the polcy check for Outside Collaborators based on the
+// Check performs the policy check for Outside Collaborators based on the
 // configuration stored in the org/repo, implementing policydef.Policy.Check()
 func (o Outside) Check(ctx context.Context, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
