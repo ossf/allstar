@@ -42,7 +42,7 @@ func main() {
 			Msg("Could not load app secret, shutting down")
 	}
 
-	boolArgPtr := flag.Bool("once", false, "Run EnforceAll once, instead of in a contiuous loop.")
+	boolArgPtr := flag.Bool("once", false, "Run EnforceAll once, instead of in a continuous loop.")
 	flag.Parse()
 
 	if *boolArgPtr {
