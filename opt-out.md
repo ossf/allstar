@@ -65,12 +65,12 @@ If your repository is on the `optInRepos` list, follow the [opt-in strategy
 instructions](#disable-allstar-org-level-opt-in-strategy).  
     
 If your repository is not listed in the allstar.yaml file, it means Allstar is
-configured directly on your repository. Follow the [repository-level instuctions](#disable-allstar-repository-level).
+configured directly on your repository. Follow the [repository-level instructions](#disable-allstar-repository-level).
 </details>
 
 ## Disable Allstar, org-level opt-out strategy
 
-These instuctions disable Allstar on a repository when Allstar is configured at the organization level using the opt-out strategy. 
+These instructions disable Allstar on a repository when Allstar is configured at the organization level using the opt-out strategy. 
    
 In the `.allstar` repository in your organization, open the file named
 `allstar.yaml`.   
@@ -122,7 +122,7 @@ Merge this file to disable Allstar on your repository.
 
 ## Disable Allstar, org-level opt-in strategy
 
-These instuctions disable Allstar on a repository when Allstar is configured at the organization level using the opt-in strategy. 
+These instructions disable Allstar on a repository when Allstar is configured at the organization level using the opt-in strategy. 
 
 In the org-level .allstar repository, open the `allstar.yaml` file. Find the
 `optInRepos` setting:
@@ -142,7 +142,7 @@ When the pull request is merged, Allstar should be disabled on your repository. 
 
 ## Disable Allstar, repository level
 
-These instuctions disable Allstar when it is configured directly on your repository (not at the organization level). 
+These instructions disable Allstar when it is configured directly on your repository (not at the organization level). 
 
 Look in your repository for a file named `.allstar/allstar.yaml`. It
     should contain this setting:
