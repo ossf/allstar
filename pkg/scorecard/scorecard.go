@@ -41,12 +41,12 @@ var mMutex sync.RWMutex
 
 const defaultGitRef = "HEAD"
 
-var githubrepoMakeGithubRepo func(string) (clients.Repo, error)
-var githubrepoCreateGithubRepoClientWithTransport func(context.Context, http.RoundTripper) clients.RepoClient
+var githubrepoMakeGitHubRepo func(string) (clients.Repo, error)
+var githubrepoCreateGitHubRepoClientWithTransport func(context.Context, http.RoundTripper) clients.RepoClient
 
 func init() {
-	githubrepoMakeGithubRepo = githubrepo.MakeGithubRepo
-	githubrepoCreateGithubRepoClientWithTransport = githubrepo.CreateGithubRepoClientWithTransport
+	githubrepoMakeGitHubRepo = githubrepo.MakeGithubRepo
+	githubrepoCreateGitHubRepoClientWithTransport = githubrepo.CreateGithubRepoClientWithTransport
 }
 
 // Function Get will get the scorecard clients and create them if they don't
@@ -98,11 +98,11 @@ func Close(fullRepo string) {
 }
 
 func create(ctx context.Context, fullRepo string, tr http.RoundTripper) (*ScClient, error) {
-	scr, err := githubrepoMakeGithubRepo(fullRepo)
+	scr, err := githubrepoMakeGitHubRepo(fullRepo)
 	if err != nil {
 		return nil, err
 	}
-	scrc := githubrepoCreateGithubRepoClientWithTransport(ctx, tr)
+	scrc := githubrepoCreateGitHubRepoClientWithTransport(ctx, tr)
 	if err := scrc.InitRepo(scr, defaultGitRef, 0); err != nil {
 		return nil, err
 	}
