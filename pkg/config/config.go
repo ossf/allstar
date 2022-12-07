@@ -36,7 +36,7 @@ type OrgConfig struct {
 	OptConfig OrgOptConfig `json:"optConfig"`
 
 	// IssueLabel is the label used to tag, search, and identify GitHub Issues
-	// created by the bot. The defeault is specified by the operator of Allstar,
+	// created by the bot. The default is specified by the operator of Allstar,
 	// currently: "allstar"
 	IssueLabel string `json:"issueLabel"`
 
