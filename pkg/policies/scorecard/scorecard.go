@@ -190,7 +190,7 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 				notify = `Project is out of compliance with Security Scorecards policy
 
 **Rule Description**
-This is a generic passthrough policy that runs the configured checks from Security Scorecards. Please see the [Security Scorecards Documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md#dangerous-workflow) for more infomation on each check.
+This is a generic passthrough policy that runs the configured checks from Security Scorecards. Please see the [Security Scorecards Documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md#dangerous-workflow) for more information on each check.
 
 `
 			}
