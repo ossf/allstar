@@ -42,7 +42,7 @@ type Result struct {
 	// the user of the problem and how to fix it.
 	NotifyText string
 
-	// Details are logged on failure. it should be serailizable to json and allow
+	// Details are logged on failure. it should be serializable to json and allow
 	// useful log querying.
 	Details interface{}
 }
