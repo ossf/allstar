@@ -19,7 +19,7 @@
 // Allstar does. There should be an org-level config and repo-level
 // config. Each config should include the OptConfig defined in
 // github.com/ossf/allstar/pkg/config to determine if the policy is enabled or
-// disabled. The config package also provided helper functions to retreive
+// disabled. The config package also provided helper functions to retrieve
 // config from the repo.
 package policydef
 
