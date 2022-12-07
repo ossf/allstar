@@ -26,7 +26,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// memoryCache is an implemtation of httpcache.Cache that stores responses in
+// memoryCache is an implementation of httpcache.Cache that stores responses in
 // an in-memory map.  It is a copy of httpcache.MemoryCache but adds
 // LogCacheSize()
 type memoryCache struct {
