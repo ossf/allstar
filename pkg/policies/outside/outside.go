@@ -70,11 +70,11 @@ type OrgConfig struct {
 	// Action defines which action to take, default log, other: issue...
 	Action string `json:"action"`
 
-	// PushAllowed defined if outside collaboraters are allowed to have push
+	// PushAllowed defined if outside collaborators are allowed to have push
 	// access, default true.
 	PushAllowed bool `json:"pushAllowed"`
 
-	// AdminAllowed defined if outside collaboraters are allowed to have admin
+	// AdminAllowed defined if outside collaborators are allowed to have admin
 	// access, default false.
 	AdminAllowed bool `json:"adminAllowed"`
 
