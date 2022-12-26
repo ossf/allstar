@@ -1,0 +1,50 @@
+header:
+  parent-security-yaml: 'https://github.com/ossf/allstar/blob/main/SECURITY-INSIGHTS.yml'
+  expiration-date: '2023-12-25T13:37:00.000Z'
+  last-updated: '2022-12-26'
+  last-reviewed: '2022-12-26'
+  commit-hash: '996c424662cf0780240e97604b50cb7192e36787'
+  project-url: 'https://github.com/ossf/allstar'
+  schema-version: '1.0.0'
+  license: 'https://github.com/ossf/allstar/blob/main/LICENSE'
+  project-release: 'v2.0'
+project-lifecycle:
+  stage: 'active'
+  bug-fixes-only: False
+  core-maintainers:
+  - 'https://github.com/jeffmendoza'
+contribution-policy:
+  accepts-pull-requests: True
+  accepts-bot-pull-requests: True
+documentation:
+- 'https://github.com/ossf/allstar/blob/main/README.md'
+distribution-points:
+- package-url: 'https://github.com/ossf/allstar'
+- package-url: 'https://ghcr.io/ossf/allstar'
+  ecosystem: 'GitHub Packages'
+  package-name: 'allstar'
+security-artifacts:
+  threat-model:
+    threat-model-created: False
+security-testing:
+- tool-type: 'sast'
+  tool-name: 'Dependabot'
+  tool-version: '2'
+  integration:
+    ad-hoc: False
+    ci: True
+    before-release: True
+  tool-url: 'https://github.com/ossf/allstar/blob/main/.github/dependabot.yml'
+security-contacts:
+- type: 'email'
+  value: 'oss-security@googlegroups.com'
+  primary: True
+vulnerability-reporting:
+  accepts-vulnerability-reports: True
+  email-contact: 'oss-security@googlegroups.com'
+  security-policy: 'https://github.com/ossf/allstar/blob/main/SECURITY.md'
+dependencies:
+  third-party-packages: True
+  dependencies-lists:
+  - 'https://github.com/ossf/allstar/blob/main/go.mod'
+  - 'https://github.com/ossf/allstar/blob/main/go.sum'
