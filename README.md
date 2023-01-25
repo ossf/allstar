@@ -34,7 +34,7 @@
 - [Run Your Own Instance of Allstar](operator.md)
 
 ## Contribute
-- [Contribute Policies](#contribute-policies)
+- [Contributing](#contributing)
 ________
 ________
 
@@ -439,10 +439,6 @@ method this is applied is described as a [JSON Merge
 Patch](https://datatracker.ietf.org/doc/html/rfc7396). The `baseConfig` must be
 a GitHub `<org>/<repository>`.
 
-## **Contribute Policies**
+## **Contributing**
 
-[Interface definition.](pkg/policydef/policydef.go)
-
-Both the [SECURITY.md](pkg/policies/security/security.go) and [Outside
-Collaborators](pkg/policies/outside/outside.go) policies are quite simple to
-understand and good examples to copy.
+See [CONTRIBUTING.md](CONTRIBUTING.md)
