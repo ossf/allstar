@@ -279,7 +279,6 @@ func mergeConfig(oc *OrgConfig, orc, rc *RepoConfig, repo string) *mergedConfig 
 	mc := &mergedConfig{
 		Action:      oc.Action,
 		IgnoreFiles: oc.IgnoreFiles,
-		IgnorePaths: rc.IgnorePaths,
 	}
 	mc = mergeInRepoConfig(mc, orc, repo)
 
@@ -292,6 +291,9 @@ func mergeConfig(oc *OrgConfig, orc, rc *RepoConfig, repo string) *mergedConfig 
 func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedConfig {
 	if rc.Action != nil {
 		mc.Action = *rc.Action
+	}
+	if rc.IgnorePaths != nil {
+		mc.IgnorePaths = rc.IgnorePaths
 	}
 	return mc
 }
