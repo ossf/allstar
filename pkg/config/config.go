@@ -87,6 +87,9 @@ type OrgOptConfig struct {
 	// OptOutArchivedRepos : set to true to opt-out archived repositories.
 	OptOutArchivedRepos bool `json:"optOutArchivedRepos"`
 
+	// OptOutForkedRepos : set to true to opt-out forked repositories.
+	OptOutForkedRepos bool `json:"optOutForkedRepos"`
+
 	// DisableRepoOverride : set to true to disallow repos from opt-in/out in
 	// their config.
 	DisableRepoOverride bool `json:"disableRepoOverride"`
@@ -305,6 +308,9 @@ func isEnabled(ctx context.Context, o OrgOptConfig, orc, r RepoOptConfig, rep re
 			enabled = false
 		}
 		if o.OptOutArchivedRepos && gr.GetArchived() {
+			enabled = false
+		}
+		if o.OptOutForkedRepos && gr.GetFork() {
 			enabled = false
 		}
 		if orc.OptOut {
