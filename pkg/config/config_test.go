@@ -191,6 +191,7 @@ func TestIsEnabled(t *testing.T) {
 		Repo           RepoOptConfig
 		IsPrivateRepo  bool
 		IsArchivedRepo bool
+		IsForkedRepo   bool
 		Expect         bool
 	}{
 		{
@@ -304,6 +305,29 @@ func TestIsEnabled(t *testing.T) {
 			Expect:         true,
 		},
 		{
+			Name: "OptOutForkedRepos",
+			Org: OrgOptConfig{
+				OptOutStrategy:    true,
+				OptOutForkedRepos: true,
+			},
+			OrgRepo:       RepoOptConfig{},
+			Repo:          RepoOptConfig{},
+			IsPrivateRepo: true,
+			IsForkedRepo:  true,
+			Expect:        false,
+		},
+		{
+			Name: "NoOptOutForkedRepos",
+			Org: OrgOptConfig{
+				OptOutStrategy: true,
+			},
+			OrgRepo:       RepoOptConfig{},
+			Repo:          RepoOptConfig{},
+			IsPrivateRepo: true,
+			IsForkedRepo:  true,
+			Expect:        true,
+		},
+		{
 			Name:    "RepoOptIn",
 			Org:     OrgOptConfig{},
 			OrgRepo: RepoOptConfig{},
@@ -397,6 +421,7 @@ func TestIsEnabled(t *testing.T) {
 				return &github.Repository{
 					Private:  &test.IsPrivateRepo,
 					Archived: &test.IsArchivedRepo,
+					Fork:     &test.IsForkedRepo,
 				}, nil, nil
 			}
 			got, _ := isEnabled(context.Background(), test.Org, test.OrgRepo, test.Repo, mockRepos{}, "thisorg", "thisrepo")
