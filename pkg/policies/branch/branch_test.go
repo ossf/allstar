@@ -1176,6 +1176,133 @@ func TestCheck(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name: "RequireCodeOwnerReviewsRequiredNotEnabled",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:          true,
+				RequireApproval:         true,
+				ApprovalCount:           1,
+				RequireCodeOwnerReviews: true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 1,
+					},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Require Code Owner Reviews not configured for branch main\n",
+				Details: map[string]details{
+					"main": details{
+						PRReviews:               true,
+						NumReviews:              1,
+						DismissStale:            true,
+						BlockForce:              true,
+						RequireCodeOwnerReviews: false,
+					},
+				},
+			},
+		},
+		{
+			Name: "RequireCodeOwnerReviewsRequiredEnabled",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:          true,
+				RequireApproval:         true,
+				ApprovalCount:           1,
+				RequireCodeOwnerReviews: true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 1,
+						RequireCodeOwnerReviews:      true,
+					},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: map[string]details{
+					"main": details{
+						PRReviews:               true,
+						NumReviews:              1,
+						DismissStale:            true,
+						BlockForce:              true,
+						RequireCodeOwnerReviews: true,
+					},
+				},
+			},
+		},
+		{
+			Name: "RequireCodeOwnerReviewsNotRequiredNotEnabled",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:          true,
+				RequireApproval:         true,
+				ApprovalCount:           1,
+				RequireCodeOwnerReviews: false,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": github.Protection{
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 1,
+					},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": github.SignaturesProtectedBranch{
+					Enabled: github.Bool(false),
+				},
+			},
+			cofigEnabled:      true,
+			doNothingOnOptOut: false,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: map[string]details{
+					"main": details{
+						PRReviews:               true,
+						NumReviews:              1,
+						DismissStale:            true,
+						BlockForce:              true,
+						RequireCodeOwnerReviews: false,
+					},
+				},
+			},
+		},
 	}
 
 	get = func(context.Context, string, string) (*github.Repository,
