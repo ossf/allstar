@@ -52,6 +52,10 @@ type OrgConfig struct {
 	// RequireApproval : set to true to enforce approval on PRs, default true.
 	RequireApproval bool `json:"requireApproval"`
 
+	// RequireCodeOwnerReviews : set to true to enforce code owner reviews on PRs, default false.
+	// If set to true, then "requireApproval" must also be true
+	RequireCodeOwnerReviews bool `json:"requireCodeOwnerReviews"`
+
 	// ApprovalCount is the number of required PR approvals, default 1.
 	ApprovalCount int `json:"approvalCount"`
 
@@ -98,6 +102,9 @@ type RepoConfig struct {
 	// RequireApproval overrides the same setting in org-level, only if present.
 	RequireApproval *bool `json:"requireApproval"`
 
+	// RequireCodeOwnerReviews overrides the same setting in org-level, only if present.
+	RequireCodeOwnerReviews *bool `json:"requireCodeOwnerReviews"`
+
 	// ApprovalCount overrides the same setting in org-level, only if present.
 	ApprovalCount *int `json:"approvalCount"`
 
@@ -143,28 +150,30 @@ type statusCheckHash struct {
 }
 
 type mergedConfig struct {
-	Action                string
-	EnforceDefault        bool
-	EnforceBranches       []string
-	RequireApproval       bool
-	ApprovalCount         int
-	DismissStale          bool
-	BlockForce            bool
-	EnforceOnAdmins       bool
-	RequireUpToDateBranch bool
-	RequireStatusChecks   []StatusCheck
-	RequireSignedCommits  bool
+	Action                  string
+	EnforceDefault          bool
+	EnforceBranches         []string
+	RequireApproval         bool
+	RequireCodeOwnerReviews bool
+	ApprovalCount           int
+	DismissStale            bool
+	BlockForce              bool
+	EnforceOnAdmins         bool
+	RequireUpToDateBranch   bool
+	RequireStatusChecks     []StatusCheck
+	RequireSignedCommits    bool
 }
 
 type details struct {
-	PRReviews             bool
-	NumReviews            int
-	DismissStale          bool
-	BlockForce            bool
-	EnforceOnAdmins       bool
-	RequireUpToDateBranch bool
-	RequireStatusChecks   []StatusCheck
-	RequireSignedCommits  bool
+	PRReviews               bool
+	NumReviews              int
+	DismissStale            bool
+	BlockForce              bool
+	EnforceOnAdmins         bool
+	RequireUpToDateBranch   bool
+	RequireStatusChecks     []StatusCheck
+	RequireSignedCommits    bool
+	RequireCodeOwnerReviews bool
 }
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
@@ -314,6 +323,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		if rev != nil {
 			d.PRReviews = true
 			d.DismissStale = rev.DismissStaleReviews
+			d.RequireCodeOwnerReviews = rev.RequireCodeOwnerReviews
 			if mc.DismissStale && !rev.DismissStaleReviews {
 				text = text +
 					fmt.Sprintf("Dismiss stale reviews not configured for branch %v\n", b)
@@ -326,8 +336,13 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 					fmt.Sprintf("PR Approvals below threshold %v : %v for branch %v\n",
 						rev.RequiredApprovingReviewCount, mc.ApprovalCount, b)
 			}
+			if mc.RequireCodeOwnerReviews && !rev.RequireCodeOwnerReviews {
+				text = text +
+					fmt.Sprintf("Require Code Owner Reviews not configured for branch %v\n", b)
+				pass = false
+			}
 		} else {
-			if mc.RequireApproval {
+			if mc.RequireApproval || mc.RequireCodeOwnerReviews {
 				pass = false
 				text = text +
 					fmt.Sprintf("PR Approvals not configured for branch %v\n", b)
@@ -445,10 +460,11 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 				if mc.EnforceOnAdmins {
 					pr.EnforceAdmins = true
 				}
-				if mc.RequireApproval {
+				if mc.RequireApproval || mc.RequireCodeOwnerReviews {
 					rq := &github.PullRequestReviewsEnforcementRequest{
 						DismissStaleReviews:          mc.DismissStale,
 						RequiredApprovingReviewCount: mc.ApprovalCount,
+						RequireCodeOwnerReviews:      mc.RequireCodeOwnerReviews,
 					}
 					pr.RequiredPullRequestReviews = rq
 				}
@@ -553,6 +569,7 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 			rq := &github.PullRequestReviewsEnforcementRequest{
 				DismissStaleReviews:          mc.DismissStale,
 				RequiredApprovingReviewCount: mc.ApprovalCount,
+				RequireCodeOwnerReviews:      mc.RequireCodeOwnerReviews,
 			}
 			pr.RequiredPullRequestReviews = rq
 			update = true
@@ -564,6 +581,10 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 			}
 			if mc.ApprovalCount > pr.RequiredPullRequestReviews.RequiredApprovingReviewCount {
 				pr.RequiredPullRequestReviews.RequiredApprovingReviewCount = mc.ApprovalCount
+				update = true
+			}
+			if mc.RequireCodeOwnerReviews && !pr.RequiredPullRequestReviews.RequireCodeOwnerReviews {
+				pr.RequiredPullRequestReviews.RequireCodeOwnerReviews = true
 				update = true
 			}
 		}
@@ -724,17 +745,18 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 
 func mergeConfig(oc *OrgConfig, orc, rc *RepoConfig, repo string) *mergedConfig {
 	mc := &mergedConfig{
-		Action:                oc.Action,
-		EnforceDefault:        oc.EnforceDefault,
-		EnforceBranches:       oc.EnforceBranches[repo],
-		RequireApproval:       oc.RequireApproval,
-		ApprovalCount:         oc.ApprovalCount,
-		DismissStale:          oc.DismissStale,
-		BlockForce:            oc.BlockForce,
-		EnforceOnAdmins:       oc.EnforceOnAdmins,
-		RequireUpToDateBranch: oc.RequireUpToDateBranch,
-		RequireStatusChecks:   oc.RequireStatusChecks,
-		RequireSignedCommits:  oc.RequireSignedCommits,
+		Action:                  oc.Action,
+		EnforceDefault:          oc.EnforceDefault,
+		EnforceBranches:         oc.EnforceBranches[repo],
+		RequireApproval:         oc.RequireApproval,
+		RequireCodeOwnerReviews: oc.RequireCodeOwnerReviews,
+		ApprovalCount:           oc.ApprovalCount,
+		DismissStale:            oc.DismissStale,
+		BlockForce:              oc.BlockForce,
+		EnforceOnAdmins:         oc.EnforceOnAdmins,
+		RequireUpToDateBranch:   oc.RequireUpToDateBranch,
+		RequireStatusChecks:     oc.RequireStatusChecks,
+		RequireSignedCommits:    oc.RequireSignedCommits,
 	}
 	mc.EnforceBranches = append(mc.EnforceBranches, orc.EnforceBranches...)
 	mc = mergeInRepoConfig(mc, orc, repo)
@@ -755,6 +777,9 @@ func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedCon
 	}
 	if rc.RequireApproval != nil {
 		mc.RequireApproval = *rc.RequireApproval
+	}
+	if rc.RequireCodeOwnerReviews != nil {
+		mc.RequireCodeOwnerReviews = *rc.RequireCodeOwnerReviews
 	}
 	if rc.ApprovalCount != nil {
 		mc.ApprovalCount = *rc.ApprovalCount
