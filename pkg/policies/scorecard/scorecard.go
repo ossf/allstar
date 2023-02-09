@@ -94,7 +94,7 @@ var checksAllChecks checker.CheckNameToFnMap
 func init() {
 	configFetchConfig = config.FetchConfig
 	configIsEnabled = config.IsEnabled
-	checksAllChecks = checks.AllChecks
+	checksAllChecks = checks.GetAll()
 	scorecardGet = scorecard.Get
 }
 
