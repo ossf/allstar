@@ -6,6 +6,47 @@ Major features and changes added to Allstar.
 
 -
 
+## Release v3.0
+
+- Branch Protection policy is more complete with support for
+  `requireSignedCommits`,` enforceOnAdmins`,
+  `requireCodeOwnerReviews`. [Link](pkg/policies/branch/branch.go)
+
+- You may now opt-out repos that are forks with the `optOutForkedRepos` option.
+
+- GitHub Actions policy added to allow/require/deny configured actions in
+  workflows. [Docs](README.md#github-actions)
+
+- Generic Scorecard policy added to run any Scorecard check with a score
+  threshold. [Docs](README.md#generic-scorecard-check)
+
+- Issue creation and pinging can be enabled / disabled based on a weekly
+  schedule. [Link](pkg/config/config.go)
+
+- The Outside Collaborators policy now allows
+  exemptions. [Link](pkg/policies/outside/outside.go)
+
+- When the Allstar action is changed from `issue` to `fix`. Existing issues
+  will be closed.
+
+- Issue ping duration is configurable at the operator level with
+  `NOTICE_PING_DURATION_HOURS`. [Link](pkg/config/operator/operator.go)
+
+- Org config may now point to a secondary repository for config and merge
+  overrides. [Docs](README.md#org-level-base-and-merge-configuration-location)
+
+- Individual repo config files are now allowed to be placed in the central org
+  config repository. Example: in the `.allstar` repo, you can have a
+  `<repo-name>/branch_protection.yaml` file with specific settings for that
+  repo. [Docs](README.md#repo-policy-configurations-in-the-org-repo)
+
+- Binary Artifacts policy configuration updated to have an ignore
+  list. [Link](pkg/policies/binary/binary.go)
+
+- Dangerous Workflow policy added. This policy checks the GitHub Actions
+  workflow configuration files (.github/workflows), for any patterns that match
+  known dangerous behavior. [Docs](README.md#dangerous-workflow)
+
 ## Release v2.0
 
 - Branch Protection added the `requireStatusChecks` setting to ensure listed
