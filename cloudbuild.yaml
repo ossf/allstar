@@ -1,8 +1,8 @@
 steps:
-- name: golang:1.17
+- name: golang:1.20
   entrypoint: go
-  args: ['install', 'github.com/google/ko@v0.10.0']
-- name: golang:1.17
+  args: ['install', 'github.com/ko-build/ko@v0.12.0']
+- name: golang:1.20
   entrypoint: bash
   args: ['-c', 'KO_DOCKER_REPO="gcr.io/allstar-ossf" /go/bin/ko publish ./cmd/allstar > container']
 - name: gcr.io/google.com/cloudsdktool/cloud-sdk
