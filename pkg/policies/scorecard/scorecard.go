@@ -26,6 +26,7 @@ import (
 	"github.com/ossf/allstar/pkg/scorecard"
 	"github.com/ossf/scorecard/v4/checker"
 	"github.com/ossf/scorecard/v4/checks"
+	"github.com/ossf/scorecard/v4/clients"
 
 	"github.com/google/go-github/v43/github"
 	"github.com/rs/zerolog/log"
@@ -157,10 +158,11 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 
 		l := checker.NewLogger()
 		cr := &checker.CheckRequest{
-			Ctx:        ctx,
-			RepoClient: scc.ScRepoClient,
-			Repo:       scc.ScRepo,
-			Dlogger:    l,
+			Ctx:                   ctx,
+			RepoClient:            scc.ScRepoClient,
+			Repo:                  scc.ScRepo,
+			Dlogger:               l,
+			VulnerabilitiesClient: clients.DefaultVulnerabilitiesClient(),
 		}
 
 		res := checksAllChecks[n].Fn(cr)
