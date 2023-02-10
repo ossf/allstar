@@ -13,7 +13,7 @@ jobs:
     - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b
     - uses: actions/setup-go@268d8c0ca0432bb2cf416faae41297df9d262d7f
       with:
-        go-version: 1.19
+        go-version: 1.20
     - uses: sigstore/cosign-installer@9becc617647dfa20ae7b1151972e9b3a2c338a2b
     - run: go install github.com/google/ko@v0.11.2
     - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.workflow }} --password-stdin
