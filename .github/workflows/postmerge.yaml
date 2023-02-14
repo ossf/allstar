@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: ossf/scorecard-action@v1.1.2
+    - uses: ossf/scorecard-action@v2.1.2
       with:
         results_file: results.sarif
         results_format: sarif
