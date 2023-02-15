@@ -141,21 +141,19 @@ func TestConfigPrecedence(t *testing.T) {
 
 func TestCheck(t *testing.T) {
 	tests := []struct {
-		Name              string
-		Org               OrgConfig
-		Repo              RepoConfig
-		SecEnabled        bool
-		cofigEnabled      bool
-		doNothingOnOptOut bool
-		Exp               policydef.Result
+		Name         string
+		Org          OrgConfig
+		Repo         RepoConfig
+		SecEnabled   bool
+		cofigEnabled bool
+		Exp          policydef.Result
 	}{
 		{
-			Name:              "NotEnabled",
-			Org:               OrgConfig{},
-			Repo:              RepoConfig{},
-			SecEnabled:        true,
-			cofigEnabled:      false,
-			doNothingOnOptOut: false,
+			Name:         "NotEnabled",
+			Org:          OrgConfig{},
+			Repo:         RepoConfig{},
+			SecEnabled:   true,
+			cofigEnabled: false,
 			Exp: policydef.Result{
 				Enabled:    false,
 				Pass:       true,
@@ -167,30 +165,15 @@ func TestCheck(t *testing.T) {
 			},
 		},
 		{
-			Name:              "NotEnabledDoNothing",
-			Org:               OrgConfig{},
-			Repo:              RepoConfig{},
-			SecEnabled:        true,
-			cofigEnabled:      false,
-			doNothingOnOptOut: true,
-			Exp: policydef.Result{
-				Enabled:    false,
-				Pass:       true,
-				NotifyText: "Disabled",
-				Details:    details{},
-			},
-		},
-		{
 			Name: "Pass",
 			Org: OrgConfig{
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
 			},
-			Repo:              RepoConfig{},
-			SecEnabled:        true,
-			cofigEnabled:      true,
-			doNothingOnOptOut: false,
+			Repo:         RepoConfig{},
+			SecEnabled:   true,
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
@@ -208,10 +191,9 @@ func TestCheck(t *testing.T) {
 					OptOutStrategy: true,
 				},
 			},
-			Repo:              RepoConfig{},
-			SecEnabled:        false,
-			cofigEnabled:      true,
-			doNothingOnOptOut: false,
+			Repo:         RepoConfig{},
+			SecEnabled:   false,
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -254,7 +236,6 @@ func TestCheck(t *testing.T) {
 				c *github.Client, owner, repo string) (bool, error) {
 				return test.cofigEnabled, nil
 			}
-			doNothingOnOptOut = test.doNothingOnOptOut
 			res, err := check(context.Background(), nil, mockClient{}, "", "thisrepo")
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)

@@ -20,15 +20,12 @@ import (
 	"fmt"
 
 	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/policydef"
 
 	"github.com/google/go-github/v43/github"
 	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
 )
-
-var doNothingOnOptOut = operator.DoNothingOnOptOut
 
 const configFile = "security.yaml"
 const polName = "SECURITY.md"
@@ -104,6 +101,12 @@ func (s Security) Check(ctx context.Context, c *github.Client, owner,
 	return check(ctx, c, v4c, owner, repo)
 }
 
+// Check whether this policy is enabled or not
+func (s Security) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
+	oc, orc, rc := getConfig(ctx, c, owner, repo)
+	return configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
+}
+
 func check(ctx context.Context, c *github.Client, v4c v4client, owner,
 	repo string) (*policydef.Result, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
@@ -117,17 +120,6 @@ func check(ctx context.Context, c *github.Client, v4c v4client, owner,
 		Str("area", polName).
 		Bool("enabled", enabled).
 		Msg("Check repo enabled")
-	if !enabled && doNothingOnOptOut {
-		// Don't run this policy if disabled and requested by operator. This is
-		// only checking enablement of policy, but not Allstar overall, this is
-		// ok for now.
-		return &policydef.Result{
-			Enabled:    enabled,
-			Pass:       true,
-			NotifyText: "Disabled",
-			Details:    details{},
-		}, nil
-	}
 
 	var q struct {
 		Repository struct {

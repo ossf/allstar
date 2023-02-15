@@ -54,6 +54,9 @@ type Policy interface {
 	// Name must return the human readable name of the policy.
 	Name() string
 
+	// Check whether this policy is enabled or not
+	IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error)
+
 	// Check checks whether the provided repo is in compliance with the policy or
 	// not. It must use the provided context and github client. See Result for
 	// more details on the return value.

@@ -21,14 +21,11 @@ import (
 
 	"github.com/gobwas/glob"
 	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/policydef"
 
 	"github.com/google/go-github/v43/github"
 	"github.com/rs/zerolog/log"
 )
-
-var doNothingOnOptOut = operator.DoNothingOnOptOut
 
 const configFile = "outside.yaml"
 const polName = "Outside Collaborators"
@@ -179,29 +176,18 @@ func (o Outside) Check(ctx context.Context, c *github.Client, owner,
 	return check(ctx, c.Repositories, c, owner, repo)
 }
 
+// Check whether this policy is enabled or not
+func (o Outside) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
+	oc, orc, rc := getConfig(ctx, c, owner, repo)
+	return configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
+}
+
 func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	enabled, err := configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 	if err != nil {
 		return nil, err
-	}
-	log.Info().
-		Str("org", owner).
-		Str("repo", repo).
-		Str("area", polName).
-		Bool("enabled", enabled).
-		Msg("Check repo enabled")
-	if !enabled && doNothingOnOptOut {
-		// Don't run this policy if disabled and requested by operator. This is
-		// only checking enablement of policy, but not Allstar overall, this is
-		// ok for now.
-		return &policydef.Result{
-			Enabled:    enabled,
-			Pass:       true,
-			NotifyText: "Disabled",
-			Details:    details{},
-		}, nil
 	}
 
 	mc := mergeConfig(oc, orc, rc, repo)

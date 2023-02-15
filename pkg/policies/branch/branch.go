@@ -21,7 +21,6 @@ import (
 	"net/http"
 
 	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/policydef"
 
 	"github.com/google/go-github/v43/github"
@@ -179,7 +178,6 @@ type details struct {
 var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
 var configIsEnabled func(ctx context.Context, o config.OrgOptConfig,
 	orc, r config.RepoOptConfig, c *github.Client, owner, repo string) (bool, error)
-var doNothingOnOptOut = operator.DoNothingOnOptOut
 
 func init() {
 	configFetchConfig = config.FetchConfig
@@ -215,6 +213,12 @@ type repositories interface {
 		*github.SignaturesProtectedBranch, *github.Response, error)
 }
 
+// Check whether this policy is enabled or not
+func (b Branch) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
+	oc, orc, rc := getConfig(ctx, c, owner, repo)
+	return configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
+}
+
 // Check performs the policy check for Branch Protection based on the
 // configuration stored in the org/repo, implementing policydef.Policy.Check()
 func (b Branch) Check(ctx context.Context, c *github.Client, owner,
@@ -235,17 +239,6 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		Str("area", polName).
 		Bool("enabled", enabled).
 		Msg("Check repo enabled")
-	if !enabled && doNothingOnOptOut {
-		// Don't run this policy if disabled and requested by operator. This is
-		// only checking enablement of policy, but not Allstar overall, this is
-		// ok for now.
-		return &policydef.Result{
-			Enabled:    enabled,
-			Pass:       true,
-			NotifyText: "Disabled",
-			Details:    map[string]details{},
-		}, nil
-	}
 
 	mc := mergeConfig(oc, orc, rc, repo)
 

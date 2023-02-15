@@ -208,6 +208,13 @@ func (a Action) Name() string {
 	return polName
 }
 
+// Check whether this policy is enabled or not
+func (a Action) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
+	oc := getConfig(ctx, c, owner, repo)
+	enabled := oc.Groups != nil
+	return enabled, nil
+}
+
 // Check performs the policy check for Action Use policy based on the
 // configuration stored in the org, implementing policydef.Policy.Check()
 func (a Action) Check(ctx context.Context, c *github.Client, owner,

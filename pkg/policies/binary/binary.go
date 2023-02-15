@@ -22,7 +22,6 @@ import (
 	"path/filepath"
 
 	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/policydef"
 	"github.com/ossf/allstar/pkg/scorecard"
 	"github.com/ossf/scorecard/v4/checker"
@@ -76,7 +75,6 @@ type details struct {
 }
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
-var doNothingOnOptOut = operator.DoNothingOnOptOut
 
 func init() {
 	configFetchConfig = config.FetchConfig
@@ -96,6 +94,12 @@ func (b Binary) Name() string {
 	return polName
 }
 
+// Check whether this policy is enabled or not
+func (b Binary) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
+	oc, orc, rc := getConfig(ctx, c, owner, repo)
+	return config.IsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
+}
+
 // Check performs the policy check for this policy based on the
 // configuration stored in the org/repo, implementing policydef.Policy.Check()
 func (b Binary) Check(ctx context.Context, c *github.Client, owner,
@@ -112,17 +116,6 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		Str("area", polName).
 		Bool("enabled", enabled).
 		Msg("Check repo enabled")
-	if !enabled && doNothingOnOptOut {
-		// Don't run this policy if disabled and requested by operator. This is
-		// only checking enablement of policy, but not Allstar overall, this is
-		// ok for now.
-		return &policydef.Result{
-			Enabled:    enabled,
-			Pass:       true,
-			NotifyText: "Disabled",
-			Details:    details{},
-		}, nil
-	}
 
 	fullName := fmt.Sprintf("%s/%s", owner, repo)
 	tr := c.Client().Transport
