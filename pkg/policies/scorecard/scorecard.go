@@ -21,7 +21,6 @@ import (
 	"net/http"
 
 	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/policydef"
 	"github.com/ossf/allstar/pkg/scorecard"
 	"github.com/ossf/scorecard/v4/checker"
@@ -88,8 +87,6 @@ var configFetchConfig func(context.Context, *github.Client, string, string, stri
 var configIsEnabled func(context.Context, config.OrgOptConfig, config.RepoOptConfig, config.RepoOptConfig, *github.Client, string, string) (bool, error)
 var scorecardGet func(context.Context, string, http.RoundTripper) (*scorecard.ScClient, error)
 
-var doNothingOnOptOut = operator.DoNothingOnOptOut
-
 var checksAllChecks checker.CheckNameToFnMap
 
 func init() {
@@ -114,6 +111,12 @@ func (b Scorecard) Name() string {
 	return polName
 }
 
+// Check whether this policy is enabled or not
+func (b Scorecard) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
+	oc, orc, rc := getConfig(ctx, c, owner, repo)
+	return configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
+}
+
 // Check performs the policy check for this policy based on the
 // configuration stored in the org/repo, implementing policydef.Policy.Check()
 func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
@@ -130,17 +133,7 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 		Str("area", polName).
 		Bool("enabled", enabled).
 		Msg("Check repo enabled")
-	if !enabled && doNothingOnOptOut {
-		// Don't run this policy if disabled and requested by operator. This is
-		// only checking enablement of policy, but not Allstar overall, this is
-		// ok for now.
-		return &policydef.Result{
-			Enabled:    enabled,
-			Pass:       true,
-			NotifyText: "Disabled",
-			Details:    details{},
-		}, nil
-	}
+
 	mc := mergeConfig(oc, orc, rc, repo)
 
 	fullName := fmt.Sprintf("%s/%s", owner, repo)

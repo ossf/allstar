@@ -38,6 +38,10 @@ func (p pol) Name() string {
 	return "Test policy"
 }
 
+func (p pol) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
+	return true, nil
+}
+
 func (p pol) Check(ctx context.Context, c *github.Client, owner, repo string) (*policydef.Result, error) {
 	policy1Result := policy1Results[repo]
 	return &policy1Result, nil
@@ -56,6 +60,10 @@ type pol2 struct{}
 
 func (p pol2) Name() string {
 	return "Test policy2"
+}
+
+func (p pol2) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
+	return true, nil
 }
 
 func (p pol2) Check(ctx context.Context, c *github.Client, owner, repo string) (*policydef.Result, error) {
@@ -293,6 +301,59 @@ func TestRunPoliciesOnInstRepos(t *testing.T) {
 				if diff := cmp.Diff(test.ExpResults, instResults); diff != "" {
 					t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 				}
+			}
+		})
+	}
+}
+
+func TestDoNothingOnOptOut(t *testing.T) {
+	policiesGetPolicies = func() []policydef.Policy {
+		return []policydef.Policy{
+			pol{},
+		}
+	}
+
+	repo := "fake-repo"
+	tests := []struct {
+		Name              string
+		Res               policyRepoResults
+		Enabled           bool
+		ExpEnforceResults EnforceRepoResults
+		doNothingOnOptOut bool
+	}{
+		{
+			Name: "doNothingOnOptOutNotEnabled",
+			Res: policyRepoResults{
+				"fake-repo": policydef.Result{Enabled: true, Pass: false},
+			},
+			Enabled: false,
+			ExpEnforceResults: EnforceRepoResults{
+				"Test policy": false,
+			},
+			doNothingOnOptOut: false,
+		},
+		{
+			Name: "doNothingOnOptOutEnabled",
+			Res: policyRepoResults{
+				"fake-repo": policydef.Result{Enabled: true, Pass: false},
+			},
+			Enabled:           false,
+			ExpEnforceResults: EnforceRepoResults{},
+			doNothingOnOptOut: true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			policy1Results = test.Res
+
+			doNothingOnOptOut = test.doNothingOnOptOut
+			enforceResults, err := runPoliciesReal(context.Background(), nil, "", repo, test.Enabled)
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			if diff := cmp.Diff(test.ExpEnforceResults, enforceResults); diff != "" {
+				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 		})
 	}

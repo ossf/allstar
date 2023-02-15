@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/ossf/allstar/pkg/config"
+	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/ghclients"
 	"github.com/ossf/allstar/pkg/issue"
 	"github.com/ossf/allstar/pkg/policies"
@@ -37,6 +38,7 @@ import (
 type EnforceRepoResults = map[string]bool
 type EnforceAllResults = map[string]map[string]int
 
+var doNothingOnOptOut = operator.DoNothingOnOptOut
 var policiesGetPolicies func() []policydef.Policy
 var issueEnsure func(context.Context, *github.Client, string, string, string, string) error
 var issueClose func(context.Context, *github.Client, string, string, string) error
@@ -256,6 +258,18 @@ func runPoliciesReal(ctx context.Context, c *github.Client, owner, repo string, 
 	var enforceResults = make(EnforceRepoResults)
 	ps := policiesGetPolicies()
 	for _, p := range ps {
+		repo_enabled, err := p.IsEnabled(ctx, c, owner, repo)
+		if err != nil {
+			return nil, err
+		}
+		if !(repo_enabled && enabled) && doNothingOnOptOut {
+			log.Info().
+				Str("org", owner).
+				Str("repo", repo).
+				Str("area", p.Name()).
+				Msg("Policy run skipped as repo is not enabled and doNothingOnOptOut is configured.")
+			continue
+		}
 		r, err := p.Check(ctx, c, owner, repo)
 		if err != nil {
 			return nil, err
@@ -265,11 +279,11 @@ func runPoliciesReal(ctx context.Context, c *github.Client, owner, repo string, 
 			Str("repo", repo).
 			Str("area", p.Name()).
 			Bool("result", r.Pass).
-			Bool("enabled", enabled && r.Enabled).
+			Bool("enabled", r.Enabled).
 			Str("notify", r.NotifyText).
 			Interface("details", r.Details).
 			Msg("Policy run result.")
-		if !enabled || !r.Enabled {
+		if !r.Enabled {
 			continue
 		}
 		a := p.GetAction(ctx, c, owner, repo)

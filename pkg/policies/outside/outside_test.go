@@ -167,14 +167,13 @@ func TestCheck(t *testing.T) {
 	bob := "bob"
 	alice := "alice"
 	tests := []struct {
-		Name              string
-		Org               OrgConfig
-		Repo              RepoConfig
-		Users             []*github.User
-		cofigEnabled      bool
-		doNothingOnOptOut bool
-		Exp               policydef.Result
-		Teams             []*github.Team
+		Name         string
+		Org          OrgConfig
+		Repo         RepoConfig
+		Users        []*github.User
+		cofigEnabled bool
+		Exp          policydef.Result
+		Teams        []*github.Team
 	}{
 		{
 			Name: "NotEnabled",
@@ -182,31 +181,13 @@ func TestCheck(t *testing.T) {
 				PushAllowed:             true,
 				TestingOwnerlessAllowed: true,
 			},
-			Repo:              RepoConfig{},
-			Users:             nil,
-			cofigEnabled:      false,
-			doNothingOnOptOut: false,
+			Repo:         RepoConfig{},
+			Users:        nil,
+			cofigEnabled: false,
 			Exp: policydef.Result{
 				Enabled:    false,
 				Pass:       true,
 				NotifyText: "",
-				Details:    details{},
-			},
-		},
-		{
-			Name: "NotEnabledDoNothing",
-			Org: OrgConfig{
-				PushAllowed:             true,
-				TestingOwnerlessAllowed: true,
-			},
-			Repo:              RepoConfig{},
-			Users:             nil,
-			cofigEnabled:      false,
-			doNothingOnOptOut: true,
-			Exp: policydef.Result{
-				Enabled:    false,
-				Pass:       true,
-				NotifyText: "Disabled",
 				Details:    details{},
 			},
 		},
@@ -219,10 +200,9 @@ func TestCheck(t *testing.T) {
 				PushAllowed:             true,
 				TestingOwnerlessAllowed: true,
 			},
-			Repo:              RepoConfig{},
-			Users:             nil,
-			cofigEnabled:      true,
-			doNothingOnOptOut: false,
+			Repo:         RepoConfig{},
+			Users:        nil,
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
@@ -254,8 +234,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled:      true,
-			doNothingOnOptOut: false,
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
@@ -291,8 +270,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled:      true,
-			doNothingOnOptOut: false,
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -331,8 +309,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled:      true,
-			doNothingOnOptOut: false,
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -371,8 +348,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled:      true,
-			doNothingOnOptOut: false,
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -426,8 +402,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled:      true,
-			doNothingOnOptOut: false,
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
@@ -468,8 +443,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled:      true,
-			doNothingOnOptOut: false,
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -506,8 +480,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled:      true,
-			doNothingOnOptOut: false,
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
@@ -545,8 +518,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled:      true,
-			doNothingOnOptOut: false,
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
@@ -584,8 +556,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled:      true,
-			doNothingOnOptOut: false,
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -622,8 +593,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled:      true,
-			doNothingOnOptOut: false,
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
@@ -657,8 +627,7 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
-			cofigEnabled:      true,
-			doNothingOnOptOut: false,
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
@@ -692,7 +661,6 @@ func TestCheck(t *testing.T) {
 				c *github.Client, owner, repo string) (bool, error) {
 				return test.cofigEnabled, nil
 			}
-			doNothingOnOptOut = test.doNothingOnOptOut
 			listTeams = func(ctx context.Context, owner string, repo string, opts *github.ListOptions) ([]*github.Team, *github.Response, error) {
 				return test.Teams, &github.Response{NextPage: 0}, nil
 			}
