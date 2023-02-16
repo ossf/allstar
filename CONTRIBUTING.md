@@ -1,7 +1,7 @@
 # Contributing
 
-All community members must abide by the [Code of
-Conduct.](code-of-conduct.md)
+All community members must abide by the [OpenSSF Code of
+Conduct.](https://openssf.org/community/code-of-conduct/)
 
 * Feel free to open issues for bugs, feature requests, discussion,
   questions, help, proposals, etc.
