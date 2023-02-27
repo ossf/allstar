@@ -148,6 +148,11 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 
 	for _, n := range mc.Checks {
 
+		if n == checks.CheckVulnerabilities {
+			// FIXME Rolling back support for Vulns, needs more testing.
+			continue
+		}
+
 		l := checker.NewLogger()
 		cr := &checker.CheckRequest{
 			Ctx:        ctx,
