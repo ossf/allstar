@@ -103,7 +103,7 @@ func create(ctx context.Context, fullRepo string, tr http.RoundTripper) (*ScClie
 		return nil, err
 	}
 	scrc := githubrepoCreateGitHubRepoClientWithTransport(ctx, tr)
-	if err := scrc.InitRepo(scr, defaultGitRef, 0); err != nil {
+	if err := scrc.InitRepo(scr, defaultGitRef); err != nil {
 		return nil, err
 	}
 	return &ScClient{
