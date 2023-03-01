@@ -302,7 +302,6 @@ Collaborators](https://docs.github.com/en/organizations/managing-access-to-your-
 have either administrator(default) or push(optional) access to the
 repository. Only organization members should have this access, as otherwise
 untrusted members can change admin level settings and commit malicious code.
-Also, by default, all repositories must have an organization user or group assigned as an Administrator.
 
 ### SECURITY.md
 
@@ -350,6 +349,14 @@ This policy checks the GitHub Actions workflow configuration files
 (`.github/workflows`) (and workflow runs in some cases) in each repo to ensure
 they are in line with rules (eg. require, deny) defined in the
 organization-level config for the policy.
+
+### Repository Administrators
+
+This policy's config file is named `admin.yaml`, and the [config definitions
+are
+here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/admin#OrgConfig).
+
+This policy checks that by default all repositories must have an organization user or group assigned as an Administrator.
 
 ### Future Policies
 

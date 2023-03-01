@@ -1,4 +1,4 @@
-// Copyright 2021 Allstar Authors
+// Copyright 2023 Allstar Authors
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package outside
+package admin
 
 import (
 	"context"
@@ -52,34 +52,32 @@ func TestConfigPrecedence(t *testing.T) {
 		{
 			Name: "OrgOnly",
 			Org: OrgConfig{
-				Action:      "issue",
-				PushAllowed: true,
+				Action:           "issue",
+				OwnerlessAllowed: true,
 			},
 			OrgRepo:   RepoConfig{},
 			Repo:      RepoConfig{},
 			ExpAction: "issue",
 			Exp: mergedConfig{
-				Action:      "issue",
-				PushAllowed: true,
+				Action:           "issue",
+				OwnerlessAllowed: true,
 			},
 		},
 		{
 			Name: "OrgRepoOverOrg",
 			Org: OrgConfig{
-				Action:      "issue",
-				PushAllowed: true,
+				Action:           "issue",
+				OwnerlessAllowed: true,
 			},
 			OrgRepo: RepoConfig{
-				Action:       github.String("log"),
-				PushAllowed:  github.Bool(false),
-				AdminAllowed: github.Bool(true),
+				Action:           github.String("log"),
+				OwnerlessAllowed: github.Bool(false),
 			},
 			Repo:      RepoConfig{},
 			ExpAction: "log",
 			Exp: mergedConfig{
-				Action:       "log",
-				PushAllowed:  false,
-				AdminAllowed: true,
+				Action:           "log",
+				OwnerlessAllowed: false,
 			},
 		},
 		{
@@ -88,14 +86,12 @@ func TestConfigPrecedence(t *testing.T) {
 				Action: "issue",
 			},
 			OrgRepo: RepoConfig{
-				Action:       github.String("log"),
-				PushAllowed:  github.Bool(true),
-				AdminAllowed: github.Bool(true),
+				Action:           github.String("log"),
+				OwnerlessAllowed: github.Bool(true),
 			},
 			Repo: RepoConfig{
-				Action:       github.String("email"),
-				PushAllowed:  github.Bool(false),
-				AdminAllowed: github.Bool(false),
+				Action:           github.String("email"),
+				OwnerlessAllowed: github.Bool(false),
 			},
 			ExpAction: "email",
 			Exp: mergedConfig{
@@ -111,20 +107,17 @@ func TestConfigPrecedence(t *testing.T) {
 				Action: "issue",
 			},
 			OrgRepo: RepoConfig{
-				Action:       github.String("log"),
-				PushAllowed:  github.Bool(true),
-				AdminAllowed: github.Bool(true),
+				Action:           github.String("log"),
+				OwnerlessAllowed: github.Bool(true),
 			},
 			Repo: RepoConfig{
-				Action:       github.String("email"),
-				PushAllowed:  github.Bool(false),
-				AdminAllowed: github.Bool(false),
+				Action:           github.String("email"),
+				OwnerlessAllowed: github.Bool(false),
 			},
 			ExpAction: "log",
 			Exp: mergedConfig{
-				Action:       "log",
-				PushAllowed:  true,
-				AdminAllowed: true,
+				Action:           "log",
+				OwnerlessAllowed: true,
 			},
 		},
 	}
@@ -147,7 +140,7 @@ func TestConfigPrecedence(t *testing.T) {
 				return nil
 			}
 
-			o := Outside(true)
+			o := Admin(true)
 			ctx := context.Background()
 
 			action := o.GetAction(ctx, nil, "", "thisrepo")
@@ -163,6 +156,7 @@ func TestConfigPrecedence(t *testing.T) {
 		})
 	}
 }
+
 func TestCheck(t *testing.T) {
 	bob := "bob"
 	alice := "alice"
@@ -178,7 +172,7 @@ func TestCheck(t *testing.T) {
 		{
 			Name: "NotEnabled",
 			Org: OrgConfig{
-				PushAllowed: true,
+				OwnerlessAllowed: true,
 			},
 			Repo:         RepoConfig{},
 			Users:        nil,
@@ -191,30 +185,79 @@ func TestCheck(t *testing.T) {
 			},
 		},
 		{
-			Name: "NoOC",
+			Name: "Ownerless not allowed and fail",
 			Org: OrgConfig{
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				PushAllowed: true,
+				OwnerlessAllowed: false,
 			},
-			Repo:         RepoConfig{},
-			Users:        nil,
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Did not find any owners of this repository\nThis policy requires all repositories to have an organization member or team assigned as an administrator",
+				Details: details{
+					Admins: nil,
+				},
+			},
+		},
+		{
+			Name: "Ownerless not allowed and pass",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed: false,
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
 			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
 				NotifyText: "",
-				Details:    details{},
+				Details: details{
+					Admins: []string{"bob"},
+				},
 			},
 		},
 		{
-			Name: "Pushers allowed",
+			Name: "Ownerless allowed and pass",
 			Org: OrgConfig{
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				PushAllowed: true,
+				OwnerlessAllowed: true,
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
@@ -237,18 +280,17 @@ func TestCheck(t *testing.T) {
 				Pass:       true,
 				NotifyText: "",
 				Details: details{
-					OutsidePushCount: 2,
-					OutsidePushers:   []string{"alice", "bob"},
+					Admins: nil,
 				},
 			},
 		},
 		{
-			Name: "Admin blocked",
+			Name: "Ownerless allowed and pass 2",
 			Org: OrgConfig{
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				PushAllowed: true,
+				OwnerlessAllowed: true,
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
@@ -269,24 +311,154 @@ func TestCheck(t *testing.T) {
 			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
-				Pass:       false,
-				NotifyText: "Found 1 outside collaborators with admin access.\nThis policy requires all users with admin access to be members of the organisation.",
+				Pass:       true,
+				NotifyText: "",
 				Details: details{
-					OutsidePushCount:  2,
-					OutsidePushers:    []string{"alice", "bob"},
-					OutsideAdminCount: 1,
-					OutsideAdmins:     []string{"bob"},
+					Admins: []string{"bob"},
 				},
 			},
 		},
 		{
-			Name: "Both blocked",
+			Name: "Ownerless not allowed and fail (team)",
 			Org: OrgConfig{
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				PushAllowed:  false,
-				AdminAllowed: false,
+				OwnerlessAllowed: false,
+			},
+			Repo: RepoConfig{},
+			Teams: []*github.Team{
+				&github.Team{
+					Slug: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.Team{
+					Slug: &bob,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Did not find any owners of this repository\nThis policy requires all repositories to have an organization member or team assigned as an administrator",
+				Details: details{
+					TeamAdmins: nil,
+				},
+			},
+		},
+		{
+			Name: "Ownerless not allowed and pass (team)",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed: false,
+			},
+			Repo: RepoConfig{},
+			Teams: []*github.Team{
+				&github.Team{
+					Slug: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.Team{
+					Slug: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					TeamAdmins: []string{"bob"},
+				},
+			},
+		},
+		{
+			Name: "Ownerless allowed and pass (team)",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed: true,
+			},
+			Repo: RepoConfig{},
+			Teams: []*github.Team{
+				&github.Team{
+					Slug: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.Team{
+					Slug: &bob,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					TeamAdmins: nil,
+				},
+			},
+		},
+		{
+			Name: "Ownerless allowed and pass (team) 2",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed: true,
+			},
+			Repo: RepoConfig{},
+			Teams: []*github.Team{
+				&github.Team{
+					Slug: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.Team{
+					Slug: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					TeamAdmins: []string{"bob"},
+				},
+			},
+		},
+		{
+			Name: "Ownerless not allowed and pass (individual)",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed: false,
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
@@ -304,74 +476,63 @@ func TestCheck(t *testing.T) {
 					},
 				},
 			},
+			Teams: []*github.Team{
+				&github.Team{
+					Slug: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.Team{
+					Slug: &bob,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+			},
 			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
-				Pass:       false,
-				NotifyText: "Found 2 outside collaborators with push access.\nFound 1 outside collaborators with admin access.\nThis policy requires all users with this access to be members of the organisation",
+				Pass:       true,
+				NotifyText: "",
 				Details: details{
-					OutsidePushCount:  2,
-					OutsidePushers:    []string{"alice", "bob"},
-					OutsideAdminCount: 1,
-					OutsideAdmins:     []string{"bob"},
+					Admins:     []string{"bob"},
+					TeamAdmins: nil,
 				},
 			},
 		},
 		{
-			Name: "Exemption allows push, not admin",
+			Name: "Ownerless not allowed and pass (team)",
 			Org: OrgConfig{
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				Exemptions: []*OutsideExemption{
-					{
-						User:  alice,
-						Repo:  "thisrepo",
-						Push:  true,
-						Admin: false,
-					},
-				},
+				OwnerlessAllowed: false,
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
 				&github.User{
 					Login: &alice,
 					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
+						"push": true,
 					},
 				},
-			},
-			cofigEnabled: true,
-			Exp: policydef.Result{
-				Enabled:    true,
-				Pass:       false,
-				NotifyText: "Found 1 outside collaborators with admin access.\nThis policy requires all users with this access to be members of the organisation.",
-				Details: details{
-					OutsideAdminCount: 1,
-					OutsideAdmins:     []string{"alice"},
-				},
-			},
-		},
-		{
-			Name: "Exemption allows admin",
-			Org: OrgConfig{
-				OptConfig: config.OrgOptConfig{
-					OptOutStrategy: true,
-				},
-				Exemptions: []*OutsideExemption{
-					{
-						User:  alice,
-						Repo:  "thisrepo",
-						Push:  true,
-						Admin: true,
-					},
-				},
-			},
-			Repo: RepoConfig{},
-			Users: []*github.User{
 				&github.User{
-					Login: &alice,
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+			},
+			Teams: []*github.Team{
+				&github.Team{
+					Slug: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.Team{
+					Slug: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
 						"admin": true,
@@ -384,24 +545,22 @@ func TestCheck(t *testing.T) {
 				Pass:       true,
 				NotifyText: "",
 				Details: details{
-					OutsideAdminCount: 0,
-					OutsideAdmins:     nil,
+					Admins:     nil,
+					TeamAdmins: []string{"bob"},
 				},
 			},
 		},
 		{
-			Name: "Exemption allows admin but not push",
+			Name: "Ownerless not allowed but allowed by an exemption and pass",
 			Org: OrgConfig{
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				Exemptions: []*OutsideExemption{
+				OwnerlessAllowed: false,
+				Exemptions: []*AdministratorExemption{
 					{
-						User: alice,
-						Repo: "thisrepo",
-						// This would happen if someone set just admin to true in their config. The expected behavior is to allow push as well.
-						Push:  false,
-						Admin: true,
+						Repo:             "thisrepo",
+						OwnerlessAllowed: true,
 					},
 				},
 			},
@@ -410,8 +569,13 @@ func TestCheck(t *testing.T) {
 				&github.User{
 					Login: &alice,
 					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
+						"push": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push": true,
 					},
 				},
 			},
@@ -421,24 +585,21 @@ func TestCheck(t *testing.T) {
 				Pass:       true,
 				NotifyText: "",
 				Details: details{
-					OutsideAdminCount: 0,
-					OutsideAdmins:     nil,
+					Admins: nil,
 				},
 			},
 		},
 		{
-			Name: "Exemption allows neither admin nor push",
+			Name: "Ownerless not allowed by an exemption and fail",
 			Org: OrgConfig{
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				Exemptions: []*OutsideExemption{
+				OwnerlessAllowed: false,
+				Exemptions: []*AdministratorExemption{
 					{
-						User: alice,
-						Repo: "thisrepo",
-						// This is a useless exemption, so neither should be exempted.
-						Push:  false,
-						Admin: false,
+						Repo:             "thisrepo",
+						OwnerlessAllowed: false,
 					},
 				},
 			},
@@ -447,8 +608,13 @@ func TestCheck(t *testing.T) {
 				&github.User{
 					Login: &alice,
 					Permissions: map[string]bool{
-						"push":  true,
-						"admin": false,
+						"push": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push": true,
 					},
 				},
 			},
@@ -456,79 +622,9 @@ func TestCheck(t *testing.T) {
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
-				NotifyText: "Found 1 outside collaborators with push access.\nThis policy requires users with this access to be members of the organisation.",
+				NotifyText: "Did not find any owners of this repository\nThis policy requires all repositories to have an organization member or team assigned as an administrator",
 				Details: details{
-					OutsidePushCount: 1,
-					OutsidePushers:   []string{"alice"},
-				},
-			},
-		},
-		{
-			Name: "Exemption allows push on matching glob",
-			Org: OrgConfig{
-				OptConfig: config.OrgOptConfig{
-					OptOutStrategy: true,
-				},
-				Exemptions: []*OutsideExemption{
-					{
-						User:  alice,
-						Repo:  "this*",
-						Push:  true,
-						Admin: false,
-					},
-				},
-			},
-			Repo: RepoConfig{},
-			Users: []*github.User{
-				&github.User{
-					Login: &alice,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": false,
-					},
-				},
-			},
-			cofigEnabled: true,
-			Exp: policydef.Result{
-				Enabled:    true,
-				Pass:       true,
-				NotifyText: "",
-				Details:    details{},
-			},
-		},
-		{
-			Name: "Exemption does not allow push due to non-matching glob",
-			Org: OrgConfig{
-				OptConfig: config.OrgOptConfig{
-					OptOutStrategy: true,
-				},
-				Exemptions: []*OutsideExemption{
-					{
-						User:  alice,
-						Repo:  "test*",
-						Push:  true,
-						Admin: false,
-					},
-				},
-			},
-			Repo: RepoConfig{},
-			Users: []*github.User{
-				&github.User{
-					Login: &alice,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": false,
-					},
-				},
-			},
-			cofigEnabled: true,
-			Exp: policydef.Result{
-				Enabled:    true,
-				Pass:       false,
-				NotifyText: "Found 1 outside collaborators with push access.\nThis policy requires users with this access to be members of the organisation.",
-				Details: details{
-					OutsidePushCount: 1,
-					OutsidePushers:   []string{"alice"},
+					Admins: nil,
 				},
 			},
 		},

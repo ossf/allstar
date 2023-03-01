@@ -18,6 +18,7 @@ package policies
 
 import (
 	"github.com/ossf/allstar/pkg/policies/action"
+	"github.com/ossf/allstar/pkg/policies/admin"
 	"github.com/ossf/allstar/pkg/policies/binary"
 	"github.com/ossf/allstar/pkg/policies/branch"
 	"github.com/ossf/allstar/pkg/policies/outside"
@@ -37,5 +38,6 @@ func GetPolicies() []policydef.Policy {
 		security.NewSecurity(),
 		workflow.NewWorkflow(),
 		action.NewAction(),
+		admin.NewAdmin(),
 	}
 }
