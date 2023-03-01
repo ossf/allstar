@@ -29,11 +29,10 @@ Group. Please see the WG page for meeting times.
 - @justaugustus
 - @markdboyd
 - @naveensrinivasan
+- @olivekl
 - @yorinasub17
 
 ### Maintainers
-
-- @olivekl (docs)
 
 ### Leaders
 
