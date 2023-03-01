@@ -24,6 +24,7 @@ Group. Please see the WG page for meeting times.
 
 ### Contributors
 
+- @coheigea
 - @danielbankhead
 - @five510
 - @justaugustus
