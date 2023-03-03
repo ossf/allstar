@@ -52,32 +52,37 @@ func TestConfigPrecedence(t *testing.T) {
 		{
 			Name: "OrgOnly",
 			Org: OrgConfig{
-				Action:           "issue",
-				OwnerlessAllowed: true,
+				Action:            "issue",
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: true,
 			},
 			OrgRepo:   RepoConfig{},
 			Repo:      RepoConfig{},
 			ExpAction: "issue",
 			Exp: mergedConfig{
-				Action:           "issue",
-				OwnerlessAllowed: true,
+				Action:            "issue",
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: true,
 			},
 		},
 		{
 			Name: "OrgRepoOverOrg",
 			Org: OrgConfig{
-				Action:           "issue",
-				OwnerlessAllowed: true,
+				Action:            "issue",
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: true,
 			},
 			OrgRepo: RepoConfig{
-				Action:           github.String("log"),
-				OwnerlessAllowed: github.Bool(false),
+				Action:            github.String("log"),
+				OwnerlessAllowed:  github.Bool(false),
+				UserAdminsAllowed: github.Bool(false),
 			},
 			Repo:      RepoConfig{},
 			ExpAction: "log",
 			Exp: mergedConfig{
-				Action:           "log",
-				OwnerlessAllowed: false,
+				Action:            "log",
+				OwnerlessAllowed:  false,
+				UserAdminsAllowed: false,
 			},
 		},
 		{
@@ -86,12 +91,14 @@ func TestConfigPrecedence(t *testing.T) {
 				Action: "issue",
 			},
 			OrgRepo: RepoConfig{
-				Action:           github.String("log"),
-				OwnerlessAllowed: github.Bool(true),
+				Action:            github.String("log"),
+				OwnerlessAllowed:  github.Bool(true),
+				UserAdminsAllowed: github.Bool(true),
 			},
 			Repo: RepoConfig{
-				Action:           github.String("email"),
-				OwnerlessAllowed: github.Bool(false),
+				Action:            github.String("email"),
+				OwnerlessAllowed:  github.Bool(false),
+				UserAdminsAllowed: github.Bool(false),
 			},
 			ExpAction: "email",
 			Exp: mergedConfig{
@@ -107,17 +114,20 @@ func TestConfigPrecedence(t *testing.T) {
 				Action: "issue",
 			},
 			OrgRepo: RepoConfig{
-				Action:           github.String("log"),
-				OwnerlessAllowed: github.Bool(true),
+				Action:            github.String("log"),
+				OwnerlessAllowed:  github.Bool(true),
+				UserAdminsAllowed: github.Bool(true),
 			},
 			Repo: RepoConfig{
-				Action:           github.String("email"),
-				OwnerlessAllowed: github.Bool(false),
+				Action:            github.String("email"),
+				OwnerlessAllowed:  github.Bool(false),
+				UserAdminsAllowed: github.Bool(false),
 			},
 			ExpAction: "log",
 			Exp: mergedConfig{
-				Action:           "log",
-				OwnerlessAllowed: true,
+				Action:            "log",
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: true,
 			},
 		},
 	}
@@ -172,7 +182,8 @@ func TestCheck(t *testing.T) {
 		{
 			Name: "NotEnabled",
 			Org: OrgConfig{
-				OwnerlessAllowed: true,
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: true,
 			},
 			Repo:         RepoConfig{},
 			Users:        nil,
@@ -190,7 +201,8 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				OwnerlessAllowed: false,
+				OwnerlessAllowed:  false,
+				UserAdminsAllowed: true,
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
@@ -223,7 +235,8 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				OwnerlessAllowed: false,
+				OwnerlessAllowed:  false,
+				UserAdminsAllowed: true,
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
@@ -257,7 +270,8 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				OwnerlessAllowed: true,
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: true,
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
@@ -290,7 +304,8 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				OwnerlessAllowed: true,
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: true,
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
@@ -324,7 +339,8 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				OwnerlessAllowed: false,
+				OwnerlessAllowed:  false,
+				UserAdminsAllowed: true,
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
@@ -357,7 +373,8 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				OwnerlessAllowed: false,
+				OwnerlessAllowed:  false,
+				UserAdminsAllowed: true,
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
@@ -391,7 +408,8 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				OwnerlessAllowed: true,
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: true,
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
@@ -424,7 +442,8 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				OwnerlessAllowed: true,
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: true,
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
@@ -458,7 +477,8 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				OwnerlessAllowed: false,
+				OwnerlessAllowed:  false,
+				UserAdminsAllowed: true,
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
@@ -507,7 +527,8 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				OwnerlessAllowed: false,
+				OwnerlessAllowed:  false,
+				UserAdminsAllowed: true,
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
@@ -556,7 +577,8 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				OwnerlessAllowed: false,
+				OwnerlessAllowed:  false,
+				UserAdminsAllowed: true,
 				Exemptions: []*AdministratorExemption{
 					{
 						Repo:             "thisrepo",
@@ -595,7 +617,8 @@ func TestCheck(t *testing.T) {
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
 				},
-				OwnerlessAllowed: false,
+				OwnerlessAllowed:  false,
+				UserAdminsAllowed: true,
 				Exemptions: []*AdministratorExemption{
 					{
 						Repo:             "thisrepo",
@@ -625,6 +648,278 @@ func TestCheck(t *testing.T) {
 				NotifyText: "Did not find any owners of this repository\nThis policy requires all repositories to have an organization member or team assigned as an administrator",
 				Details: details{
 					Admins: nil,
+				},
+			},
+		},
+		{
+			Name: "UserAdminsAllowed not allowed and fail",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: false,
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Users are not allowed to be administrators of this repository.\nInstead a team should be added as administrator.",
+				Details: details{
+					Admins: []string{"bob"},
+				},
+			},
+		},
+		{
+			Name: "UserAdminsAllowed not allowed and pass",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: false,
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					Admins: nil,
+				},
+			},
+		},
+		{
+			Name: "UserAdminsAllowed not allowed and pass 2",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: false,
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+			},
+			Teams: []*github.Team{
+				&github.Team{
+					Slug: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.Team{
+					Slug: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					Admins:     nil,
+					TeamAdmins: []string{"bob"},
+				},
+			},
+		},
+		{
+			Name: "UserAdminsAllowed allowed and pass",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: true,
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					Admins: []string{"bob"},
+				},
+			},
+		},
+		{
+			Name: "UserAdminsAllowed allowed and pass 2",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: true,
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					Admins: nil,
+				},
+			},
+		},
+		{
+			Name: "UserAdminsAllowed not allowed but allowed by an exemption and pass",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: false,
+				Exemptions: []*AdministratorExemption{
+					{
+						Repo:              "thisrepo",
+						OwnerlessAllowed:  true,
+						UserAdminsAllowed: true,
+					},
+				},
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					Admins: []string{"bob"},
+				},
+			},
+		},
+		{
+			Name: "UserAdminsAllowed not allowed by by an exemption and fail",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: false,
+				Exemptions: []*AdministratorExemption{
+					{
+						Repo:              "thisrepo",
+						OwnerlessAllowed:  true,
+						UserAdminsAllowed: false,
+					},
+				},
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Users are not allowed to be administrators of this repository.\nInstead a team should be added as administrator.",
+				Details: details{
+					Admins: []string{"bob"},
 				},
 			},
 		},

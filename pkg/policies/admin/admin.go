@@ -38,6 +38,13 @@ To add an administrator From the main page of the repository, go to Settings -> 
 Alternately, if this repository does not have any maintainers, archive or delete it.
 `
 
+const userAdminsText = `Users are not allowed to be administrators of this repository.
+Instead a team should be added as administrator. 
+
+To add a team as administrator From the main page of the repository, go to Settings -> Manage Access.
+(For more information, see https://docs.github.com/en/organizations/managing-access-to-your-organizations-repositories)
+`
+
 // OrgConfig is the org-level config definition for Repository Administrators
 // security policy.
 type OrgConfig struct {
@@ -51,6 +58,9 @@ type OrgConfig struct {
 	// OwnerlessAllowed defines if repositories are allowed to have no
 	// administrators, default false.
 	OwnerlessAllowed bool `json:"ownerlessAllowed"`
+
+	// Whether to allow users to be admins on a repo. If false then only teams can be admins. Default true.
+	UserAdminsAllowed bool `json:"userAdminsAllowed"`
 
 	// Exemptions is a list of repo-bool pairings to exempt.
 	// Exemptions are only defined at the org level because they should be made
@@ -69,12 +79,16 @@ type RepoConfig struct {
 
 	// OwnerlessAllowed overrides the same setting in org-level, only if present.
 	OwnerlessAllowed *bool `json:"ownerlessAllowed"`
+
+	// UserAdminsAllowed overrides the same setting in org-level, only if present.
+	UserAdminsAllowed *bool `json:"userAdminsAllowed"`
 }
 
 type mergedConfig struct {
-	Action           string
-	OwnerlessAllowed bool
-	Exemptions       []*AdministratorExemption
+	Action            string
+	OwnerlessAllowed  bool
+	UserAdminsAllowed bool
+	Exemptions        []*AdministratorExemption
 }
 
 type globCache map[string]glob.Glob
@@ -82,12 +96,15 @@ type globCache map[string]glob.Glob
 // AdministratorExemption is an exemption entry for the Repository Administrators policy.
 type AdministratorExemption struct {
 
-	// Repo is a GitHub repo name
+	// Repo is a GitHub repo name. Globs are allowed.
 	Repo string `json:"repo"`
 
 	// OwnerlessAllowed defines if repositories are allowed to have no
 	// administrators, default false.
 	OwnerlessAllowed bool `json:"ownerlessAllowed"`
+
+	// Whether to allow users to be admins on a repo. If false then only teams can be admins. Default true.
+	UserAdminsAllowed bool `json:"userAdminsAllowed"`
 }
 
 type details struct {
@@ -186,9 +203,16 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		Details: d,
 	}
 
-	if (len(d.Admins)+len(d.TeamAdmins)) < 1 && !(mc.OwnerlessAllowed || isExempt(repo, mc.Exemptions, gc)) {
+	// Test OwnerlessAllowed
+	if (len(d.Admins)+len(d.TeamAdmins)) < 1 && !(mc.OwnerlessAllowed || isOwnerlessExempt(repo, mc.Exemptions, gc)) {
 		rv.Pass = false
 		rv.NotifyText = rv.NotifyText + ownerlessText
+	}
+
+	// Test UserAdminsAllowed
+	if len(d.Admins) > 0 && !(mc.UserAdminsAllowed || isUserAdminsExempt(repo, mc.Exemptions, gc)) {
+		rv.Pass = false
+		rv.NotifyText = rv.NotifyText + userAdminsText
 	}
 
 	return rv, nil
@@ -224,10 +248,21 @@ func getAdminUsers(ctx context.Context, r repositories, owner, repo string,
 	return rv, nil
 }
 
-func isExempt(repo string, ee []*AdministratorExemption, gc globCache) bool {
+func isOwnerlessExempt(repo string, ee []*AdministratorExemption, gc globCache) bool {
 	for _, e := range ee {
 		if g, err := gc.compileGlob(e.Repo); err == nil {
 			if g.Match(repo) && e.OwnerlessAllowed {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func isUserAdminsExempt(repo string, ee []*AdministratorExemption, gc globCache) bool {
+	for _, e := range ee {
+		if g, err := gc.compileGlob(e.Repo); err == nil {
+			if g.Match(repo) && e.UserAdminsAllowed {
 				return true
 			}
 		}
@@ -257,8 +292,9 @@ func (a Admin) GetAction(ctx context.Context, c *github.Client, owner, repo stri
 
 func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgConfig, *RepoConfig, *RepoConfig) {
 	oc := &OrgConfig{ // Fill out non-zero defaults
-		Action:           "log",
-		OwnerlessAllowed: false,
+		Action:            "log",
+		OwnerlessAllowed:  false,
+		UserAdminsAllowed: true,
 	}
 	if err := configFetchConfig(ctx, c, owner, "", configFile, config.OrgLevel, oc); err != nil {
 		log.Error().
@@ -297,9 +333,10 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 
 func mergeConfig(oc *OrgConfig, orc *RepoConfig, rc *RepoConfig, repo string) *mergedConfig {
 	mc := &mergedConfig{
-		Action:           oc.Action,
-		OwnerlessAllowed: oc.OwnerlessAllowed,
-		Exemptions:       oc.Exemptions,
+		Action:            oc.Action,
+		OwnerlessAllowed:  oc.OwnerlessAllowed,
+		UserAdminsAllowed: oc.UserAdminsAllowed,
+		Exemptions:        oc.Exemptions,
 	}
 	mc = mergeInRepoConfig(mc, orc, repo)
 
@@ -315,6 +352,9 @@ func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedCon
 	}
 	if rc.OwnerlessAllowed != nil {
 		mc.OwnerlessAllowed = *rc.OwnerlessAllowed
+	}
+	if rc.UserAdminsAllowed != nil {
+		mc.UserAdminsAllowed = *rc.UserAdminsAllowed
 	}
 	return mc
 }
