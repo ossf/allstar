@@ -356,7 +356,7 @@ This policy's config file is named `admin.yaml`, and the [config definitions
 are
 here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/admin#OrgConfig).
 
-This policy checks that by default all repositories must have an organization user or group assigned as an Administrator.
+This policy checks that by default all repositories must have a user or group assigned as an Administrator. It allows you to optionally configure if users are allowed to be administrators (as opposed to teams).
 
 ### Future Policies
 
