@@ -45,6 +45,13 @@ To add a team as administrator From the main page of the repository, go to Setti
 (For more information, see https://docs.github.com/en/organizations/managing-access-to-your-organizations-repositories)
 `
 
+const teamAdminsText = `Teams are not allowed to be administrators of this repository.
+Instead a user should be added as administrator. 
+
+To add a user as administrator From the main page of the repository, go to Settings -> Manage Access.
+(For more information, see https://docs.github.com/en/organizations/managing-access-to-your-organizations-repositories)
+`
+
 // OrgConfig is the org-level config definition for Repository Administrators
 // security policy.
 type OrgConfig struct {
@@ -61,6 +68,9 @@ type OrgConfig struct {
 
 	// Whether to allow users to be admins on a repo. If false then only teams can be admins. Default true.
 	UserAdminsAllowed bool `json:"userAdminsAllowed"`
+
+	// Whether to allow teams to be admins on a repo. If false then only users can be admins. Default true.
+	TeamAdminsAllowed bool `json:"teamAdminsAllowed"`
 
 	// Exemptions is a list of repo-bool pairings to exempt.
 	// Exemptions are only defined at the org level because they should be made
@@ -82,12 +92,16 @@ type RepoConfig struct {
 
 	// UserAdminsAllowed overrides the same setting in org-level, only if present.
 	UserAdminsAllowed *bool `json:"userAdminsAllowed"`
+
+	// TeamAdminsAllowed overrides the same setting in org-level, only if present.
+	TeamAdminsAllowed *bool `json:"teamAdminsAllowed"`
 }
 
 type mergedConfig struct {
 	Action            string
 	OwnerlessAllowed  bool
 	UserAdminsAllowed bool
+	TeamAdminsAllowed bool
 	Exemptions        []*AdministratorExemption
 }
 
@@ -105,6 +119,9 @@ type AdministratorExemption struct {
 
 	// Whether to allow users to be admins on a repo. If false then only teams can be admins. Default true.
 	UserAdminsAllowed bool `json:"userAdminsAllowed"`
+
+	// Whether to allow teams to be admins on a repo. If false then only users can be admins. Default true.
+	TeamAdminsAllowed bool `json:"teamAdminsAllowed"`
 }
 
 type details struct {
@@ -215,6 +232,12 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		rv.NotifyText = rv.NotifyText + userAdminsText
 	}
 
+	// Test TeamAdminsAllowed
+	if len(d.TeamAdmins) > 0 && !(mc.TeamAdminsAllowed || isTeamAdminsExempt(repo, mc.Exemptions, gc)) {
+		rv.Pass = false
+		rv.NotifyText = rv.NotifyText + teamAdminsText
+	}
+
 	return rv, nil
 }
 
@@ -270,6 +293,17 @@ func isUserAdminsExempt(repo string, ee []*AdministratorExemption, gc globCache)
 	return false
 }
 
+func isTeamAdminsExempt(repo string, ee []*AdministratorExemption, gc globCache) bool {
+	for _, e := range ee {
+		if g, err := gc.compileGlob(e.Repo); err == nil {
+			if g.Match(repo) && e.TeamAdminsAllowed {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Fix implementing policydef.Policy.Fix(). Currently not supported. Plan
 // to support this TODO.
 func (a Admin) Fix(ctx context.Context, c *github.Client, owner, repo string) error {
@@ -295,6 +329,7 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 		Action:            "log",
 		OwnerlessAllowed:  false,
 		UserAdminsAllowed: true,
+		TeamAdminsAllowed: true,
 	}
 	if err := configFetchConfig(ctx, c, owner, "", configFile, config.OrgLevel, oc); err != nil {
 		log.Error().
@@ -336,6 +371,7 @@ func mergeConfig(oc *OrgConfig, orc *RepoConfig, rc *RepoConfig, repo string) *m
 		Action:            oc.Action,
 		OwnerlessAllowed:  oc.OwnerlessAllowed,
 		UserAdminsAllowed: oc.UserAdminsAllowed,
+		TeamAdminsAllowed: oc.TeamAdminsAllowed,
 		Exemptions:        oc.Exemptions,
 	}
 	mc = mergeInRepoConfig(mc, orc, repo)
@@ -355,6 +391,9 @@ func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedCon
 	}
 	if rc.UserAdminsAllowed != nil {
 		mc.UserAdminsAllowed = *rc.UserAdminsAllowed
+	}
+	if rc.TeamAdminsAllowed != nil {
+		mc.TeamAdminsAllowed = *rc.TeamAdminsAllowed
 	}
 	return mc
 }
