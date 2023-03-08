@@ -911,7 +911,94 @@ func TestCheck(t *testing.T) {
 			},
 		},
 		{
+			Name: "UserAdminsAllowed not allowed but allowed by an exemption and pass 2",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: false,
+				TeamAdminsAllowed: true,
+				Exemptions: []*AdministratorExemption{
+					{
+						Repo:             "thisrepo",
+						OwnerlessAllowed: true,
+						UserAdmins:       []string{"dave", "bob"},
+					},
+				},
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					Admins: []string{"bob"},
+				},
+			},
+		},
+		{
 			Name: "UserAdminsAllowed not allowed by by an exemption and fail",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: false,
+				TeamAdminsAllowed: true,
+				Exemptions: []*AdministratorExemption{
+					{
+						Repo:              "thisrepo",
+						OwnerlessAllowed:  true,
+						UserAdminsAllowed: false,
+						UserAdmins:        []string{"dave"},
+					},
+				},
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Users are not allowed to be administrators of this repository.\nInstead a team should be added as administrator.",
+				Details: details{
+					Admins: []string{"bob"},
+				},
+			},
+		},
+		{
+			Name: "UserAdminsAllowed not allowed by by an exemption and fail 2",
 			Org: OrgConfig{
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
