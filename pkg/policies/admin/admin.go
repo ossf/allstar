@@ -120,6 +120,9 @@ type AdministratorExemption struct {
 	// Whether to allow users to be admins on a repo. If false then only teams can be admins. Default true.
 	UserAdminsAllowed bool `json:"userAdminsAllowed"`
 
+	// Allow specific users to be admins on this repository. It overrides the boolean value UserAdminsAllowed.
+	UserAdmins []string `json:"userAdmins"`
+
 	// Whether to allow teams to be admins on a repo. If false then only users can be admins. Default true.
 	TeamAdminsAllowed bool `json:"teamAdminsAllowed"`
 }
@@ -227,7 +230,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	}
 
 	// Test UserAdminsAllowed
-	if len(d.Admins) > 0 && !(mc.UserAdminsAllowed || isUserAdminsExempt(repo, mc.Exemptions, gc)) {
+	if len(d.Admins) > 0 && !(mc.UserAdminsAllowed || isUserAdminsExempt(repo, d.Admins, mc.Exemptions, gc)) {
 		rv.Pass = false
 		rv.NotifyText = rv.NotifyText + userAdminsText
 	}
@@ -282,10 +285,10 @@ func isOwnerlessExempt(repo string, ee []*AdministratorExemption, gc globCache) 
 	return false
 }
 
-func isUserAdminsExempt(repo string, ee []*AdministratorExemption, gc globCache) bool {
+func isUserAdminsExempt(repo string, userAdmins []string, ee []*AdministratorExemption, gc globCache) bool {
 	for _, e := range ee {
 		if g, err := gc.compileGlob(e.Repo); err == nil {
-			if g.Match(repo) && e.UserAdminsAllowed {
+			if g.Match(repo) && (e.UserAdminsAllowed || in(userAdmins, e.UserAdmins)) {
 				return true
 			}
 		}
@@ -302,6 +305,22 @@ func isTeamAdminsExempt(repo string, ee []*AdministratorExemption, gc globCache)
 		}
 	}
 	return false
+}
+
+func in(admins []string, list []string) bool {
+	for _, admin := range admins {
+		var found bool = false
+		for _, l := range list {
+			if l == admin {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }
 
 // Fix implementing policydef.Policy.Fix(). Currently not supported. Plan
