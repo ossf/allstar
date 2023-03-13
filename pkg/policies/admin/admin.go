@@ -125,6 +125,9 @@ type AdministratorExemption struct {
 
 	// Whether to allow teams to be admins on a repo. If false then only users can be admins. Default true.
 	TeamAdminsAllowed bool `json:"teamAdminsAllowed"`
+
+	// Allow specific teams to be admins on this repository. It overrides the boolean value TeamAdminsAllowed.
+	TeamAdmins []string `json:"teamAdmins"`
 }
 
 type details struct {
@@ -236,7 +239,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	}
 
 	// Test TeamAdminsAllowed
-	if len(d.TeamAdmins) > 0 && !(mc.TeamAdminsAllowed || isTeamAdminsExempt(repo, mc.Exemptions, gc)) {
+	if len(d.TeamAdmins) > 0 && !(mc.TeamAdminsAllowed || isTeamAdminsExempt(repo, d.TeamAdmins, mc.Exemptions, gc)) {
 		rv.Pass = false
 		rv.NotifyText = rv.NotifyText + teamAdminsText
 	}
@@ -296,10 +299,10 @@ func isUserAdminsExempt(repo string, userAdmins []string, ee []*AdministratorExe
 	return false
 }
 
-func isTeamAdminsExempt(repo string, ee []*AdministratorExemption, gc globCache) bool {
+func isTeamAdminsExempt(repo string, teamAdmins []string, ee []*AdministratorExemption, gc globCache) bool {
 	for _, e := range ee {
 		if g, err := gc.compileGlob(e.Repo); err == nil {
-			if g.Match(repo) && e.TeamAdminsAllowed {
+			if g.Match(repo) && (e.TeamAdminsAllowed || in(teamAdmins, e.TeamAdmins)) {
 				return true
 			}
 		}

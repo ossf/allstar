@@ -1277,6 +1277,49 @@ func TestCheck(t *testing.T) {
 			},
 		},
 		{
+			Name: "TeamAdminsAllowed not allowed but allowed by an exemption and pass 2",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: true,
+				TeamAdminsAllowed: false,
+				Exemptions: []*AdministratorExemption{
+					{
+						Repo:             "thisrepo",
+						OwnerlessAllowed: true,
+						TeamAdmins:       []string{"dave", "bob"},
+					},
+				},
+			},
+			Repo: RepoConfig{},
+			Teams: []*github.Team{
+				&github.Team{
+					Slug: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.Team{
+					Slug: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					TeamAdmins: []string{"bob"},
+				},
+			},
+		},
+		{
 			Name: "TeamAdminsAllowed not allowed by by an exemption and fail",
 			Org: OrgConfig{
 				OptConfig: config.OrgOptConfig{
@@ -1290,6 +1333,49 @@ func TestCheck(t *testing.T) {
 						Repo:              "thisrepo",
 						OwnerlessAllowed:  true,
 						TeamAdminsAllowed: false,
+					},
+				},
+			},
+			Repo: RepoConfig{},
+			Teams: []*github.Team{
+				&github.Team{
+					Slug: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.Team{
+					Slug: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Teams are not allowed to be administrators of this repository.\nInstead a user should be added as administrator.",
+				Details: details{
+					TeamAdmins: []string{"bob"},
+				},
+			},
+		},
+		{
+			Name: "TeamAdminsAllowed not allowed by by an exemption and fail 2",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:  true,
+				UserAdminsAllowed: false,
+				TeamAdminsAllowed: false,
+				Exemptions: []*AdministratorExemption{
+					{
+						Repo:             "thisrepo",
+						OwnerlessAllowed: true,
+						TeamAdmins:       []string{"dave"},
 					},
 				},
 			},
