@@ -52,42 +52,47 @@ func TestConfigPrecedence(t *testing.T) {
 		{
 			Name: "OrgOnly",
 			Org: OrgConfig{
-				Action:            "issue",
-				OwnerlessAllowed:  true,
-				UserAdminsAllowed: true,
-				TeamAdminsAllowed: true,
+				Action:              "issue",
+				OwnerlessAllowed:    true,
+				UserAdminsAllowed:   true,
+				TeamAdminsAllowed:   true,
+				MaxNumberAdminTeams: 2,
 			},
 			OrgRepo:   RepoConfig{},
 			Repo:      RepoConfig{},
 			ExpAction: "issue",
 			Exp: mergedConfig{
-				Action:            "issue",
-				OwnerlessAllowed:  true,
-				UserAdminsAllowed: true,
-				TeamAdminsAllowed: true,
+				Action:              "issue",
+				OwnerlessAllowed:    true,
+				UserAdminsAllowed:   true,
+				TeamAdminsAllowed:   true,
+				MaxNumberAdminTeams: 2,
 			},
 		},
 		{
 			Name: "OrgRepoOverOrg",
 			Org: OrgConfig{
-				Action:            "issue",
-				OwnerlessAllowed:  true,
-				UserAdminsAllowed: true,
-				TeamAdminsAllowed: true,
+				Action:              "issue",
+				OwnerlessAllowed:    true,
+				UserAdminsAllowed:   true,
+				TeamAdminsAllowed:   true,
+				MaxNumberAdminTeams: 2,
 			},
 			OrgRepo: RepoConfig{
-				Action:            github.String("log"),
-				OwnerlessAllowed:  github.Bool(false),
-				UserAdminsAllowed: github.Bool(false),
-				TeamAdminsAllowed: github.Bool(false),
+				Action:              github.String("log"),
+				OwnerlessAllowed:    github.Bool(false),
+				UserAdminsAllowed:   github.Bool(false),
+				TeamAdminsAllowed:   github.Bool(false),
+				MaxNumberAdminTeams: github.Int(3),
 			},
 			Repo:      RepoConfig{},
 			ExpAction: "log",
 			Exp: mergedConfig{
-				Action:            "log",
-				OwnerlessAllowed:  false,
-				UserAdminsAllowed: false,
-				TeamAdminsAllowed: false,
+				Action:              "log",
+				OwnerlessAllowed:    false,
+				UserAdminsAllowed:   false,
+				TeamAdminsAllowed:   false,
+				MaxNumberAdminTeams: 3,
 			},
 		},
 		{
@@ -96,20 +101,23 @@ func TestConfigPrecedence(t *testing.T) {
 				Action: "issue",
 			},
 			OrgRepo: RepoConfig{
-				Action:            github.String("log"),
-				OwnerlessAllowed:  github.Bool(true),
-				UserAdminsAllowed: github.Bool(true),
-				TeamAdminsAllowed: github.Bool(true),
+				Action:              github.String("log"),
+				OwnerlessAllowed:    github.Bool(true),
+				UserAdminsAllowed:   github.Bool(true),
+				TeamAdminsAllowed:   github.Bool(true),
+				MaxNumberAdminTeams: github.Int(2),
 			},
 			Repo: RepoConfig{
-				Action:            github.String("email"),
-				OwnerlessAllowed:  github.Bool(false),
-				UserAdminsAllowed: github.Bool(false),
-				TeamAdminsAllowed: github.Bool(false),
+				Action:              github.String("email"),
+				OwnerlessAllowed:    github.Bool(false),
+				UserAdminsAllowed:   github.Bool(false),
+				TeamAdminsAllowed:   github.Bool(false),
+				MaxNumberAdminTeams: github.Int(3),
 			},
 			ExpAction: "email",
 			Exp: mergedConfig{
-				Action: "email",
+				Action:              "email",
+				MaxNumberAdminTeams: 3,
 			},
 		},
 		{
@@ -121,23 +129,26 @@ func TestConfigPrecedence(t *testing.T) {
 				Action: "issue",
 			},
 			OrgRepo: RepoConfig{
-				Action:            github.String("log"),
-				OwnerlessAllowed:  github.Bool(true),
-				UserAdminsAllowed: github.Bool(true),
-				TeamAdminsAllowed: github.Bool(true),
+				Action:              github.String("log"),
+				OwnerlessAllowed:    github.Bool(true),
+				UserAdminsAllowed:   github.Bool(true),
+				TeamAdminsAllowed:   github.Bool(true),
+				MaxNumberAdminTeams: github.Int(2),
 			},
 			Repo: RepoConfig{
-				Action:            github.String("email"),
-				OwnerlessAllowed:  github.Bool(false),
-				UserAdminsAllowed: github.Bool(false),
-				TeamAdminsAllowed: github.Bool(false),
+				Action:              github.String("email"),
+				OwnerlessAllowed:    github.Bool(false),
+				UserAdminsAllowed:   github.Bool(false),
+				TeamAdminsAllowed:   github.Bool(false),
+				MaxNumberAdminTeams: github.Int(3),
 			},
 			ExpAction: "log",
 			Exp: mergedConfig{
-				Action:            "log",
-				OwnerlessAllowed:  true,
-				UserAdminsAllowed: true,
-				TeamAdminsAllowed: true,
+				Action:              "log",
+				OwnerlessAllowed:    true,
+				UserAdminsAllowed:   true,
+				TeamAdminsAllowed:   true,
+				MaxNumberAdminTeams: 2,
 			},
 		},
 	}
@@ -180,6 +191,7 @@ func TestConfigPrecedence(t *testing.T) {
 func TestCheck(t *testing.T) {
 	bob := "bob"
 	alice := "alice"
+	dave := "dave"
 	tests := []struct {
 		Name         string
 		Org          OrgConfig
@@ -1402,6 +1414,219 @@ func TestCheck(t *testing.T) {
 				NotifyText: "Teams are not allowed to be administrators of this repository.\nInstead a user should be added as administrator.",
 				Details: details{
 					TeamAdmins: []string{"bob"},
+				},
+			},
+		},
+		{
+			Name: "MaxNumberAdminTeams fail",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:    false,
+				UserAdminsAllowed:   false,
+				TeamAdminsAllowed:   true,
+				MaxNumberAdminTeams: 1,
+			},
+			Repo: RepoConfig{},
+			Teams: []*github.Team{
+				&github.Team{
+					Slug: &alice,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+				&github.Team{
+					Slug: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "The number of teams with admin permission on this repository is greater than the allowed maximum value.",
+				Details: details{
+					TeamAdmins: []string{"alice", "bob"},
+				},
+			},
+		},
+		{
+			Name: "MaxNumberAdminTeams pass",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:    false,
+				UserAdminsAllowed:   false,
+				TeamAdminsAllowed:   true,
+				MaxNumberAdminTeams: 2,
+			},
+			Repo: RepoConfig{},
+			Teams: []*github.Team{
+				&github.Team{
+					Slug: &alice,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+				&github.Team{
+					Slug: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					TeamAdmins: []string{"alice", "bob"},
+				},
+			},
+		},
+		{
+			Name: "MaxNumberAdminTeams pass 2",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:    true,
+				UserAdminsAllowed:   false,
+				TeamAdminsAllowed:   true,
+				MaxNumberAdminTeams: 2,
+			},
+			Repo: RepoConfig{},
+			Teams: []*github.Team{
+				&github.Team{
+					Slug: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.Team{
+					Slug: &bob,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					TeamAdmins: nil,
+				},
+			},
+		},
+		{
+			Name: "MaxNumberAdminTeams allowed by an exemption and pass",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:    false,
+				UserAdminsAllowed:   false,
+				TeamAdminsAllowed:   true,
+				MaxNumberAdminTeams: 1,
+				Exemptions: []*AdministratorExemption{
+					{
+						Repo:                "thisrepo",
+						OwnerlessAllowed:    false,
+						UserAdminsAllowed:   false,
+						TeamAdminsAllowed:   true,
+						MaxNumberAdminTeams: 3,
+					},
+				},
+			},
+			Repo: RepoConfig{},
+			Teams: []*github.Team{
+				&github.Team{
+					Slug: &alice,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+				&github.Team{
+					Slug: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					TeamAdmins: []string{"alice", "bob"},
+				},
+			},
+		},
+		{
+			Name: "MaxNumberAdminTeams not allowed by an exemption and fail",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:    false,
+				UserAdminsAllowed:   false,
+				TeamAdminsAllowed:   true,
+				MaxNumberAdminTeams: 3,
+				Exemptions: []*AdministratorExemption{
+					{
+						Repo:                "thisrepo",
+						OwnerlessAllowed:    false,
+						UserAdminsAllowed:   false,
+						TeamAdminsAllowed:   true,
+						MaxNumberAdminTeams: 2,
+					},
+				},
+			},
+			Repo: RepoConfig{},
+			Teams: []*github.Team{
+				&github.Team{
+					Slug: &alice,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+				&github.Team{
+					Slug: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+				&github.Team{
+					Slug: &dave,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "The number of teams with admin permission on this repository is greater than the allowed maximum value.",
+				Details: details{
+					TeamAdmins: []string{"alice", "bob", "dave"},
 				},
 			},
 		},
