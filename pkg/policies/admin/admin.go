@@ -52,6 +52,9 @@ To add a user as administrator From the main page of the repository, go to Setti
 (For more information, see https://docs.github.com/en/organizations/managing-access-to-your-organizations-repositories)
 `
 
+const maxNumberAdminTeamsText = `The number of teams with admin permission on this repository is greater than the allowed maximum value.
+`
+
 // OrgConfig is the org-level config definition for Repository Administrators
 // security policy.
 type OrgConfig struct {
@@ -71,6 +74,10 @@ type OrgConfig struct {
 
 	// Whether to allow teams to be admins on a repo. If false then only users can be admins. Default true.
 	TeamAdminsAllowed bool `json:"teamAdminsAllowed"`
+
+	// The maximum number of teams with admin permissions on a repo that are allowed.
+	// It only takes effect if a value > 0 is specified. If you wish to disallow admin teams in general, please use the teamAdminsAllowed bool instead.
+	MaxNumberAdminTeams int `json:"maxNumberAdminTeams"`
 
 	// Exemptions is a list of repo-bool pairings to exempt.
 	// Exemptions are only defined at the org level because they should be made
@@ -95,14 +102,18 @@ type RepoConfig struct {
 
 	// TeamAdminsAllowed overrides the same setting in org-level, only if present.
 	TeamAdminsAllowed *bool `json:"teamAdminsAllowed"`
+
+	// MaxNumberAdminTeams overrides the same setting in org-level, only if present.
+	MaxNumberAdminTeams *int `json:"maxNumberAdminTeams"`
 }
 
 type mergedConfig struct {
-	Action            string
-	OwnerlessAllowed  bool
-	UserAdminsAllowed bool
-	TeamAdminsAllowed bool
-	Exemptions        []*AdministratorExemption
+	Action              string
+	OwnerlessAllowed    bool
+	UserAdminsAllowed   bool
+	TeamAdminsAllowed   bool
+	MaxNumberAdminTeams int
+	Exemptions          []*AdministratorExemption
 }
 
 type globCache map[string]glob.Glob
@@ -128,6 +139,10 @@ type AdministratorExemption struct {
 
 	// Allow specific teams to be admins on this repository. It overrides the boolean value TeamAdminsAllowed.
 	TeamAdmins []string `json:"teamAdmins"`
+
+	// The maximum number of teams with admin permissions on this repo that are allowed. It overrides the int value MaxNumberAdminTeams.
+	// It only takes effect if a value > 0 is specified. If you wish to disallow admin teams in general, please use the teamAdminsAllowed bool instead.
+	MaxNumberAdminTeams int `json:"maxNumberAdminTeams"`
 }
 
 type details struct {
@@ -244,6 +259,18 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		rv.NotifyText = rv.NotifyText + teamAdminsText
 	}
 
+	// Test MaxNumberAdminTeams exemption if it's defined
+	if !isMaxNumberAdminTeamsExempt(repo, len(d.TeamAdmins), mc.Exemptions, gc, true) {
+		rv.Pass = false
+		rv.NotifyText = rv.NotifyText + maxNumberAdminTeamsText
+	}
+
+	// Test MaxNumberAdminTeams
+	if mc.MaxNumberAdminTeams > 0 && len(d.TeamAdmins) > mc.MaxNumberAdminTeams && !isMaxNumberAdminTeamsExempt(repo, len(d.TeamAdmins), mc.Exemptions, gc, false) {
+		rv.Pass = false
+		rv.NotifyText = rv.NotifyText + maxNumberAdminTeamsText
+	}
+
 	return rv, nil
 }
 
@@ -326,6 +353,17 @@ func in(admins []string, list []string) bool {
 	return true
 }
 
+func isMaxNumberAdminTeamsExempt(repo string, teamAdminsCount int, ee []*AdministratorExemption, gc globCache, def bool) bool {
+	for _, e := range ee {
+		if g, err := gc.compileGlob(e.Repo); err == nil {
+			if g.Match(repo) && e.MaxNumberAdminTeams > 0 {
+				return e.MaxNumberAdminTeams >= teamAdminsCount
+			}
+		}
+	}
+	return def
+}
+
 // Fix implementing policydef.Policy.Fix(). Currently not supported. Plan
 // to support this TODO.
 func (a Admin) Fix(ctx context.Context, c *github.Client, owner, repo string) error {
@@ -348,10 +386,11 @@ func (a Admin) GetAction(ctx context.Context, c *github.Client, owner, repo stri
 
 func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgConfig, *RepoConfig, *RepoConfig) {
 	oc := &OrgConfig{ // Fill out non-zero defaults
-		Action:            "log",
-		OwnerlessAllowed:  false,
-		UserAdminsAllowed: true,
-		TeamAdminsAllowed: true,
+		Action:              "log",
+		OwnerlessAllowed:    false,
+		UserAdminsAllowed:   true,
+		TeamAdminsAllowed:   true,
+		MaxNumberAdminTeams: 0,
 	}
 	if err := configFetchConfig(ctx, c, owner, "", configFile, config.OrgLevel, oc); err != nil {
 		log.Error().
@@ -390,11 +429,12 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 
 func mergeConfig(oc *OrgConfig, orc *RepoConfig, rc *RepoConfig, repo string) *mergedConfig {
 	mc := &mergedConfig{
-		Action:            oc.Action,
-		OwnerlessAllowed:  oc.OwnerlessAllowed,
-		UserAdminsAllowed: oc.UserAdminsAllowed,
-		TeamAdminsAllowed: oc.TeamAdminsAllowed,
-		Exemptions:        oc.Exemptions,
+		Action:              oc.Action,
+		OwnerlessAllowed:    oc.OwnerlessAllowed,
+		UserAdminsAllowed:   oc.UserAdminsAllowed,
+		TeamAdminsAllowed:   oc.TeamAdminsAllowed,
+		MaxNumberAdminTeams: oc.MaxNumberAdminTeams,
+		Exemptions:          oc.Exemptions,
 	}
 	mc = mergeInRepoConfig(mc, orc, repo)
 
@@ -416,6 +456,9 @@ func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedCon
 	}
 	if rc.TeamAdminsAllowed != nil {
 		mc.TeamAdminsAllowed = *rc.TeamAdminsAllowed
+	}
+	if rc.MaxNumberAdminTeams != nil {
+		mc.MaxNumberAdminTeams = *rc.MaxNumberAdminTeams
 	}
 	return mc
 }
