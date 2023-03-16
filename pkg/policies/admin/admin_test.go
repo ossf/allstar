@@ -55,6 +55,7 @@ func TestConfigPrecedence(t *testing.T) {
 				Action:              "issue",
 				OwnerlessAllowed:    true,
 				UserAdminsAllowed:   true,
+				MaxNumberUserAdmins: 1,
 				TeamAdminsAllowed:   true,
 				MaxNumberAdminTeams: 2,
 			},
@@ -65,6 +66,7 @@ func TestConfigPrecedence(t *testing.T) {
 				Action:              "issue",
 				OwnerlessAllowed:    true,
 				UserAdminsAllowed:   true,
+				MaxNumberUserAdmins: 1,
 				TeamAdminsAllowed:   true,
 				MaxNumberAdminTeams: 2,
 			},
@@ -75,6 +77,7 @@ func TestConfigPrecedence(t *testing.T) {
 				Action:              "issue",
 				OwnerlessAllowed:    true,
 				UserAdminsAllowed:   true,
+				MaxNumberUserAdmins: 1,
 				TeamAdminsAllowed:   true,
 				MaxNumberAdminTeams: 2,
 			},
@@ -82,6 +85,7 @@ func TestConfigPrecedence(t *testing.T) {
 				Action:              github.String("log"),
 				OwnerlessAllowed:    github.Bool(false),
 				UserAdminsAllowed:   github.Bool(false),
+				MaxNumberUserAdmins: github.Int(4),
 				TeamAdminsAllowed:   github.Bool(false),
 				MaxNumberAdminTeams: github.Int(3),
 			},
@@ -91,6 +95,7 @@ func TestConfigPrecedence(t *testing.T) {
 				Action:              "log",
 				OwnerlessAllowed:    false,
 				UserAdminsAllowed:   false,
+				MaxNumberUserAdmins: 4,
 				TeamAdminsAllowed:   false,
 				MaxNumberAdminTeams: 3,
 			},
@@ -104,6 +109,7 @@ func TestConfigPrecedence(t *testing.T) {
 				Action:              github.String("log"),
 				OwnerlessAllowed:    github.Bool(true),
 				UserAdminsAllowed:   github.Bool(true),
+				MaxNumberUserAdmins: github.Int(1),
 				TeamAdminsAllowed:   github.Bool(true),
 				MaxNumberAdminTeams: github.Int(2),
 			},
@@ -111,12 +117,14 @@ func TestConfigPrecedence(t *testing.T) {
 				Action:              github.String("email"),
 				OwnerlessAllowed:    github.Bool(false),
 				UserAdminsAllowed:   github.Bool(false),
+				MaxNumberUserAdmins: github.Int(4),
 				TeamAdminsAllowed:   github.Bool(false),
 				MaxNumberAdminTeams: github.Int(3),
 			},
 			ExpAction: "email",
 			Exp: mergedConfig{
 				Action:              "email",
+				MaxNumberUserAdmins: 4,
 				MaxNumberAdminTeams: 3,
 			},
 		},
@@ -132,6 +140,7 @@ func TestConfigPrecedence(t *testing.T) {
 				Action:              github.String("log"),
 				OwnerlessAllowed:    github.Bool(true),
 				UserAdminsAllowed:   github.Bool(true),
+				MaxNumberUserAdmins: github.Int(1),
 				TeamAdminsAllowed:   github.Bool(true),
 				MaxNumberAdminTeams: github.Int(2),
 			},
@@ -139,6 +148,7 @@ func TestConfigPrecedence(t *testing.T) {
 				Action:              github.String("email"),
 				OwnerlessAllowed:    github.Bool(false),
 				UserAdminsAllowed:   github.Bool(false),
+				MaxNumberUserAdmins: github.Int(4),
 				TeamAdminsAllowed:   github.Bool(false),
 				MaxNumberAdminTeams: github.Int(3),
 			},
@@ -147,6 +157,7 @@ func TestConfigPrecedence(t *testing.T) {
 				Action:              "log",
 				OwnerlessAllowed:    true,
 				UserAdminsAllowed:   true,
+				MaxNumberUserAdmins: 1,
 				TeamAdminsAllowed:   true,
 				MaxNumberAdminTeams: 2,
 			},
@@ -1049,6 +1060,219 @@ func TestCheck(t *testing.T) {
 				NotifyText: "Users are not allowed to be administrators of this repository.\nInstead a team should be added as administrator.",
 				Details: details{
 					Admins: []string{"bob"},
+				},
+			},
+		},
+		{
+			Name: "MaxNumberUserAdmins fail",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:    false,
+				UserAdminsAllowed:   true,
+				MaxNumberUserAdmins: 1,
+				TeamAdminsAllowed:   true,
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "The number of users with admin permission on this repository is greater than the allowed maximum value.",
+				Details: details{
+					Admins: []string{"alice", "bob"},
+				},
+			},
+		},
+		{
+			Name: "MaxNumberUserAdmins pass",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:    false,
+				UserAdminsAllowed:   true,
+				MaxNumberUserAdmins: 2,
+				TeamAdminsAllowed:   true,
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					Admins: []string{"alice", "bob"},
+				},
+			},
+		},
+		{
+			Name: "MaxNumberUserAdmins pass 2",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:    true,
+				UserAdminsAllowed:   true,
+				MaxNumberUserAdmins: 2,
+				TeamAdminsAllowed:   true,
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					Admins: nil,
+				},
+			},
+		},
+		{
+			Name: "MaxNumberUserAdmins allowed by an exemption and pass",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:    false,
+				UserAdminsAllowed:   false,
+				MaxNumberUserAdmins: 1,
+				TeamAdminsAllowed:   false,
+				Exemptions: []*AdministratorExemption{
+					{
+						Repo:                "thisrepo",
+						OwnerlessAllowed:    false,
+						UserAdminsAllowed:   true,
+						MaxNumberUserAdmins: 3,
+						TeamAdminsAllowed:   false,
+					},
+				},
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					Admins: []string{"alice", "bob"},
+				},
+			},
+		},
+		{
+			Name: "MaxNumberUserAdmins not llowed by an exemption and fail",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				OwnerlessAllowed:    false,
+				UserAdminsAllowed:   false,
+				MaxNumberUserAdmins: 3,
+				TeamAdminsAllowed:   false,
+				Exemptions: []*AdministratorExemption{
+					{
+						Repo:                "thisrepo",
+						OwnerlessAllowed:    false,
+						UserAdminsAllowed:   true,
+						MaxNumberUserAdmins: 2,
+						TeamAdminsAllowed:   false,
+					},
+				},
+			},
+			Repo: RepoConfig{},
+			Users: []*github.User{
+				&github.User{
+					Login: &alice,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+				&github.User{
+					Login: &bob,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+				&github.User{
+					Login: &dave,
+					Permissions: map[string]bool{
+						"push":  true,
+						"admin": true,
+					},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "The number of users with admin permission on this repository is greater than the allowed maximum value.",
+				Details: details{
+					Admins: []string{"alice", "bob", "dave"},
 				},
 			},
 		},
