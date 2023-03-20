@@ -333,10 +333,15 @@ func getAdminUsers(ctx context.Context, r repositories, owner, repo string,
 
 func isOwnerlessExempt(repo string, ee []*AdministratorExemption, gc globCache) bool {
 	for _, e := range ee {
-		if g, err := gc.compileGlob(e.Repo); err == nil {
-			if g.Match(repo) && e.OwnerlessAllowed {
-				return true
-			}
+		g, err := gc.compileGlob(e.Repo)
+		if err != nil {
+			log.Warn().
+				Str("repo", repo).
+				Str("glob", e.Repo).
+				Err(err).
+				Msg("Unexpected error compiling the glob.")
+		} else if g.Match(repo) && e.OwnerlessAllowed {
+			return true
 		}
 	}
 	return false
@@ -344,10 +349,15 @@ func isOwnerlessExempt(repo string, ee []*AdministratorExemption, gc globCache) 
 
 func isUserAdminsExempt(repo string, userAdmins []string, ee []*AdministratorExemption, gc globCache) bool {
 	for _, e := range ee {
-		if g, err := gc.compileGlob(e.Repo); err == nil {
-			if g.Match(repo) && (e.UserAdminsAllowed || in(userAdmins, e.UserAdmins)) {
-				return true
-			}
+		g, err := gc.compileGlob(e.Repo)
+		if err != nil {
+			log.Warn().
+				Str("repo", repo).
+				Str("glob", e.Repo).
+				Err(err).
+				Msg("Unexpected error compiling the glob.")
+		} else if g.Match(repo) && (e.UserAdminsAllowed || in(userAdmins, e.UserAdmins)) {
+			return true
 		}
 	}
 	return false
@@ -355,10 +365,15 @@ func isUserAdminsExempt(repo string, userAdmins []string, ee []*AdministratorExe
 
 func isTeamAdminsExempt(repo string, teamAdmins []string, ee []*AdministratorExemption, gc globCache) bool {
 	for _, e := range ee {
-		if g, err := gc.compileGlob(e.Repo); err == nil {
-			if g.Match(repo) && (e.TeamAdminsAllowed || in(teamAdmins, e.TeamAdmins)) {
-				return true
-			}
+		g, err := gc.compileGlob(e.Repo)
+		if err != nil {
+			log.Warn().
+				Str("repo", repo).
+				Str("glob", e.Repo).
+				Err(err).
+				Msg("Unexpected error compiling the glob.")
+		} else if g.Match(repo) && (e.TeamAdminsAllowed || in(teamAdmins, e.TeamAdmins)) {
+			return true
 		}
 	}
 	return false
@@ -382,10 +397,15 @@ func in(admins []string, list []string) bool {
 
 func isMaxNumberUserAdminsExempt(repo string, adminsCount int, ee []*AdministratorExemption, gc globCache, def bool) bool {
 	for _, e := range ee {
-		if g, err := gc.compileGlob(e.Repo); err == nil {
-			if g.Match(repo) && e.MaxNumberUserAdmins > 0 {
-				return e.MaxNumberUserAdmins >= adminsCount
-			}
+		g, err := gc.compileGlob(e.Repo)
+		if err != nil {
+			log.Warn().
+				Str("repo", repo).
+				Str("glob", e.Repo).
+				Err(err).
+				Msg("Unexpected error compiling the glob.")
+		} else if g.Match(repo) && e.MaxNumberUserAdmins > 0 {
+			return e.MaxNumberUserAdmins >= adminsCount
 		}
 	}
 	return def
@@ -393,10 +413,15 @@ func isMaxNumberUserAdminsExempt(repo string, adminsCount int, ee []*Administrat
 
 func isMaxNumberAdminTeamsExempt(repo string, teamAdminsCount int, ee []*AdministratorExemption, gc globCache, def bool) bool {
 	for _, e := range ee {
-		if g, err := gc.compileGlob(e.Repo); err == nil {
-			if g.Match(repo) && e.MaxNumberAdminTeams > 0 {
-				return e.MaxNumberAdminTeams >= teamAdminsCount
-			}
+		g, err := gc.compileGlob(e.Repo)
+		if err != nil {
+			log.Warn().
+				Str("repo", repo).
+				Str("glob", e.Repo).
+				Err(err).
+				Msg("Unexpected error compiling the glob.")
+		} else if g.Match(repo) && e.MaxNumberAdminTeams > 0 {
+			return e.MaxNumberAdminTeams >= teamAdminsCount
 		}
 	}
 	return def
