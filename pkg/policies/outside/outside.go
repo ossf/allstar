@@ -299,10 +299,15 @@ func isExempt(repo, user, access string, ee []*OutsideExemption, gc globCache) b
 		if !(((e.Push || e.Admin) && access == "push") || (e.Admin && access == "admin")) {
 			continue
 		}
-		if g, err := gc.compileGlob(e.Repo); err == nil {
-			if g.Match(repo) && e.User == user {
-				return true
-			}
+		g, err := gc.compileGlob(e.Repo)
+		if err != nil {
+			log.Warn().
+				Str("repo", repo).
+				Str("glob", e.Repo).
+				Err(err).
+				Msg("Unexpected error compiling the glob.")
+		} else if g.Match(repo) && e.User == user {
+			return true
 		}
 	}
 	return false
