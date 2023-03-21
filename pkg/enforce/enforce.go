@@ -130,6 +130,16 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface) (EnforceA
 				Int("count", len(repos)).
 				Msg("Enforcing policies on repos of installation.")
 
+			// For debug usage, you can filter repositories to test against a single one
+			// TODO: Implement a cli flag option to specific a repository, and/or a policy you want to run, useful for testing.
+			// var found github.Repository
+			// for _, r := range repos {
+			// 	if *r.Name == "daikon-ee" {
+			// 		found = *r
+			// 	}
+			// }
+			// repos = []*github.Repository{}
+			// repos = append(repos, &found)
 			instResults, err := runPoliciesOnInstRepos(ctx, repos, ic)
 
 			mu.Lock()

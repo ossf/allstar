@@ -117,25 +117,28 @@ func check(ctx context.Context, rep github.RepositoriesService, c *github.Client
 		Bool("enabled", enabled).
 		Msg("Check repo enabled")
 
-	var errors *github.CodeownersErrors
-
 	codeownererrors, _, err := rep.GetCodeownersErrors(context.Background(), owner, repo)
 
 	if err != nil {
-		log.Err(err)
-	}
-
-	if codeownererrors != errors {
 		return &policydef.Result{
 			Enabled:    enabled,
 			Pass:       false,
-			NotifyText: "CODEOWNERS policy not enabled.\n" + notifyText,
+			NotifyText: "CODEOWNERS file not present.\n" + notifyText,
 		}, nil
 	}
+
+	if len(codeownererrors.Errors) == 0 {
+		return &policydef.Result{
+			Enabled:    enabled,
+			Pass:       true,
+			NotifyText: "",
+		}, nil
+	}
+
 	return &policydef.Result{
 		Enabled:    enabled,
-		Pass:       true,
-		NotifyText: "",
+		Pass:       false,
+		NotifyText: "CODEOWNERS file not present.\n" + notifyText,
 	}, nil
 }
 
