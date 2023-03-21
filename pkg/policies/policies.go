@@ -24,6 +24,7 @@ import (
 	"github.com/ossf/allstar/pkg/policies/outside"
 	"github.com/ossf/allstar/pkg/policies/scorecard"
 	"github.com/ossf/allstar/pkg/policies/security"
+	"github.com/ossf/allstar/pkg/policies/codeowners"
 	"github.com/ossf/allstar/pkg/policies/workflow"
 	"github.com/ossf/allstar/pkg/policydef"
 )
@@ -34,6 +35,7 @@ func GetPolicies() []policydef.Policy {
 		binary.NewBinary(),
 		branch.NewBranch(),
 		outside.NewOutside(),
+		codeowners.NewCodeowners(),
 		scorecard.NewScorecard(),
 		security.NewSecurity(),
 		workflow.NewWorkflow(),

@@ -25,7 +25,7 @@ import (
 	"github.com/ossf/allstar/pkg/config/operator"
 
 	jsonpatch "github.com/evanphx/json-patch"
-	"github.com/google/go-github/v43/github"
+	"github.com/google/go-github/v50/github"
 	"github.com/rs/zerolog/log"
 	"sigs.k8s.io/yaml"
 )

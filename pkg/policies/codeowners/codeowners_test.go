@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package security
+package codeowners
 
 import (
 	"context"
@@ -122,7 +122,7 @@ func TestConfigPrecedence(t *testing.T) {
 				return nil
 			}
 
-			s := Security(true)
+			s := Codeowners(true)
 			ctx := context.Background()
 
 			action := s.GetAction(ctx, nil, "", "thisrepo")
@@ -195,9 +195,12 @@ func TestCheck(t *testing.T) {
 			SecEnabled:   false,
 			cofigEnabled: true,
 			Exp: policydef.Result{
-				Enabled:    true,
-				Pass:       false,
-				NotifyText: "Security policy not enabled.\nA SECURITY.md file can give users information about what constitutes a vulnerability",
+				Enabled: true,
+				Pass:    false,
+				NotifyText: "CODEOWNERS policy not enabled.\n" + `A CODEOWNERS file can give users information about who is responsible for the maintenance of the repository, or specific folders/files. This is different the access control/permissions on a repository.
+
+				To fix this, add a CODEOWNERS file to your repository, following the official Github documentation and maybe your company's policy.
+				https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners`,
 				Details: details{
 					Enabled: false,
 					URL:     "",
