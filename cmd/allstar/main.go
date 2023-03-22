@@ -17,6 +17,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -26,6 +27,7 @@ import (
 
 	"github.com/ossf/allstar/pkg/enforce"
 	"github.com/ossf/allstar/pkg/ghclients"
+	"github.com/ossf/allstar/pkg/policies"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -41,12 +43,45 @@ func main() {
 			Err(err).
 			Msg("Could not load app secret, shutting down")
 	}
+	var supportedPolicies = policies.GetPolicies()
+	supportedPoliciesMap := map[string]string{}
+	var supportedPoliciesMsg = ""
 
+	for i, p := range supportedPolicies {
+		var policyName = p.Name()
+		supportedPoliciesMap[policyName] = policyName
+		if i < len(supportedPolicies)-1 {
+			supportedPoliciesMsg += policyName + ", "
+		}
+		if i == len(supportedPolicies)-1 {
+			supportedPoliciesMsg += policyName
+		}
+	}
 	boolArgPtr := flag.Bool("once", false, "Run EnforceAll once, instead of in a continuous loop.")
+
+	specificPolicyArg := flag.String("policy", "", fmt.Sprintf("Run a specific policy check. Supported policies: %s", supportedPoliciesMsg))
+	specificRepoArg := flag.String("repo", "", "Run on a specific \"owner/repo\". For example \"ossf/allstar\"")
+
 	flag.Parse()
 
+	if *specificPolicyArg != "" {
+		if v, exists := supportedPoliciesMap[*specificPolicyArg]; exists {
+			log.Info().
+				Str("Policy filtering", *specificPolicyArg).
+				Msg(fmt.Sprintf("Allstar will only run on policy %s", v))
+		} else {
+			log.Fatal().Err(fmt.Errorf("Unsupported policy flag %s", *specificPolicyArg)).Msg(fmt.Sprintf("Supported policies: %s", supportedPoliciesMsg))
+		}
+	}
+
+	if *specificRepoArg != "" {
+		log.Info().
+			Str("Repository filtering", *specificRepoArg).
+			Msg(fmt.Sprintf("Allstar will only run on repository %s", *specificRepoArg))
+	}
+
 	if *boolArgPtr {
-		_, err := enforce.EnforceAll(ctx, ghc)
+		_, err := enforce.EnforceAll(ctx, ghc, *specificPolicyArg, *specificRepoArg)
 		if err != nil {
 			log.Fatal().
 				Err(err).
@@ -59,7 +94,7 @@ func main() {
 		go func() {
 			defer wg.Done()
 			log.Info().
-				Err(enforce.EnforceJob(ctx, ghc, (5 * time.Minute))).
+				Err(enforce.EnforceJob(ctx, ghc, (5 * time.Minute), *specificPolicyArg, *specificRepoArg)).
 				Msg("Enforce job shutting down.")
 		}()
 		sigs := make(chan os.Signal, 1)
