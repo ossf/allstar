@@ -52,8 +52,7 @@ func main() {
 		supportedPoliciesMap[policyName] = policyName
 		if i < len(supportedPolicies)-1 {
 			supportedPoliciesMsg += policyName + ", "
-		}
-		if i == len(supportedPolicies)-1 {
+		} else {
 			supportedPoliciesMsg += policyName
 		}
 	}
