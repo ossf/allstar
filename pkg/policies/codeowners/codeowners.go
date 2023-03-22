@@ -1,4 +1,4 @@
-// Copyright 2021 Allstar Authors
+// Copyright 2023 Allstar Authors
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package security implements the SECURITY.md security policy.
-package security
+// Package codeowners implements the CODEOWNERS policy.
+package codeowners
 
 import (
 	"context"
@@ -24,17 +24,15 @@ import (
 
 	"github.com/google/go-github/v50/github"
 	"github.com/rs/zerolog/log"
-	"github.com/shurcooL/githubv4"
 )
 
-const configFile = "security.yaml"
-const polName = "SECURITY.md"
+const configFile = "codeowners.yaml"
+const polName = "CODEOWNERS"
 
-const notifyText = `A SECURITY.md file can give users information about what constitutes a vulnerability and how to report one securely so that information about a bug is not publicly visible. Examples of secure reporting methods include using an issue tracker with private issue support, or encrypted email with a published key.
+const notifyText = `A CODEOWNERS file can give users information about who is responsible for the maintenance of the repository, or specific folders/files. This is different the access control/permissions on a repository.
 
-To fix this, add a SECURITY.md file that explains how to handle vulnerabilities found in your repository. Go to https://github.com/%v/%v/security/policy to enable.
-
-For more information, see https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository.`
+To fix this, add a CODEOWNERS file to your repository, following the official Github documentation and maybe your company's policy.
+https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners`
 
 // OrgConfig is the org-level config definition for Branch Protection.
 type OrgConfig struct {
@@ -62,8 +60,10 @@ type mergedConfig struct {
 }
 
 type details struct {
-	Enabled bool
-	URL     string
+	Enabled         bool
+	URL             string
+	CodeownersFound bool
+	ErrorCount      int
 }
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
@@ -75,42 +75,44 @@ func init() {
 	configIsEnabled = config.IsEnabled
 }
 
-type v4client interface {
-	Query(context.Context, interface{}, map[string]interface{}) error
+type repositories interface {
+	GetCodeownersErrors(context.Context, string, string) ([]*github.CodeownersErrors, *github.Response, error)
 }
 
-// Security is the SECURITY.md policy object, implements policydef.Policy.
-type Security bool
+// Codeowners is the CODEOWNERS policy object, implements policydef.Policy.
+type Codeowners bool
 
-// NewSecurity returns a new SECURITY.md policy.
-func NewSecurity() policydef.Policy {
-	var s Security
+// NewCodeowners returns a new CODEOWNERS policy.
+func NewCodeowners() policydef.Policy {
+	var s Codeowners
 	return s
 }
 
 // Name returns the name of this policy, implementing policydef.Policy.Name()
-func (s Security) Name() string {
+func (s Codeowners) Name() string {
 	return polName
 }
 
-// Check performs the policy check for SECURITY.md policy based on the
+// Check performs the policy check for CODEOWNERS policy based on the
 // configuration stored in the org/repo, implementing policydef.Policy.Check()
-func (s Security) Check(ctx context.Context, c *github.Client, owner,
+func (s Codeowners) Check(ctx context.Context, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
-	v4c := githubv4.NewClient(c.Client())
-	return check(ctx, c, v4c, owner, repo)
+	return check(ctx, *c.Repositories, c, owner, repo)
 }
 
 // Check whether this policy is enabled or not
-func (s Security) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
+func (s Codeowners) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	return configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 }
 
-func check(ctx context.Context, c *github.Client, v4c v4client, owner,
+func check(ctx context.Context, rep github.RepositoriesService, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	enabled, err := configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
+	var d details
+	d.Enabled = enabled
+	d.URL = ""
 	if err != nil {
 		return nil, err
 	}
@@ -121,44 +123,47 @@ func check(ctx context.Context, c *github.Client, v4c v4client, owner,
 		Bool("enabled", enabled).
 		Msg("Check repo enabled")
 
-	var q struct {
-		Repository struct {
-			SecurityPolicyUrl       string
-			IsSecurityPolicyEnabled bool
-		} `graphql:"repository(owner: $owner, name: $name)"`
-	}
-	variables := map[string]interface{}{
-		"owner": githubv4.String(owner),
-		"name":  githubv4.String(repo),
-	}
-	if err := v4c.Query(ctx, &q, variables); err != nil {
-		return nil, err
-	}
-	if !q.Repository.IsSecurityPolicyEnabled {
+	codeownererrors, _, err := rep.GetCodeownersErrors(context.Background(), owner, repo)
+
+	// this is a 404, CODEOWNERS is not the in the repository
+	if err != nil {
+		d.CodeownersFound = false
 		return &policydef.Result{
 			Enabled:    enabled,
 			Pass:       false,
-			NotifyText: "Security policy not enabled.\n" + fmt.Sprintf(notifyText, owner, repo),
-			Details: details{
-				Enabled: false,
-				URL:     q.Repository.SecurityPolicyUrl,
-			},
+			NotifyText: "CODEOWNERS file not present.\n" + notifyText,
+			Details:    d,
 		}, nil
+	}
+
+	d.ErrorCount = len(codeownererrors.Errors)
+	d.CodeownersFound = true
+	// the CODEOWNERS is present and has no errors, pass
+	if d.ErrorCount == 0 {
+		return &policydef.Result{
+			Enabled:    enabled,
+			Pass:       true,
+			NotifyText: "",
+			Details:    d,
+		}, nil
+	}
+	// otherwise, fail because CODEOWNERS has errors
+	var errorMessage = fmt.Sprintf("CODEOWNERS file present but has %d errors.\n", d.ErrorCount)
+	for _, e := range codeownererrors.Errors {
+		errorMessage += fmt.Sprintf("- %s\n  - %s", e.Path, e.Message)
 	}
 	return &policydef.Result{
 		Enabled:    enabled,
-		Pass:       true,
-		NotifyText: "",
-		Details: details{
-			Enabled: true,
-			URL:     q.Repository.SecurityPolicyUrl,
-		},
+		Pass:       false,
+		NotifyText: errorMessage,
+		Details:    d,
 	}, nil
+
 }
 
 // Fix implementing policydef.Policy.Fix(). Currently not supported. Plan
 // to support this TODO.
-func (s Security) Fix(ctx context.Context, c *github.Client, owner, repo string) error {
+func (s Codeowners) Fix(ctx context.Context, c *github.Client, owner, repo string) error {
 	log.Warn().
 		Str("org", owner).
 		Str("repo", repo).
@@ -167,10 +172,10 @@ func (s Security) Fix(ctx context.Context, c *github.Client, owner, repo string)
 	return nil
 }
 
-// GetAction returns the configured action from SECURITY.md policy's
+// GetAction returns the configured action from CODEOWNERS policy's
 // configuration stored in the org-level repo, default log. Implementing
 // policydef.Policy.GetAction()
-func (s Security) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
+func (s Codeowners) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	mc := mergeConfig(oc, orc, rc, repo)
 	return mc.Action
