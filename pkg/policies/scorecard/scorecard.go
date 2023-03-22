@@ -194,11 +194,11 @@ This is a generic passthrough policy that runs the configured checks from Securi
 			}
 			if len(logs) > 10 {
 				notify += fmt.Sprintf(
-					"**First 10 Results from policy: %v : %v **\n\n%v"+
+					"**First 10 Results from policy: %v : %v**\n\n%v"+
 						"- Run a Scorecards scan to see full list.\n\n",
 					res.Name, res.Reason, listJoin(logs[:10]))
 			} else {
-				notify += fmt.Sprintf("**Results from policy: %v : %v **\n\n%v\n",
+				notify += fmt.Sprintf("**Results from policy: %v : %v**\n\n%v\n",
 					res.Name, res.Reason, listJoin(logs))
 			}
 		}
