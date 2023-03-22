@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/google/go-github/v43/github"
+	"github.com/google/go-github/v50/github"
 	"github.com/rs/zerolog/log"
 )
 
@@ -40,9 +40,9 @@ type WebookHandler struct {
 // Handle GitHub Webhooks for Review Bot.
 //
 // Example:
-//   config := Config{...}
-//   reviewbot.HandleWebhooks(&config)
 //
+//	config := Config{...}
+//	reviewbot.HandleWebhooks(&config)
 func HandleWebhooks(config *Config) error {
 	w := WebookHandler{*config}
 
