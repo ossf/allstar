@@ -198,7 +198,7 @@ func TestRunPolicies(t *testing.T) {
 			policy1Results = test.Res
 			action = test.Action
 
-			enforceResults, err := runPoliciesReal(context.Background(), nil, "", repo, true)
+			enforceResults, err := runPoliciesReal(context.Background(), nil, "", repo, true, "")
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -283,14 +283,14 @@ func TestRunPoliciesOnInstRepos(t *testing.T) {
 				},
 			}
 
-			runPolicies = func(ctx context.Context, c *github.Client, owner, repo string, enabled bool) (EnforceRepoResults, error) {
+			runPolicies = func(ctx context.Context, c *github.Client, owner, repo string, enabled bool, specificPolicyArg string) (EnforceRepoResults, error) {
 				if test.ShouldError {
 					return nil, failErr
 				}
 				return test.EnforceResults, nil
 			}
 
-			instResults, err := runPoliciesOnInstRepos(context.Background(), repos, client)
+			instResults, err := runPoliciesOnInstRepos(context.Background(), repos, client, "")
 			if test.ExpError != nil && !errors.Is(test.ExpError, err) {
 				t.Fatalf("Error %v does not match expected error %v", err, test.ExpError)
 			}
@@ -347,7 +347,7 @@ func TestDoNothingOnOptOut(t *testing.T) {
 			policy1Results = test.Res
 
 			doNothingOnOptOut = test.doNothingOnOptOut
-			enforceResults, err := runPoliciesReal(context.Background(), nil, "", repo, test.Enabled)
+			enforceResults, err := runPoliciesReal(context.Background(), nil, "", repo, test.Enabled, "")
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -545,7 +545,7 @@ func TestEnforceAll(t *testing.T) {
 			policy1Results = test.Policy1Results
 			policy2Results = test.Policy2Results
 
-			enforceAllResults, err := EnforceAll(context.Background(), mockGhc)
+			enforceAllResults, err := EnforceAll(context.Background(), mockGhc, "", "")
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -577,7 +577,7 @@ func TestSuspendedEnforce(t *testing.T) {
 	}
 	suspended = false
 	gaicalled = false
-	if _, err := EnforceAll(context.Background(), &MockGhClients{}); err != nil {
+	if _, err := EnforceAll(context.Background(), &MockGhClients{}, "", ""); err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 	if !gaicalled {
@@ -585,7 +585,7 @@ func TestSuspendedEnforce(t *testing.T) {
 	}
 	suspended = true
 	gaicalled = false
-	if _, err := EnforceAll(context.Background(), &MockGhClients{}); err != nil {
+	if _, err := EnforceAll(context.Background(), &MockGhClients{}, "", ""); err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 	if gaicalled {
