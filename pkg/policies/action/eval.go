@@ -30,7 +30,7 @@ var runInProgressStatuses = []string{"in_progress", "queued", "waiting", "reques
 
 // evaluateActionDenied evaluates an Action against a set of Rules
 func evaluateActionDenied(ctx context.Context, c *github.Client, rules []*internalRule, action *actionMetadata,
-	gc globCache, sc semverCache) (*denyRuleEvaluationResult, []error) {
+	gc globCache) (*denyRuleEvaluationResult, []error) {
 	result := &denyRuleEvaluationResult{
 		denied:         false,
 		actionMetadata: action,
@@ -47,7 +47,7 @@ func evaluateActionDenied(ctx context.Context, c *github.Client, rules []*intern
 		versionMismatch := false
 
 		for _, a := range r.Actions {
-			match, matchName, _, err := a.match(ctx, c, action, gc, sc)
+			match, matchName, _, err := a.match(ctx, c, action, gc)
 			if err != nil {
 				errs = append(errs, err)
 				errored = true
@@ -121,7 +121,7 @@ func evaluateActionDenied(ctx context.Context, c *github.Client, rules []*intern
 
 // evaluateRequireRule evaluates a require rule against a set of Actions
 func evaluateRequireRule(ctx context.Context, c *github.Client, owner, repo string, rule *internalRule,
-	actions []*actionMetadata, headSHA string, gc globCache, sc semverCache) (*requireRuleEvaluationResult, error) {
+	actions []*actionMetadata, headSHA string, gc globCache) (*requireRuleEvaluationResult, error) {
 	if rule.Method != "require" {
 		return nil, fmt.Errorf("rule is not a require rule")
 	}
@@ -147,7 +147,7 @@ func evaluateRequireRule(ctx context.Context, c *github.Client, owner, repo stri
 
 		// Find Action matching selector ra
 		for _, a := range actions {
-			match, fixMethod, err := requireActionDetermineFix(ctx, c, owner, repo, ra, a, rule.MustPass, headSHA, gc, sc)
+			match, fixMethod, err := requireActionDetermineFix(ctx, c, owner, repo, ra, a, rule.MustPass, headSHA, gc)
 
 			if err != nil {
 				return nil, err
@@ -202,8 +202,8 @@ func evaluateRequireRule(ctx context.Context, c *github.Client, owner, repo stri
 //   - on error, the match bool is false AND fix method will not be usable.
 //   - on match true, the fix method is not to be used.
 func requireActionDetermineFix(ctx context.Context, c *github.Client, owner, repo string, ra *ActionSelector, a *actionMetadata,
-	mustPass bool, headSHA string, gc globCache, sc semverCache) (match bool, fix requireRuleEvaluationFixMethod, err error) {
-	match, matchName, _, err := ra.match(ctx, c, a, gc, sc)
+	mustPass bool, headSHA string, gc globCache) (match bool, fix requireRuleEvaluationFixMethod, err error) {
+	match, matchName, _, err := ra.match(ctx, c, a, gc)
 	if err != nil {
 		return false, 0, err
 	}
