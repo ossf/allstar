@@ -260,8 +260,7 @@ func TestEnsure(t *testing.T) {
 		}
 	})
 	t.Run("OpenFreshIssue", func(t *testing.T) {
-		now := github.Timestamp{Time: time.Now()}
-
+		now := time.Now()
 		listByRepo = func(ctx context.Context, owner string, repo string,
 			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
 			return []*github.Issue{
@@ -282,7 +281,7 @@ func TestEnsure(t *testing.T) {
 		}
 	})
 	t.Run("OpenStaleIssue", func(t *testing.T) {
-		stale := github.Timestamp{Time: time.Now().Add(-10 * operator.NoticePingDuration)}
+		stale := time.Now().Add(-10 * operator.NoticePingDuration)
 		listByRepo = func(ctx context.Context, owner string, repo string,
 			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
 			return []*github.Issue{
@@ -380,7 +379,7 @@ func TestEnsure(t *testing.T) {
 	})
 	t.Run("OpenStaleIssueScheduleAllowsPing", func(t *testing.T) {
 		setShouldPerform(true)
-		stale := github.Timestamp{Time: time.Now().Add(-10 * operator.NoticePingDuration)}
+		stale := time.Now().Add(-10 * operator.NoticePingDuration)
 		listByRepo = func(ctx context.Context, owner string, repo string,
 			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
 			return []*github.Issue{
@@ -413,7 +412,7 @@ func TestEnsure(t *testing.T) {
 	})
 	t.Run("OpenStaleIssueScheduleBlocksPing", func(t *testing.T) {
 		setShouldPerform(false)
-		stale := github.Timestamp{Time: time.Now().Add(-10 * operator.NoticePingDuration)}
+		stale := time.Now().Add(-10 * operator.NoticePingDuration)
 		listByRepo = func(ctx context.Context, owner string, repo string,
 			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
 			return []*github.Issue{
