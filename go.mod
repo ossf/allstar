@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/Masterminds/semver/v3 v3.1.1
-	github.com/bradleyfalzon/ghinstallation/v2 v2.1.0
+	github.com/bradleyfalzon/ghinstallation/v2 v2.2.0
 	github.com/evanphx/json-patch v5.6.0+incompatible
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-cmp v0.5.9
