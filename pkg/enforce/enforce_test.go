@@ -20,6 +20,7 @@ import (
 	"errors"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -378,7 +379,7 @@ func TestEnforceAll(t *testing.T) {
 		insts = append(insts, inst)
 		return insts, nil
 	}
-	getAppInstallationRepos = func(ctx context.Context, ic *github.Client, instID int64) ([]*github.Repository, *github.Response, error) {
+	getAppInstallationRepos = func(ctx context.Context, ic *github.Client) ([]*github.Repository, *github.Response, error) {
 		var repos []*github.Repository
 		repo1Name := "repo1"
 		repo2Name := "repo2"
@@ -574,7 +575,7 @@ func TestSuspendedEnforce(t *testing.T) {
 		insts = append(insts, inst)
 		return insts, nil
 	}
-	getAppInstallationRepos = func(ctx context.Context, ic *github.Client, instID int64) ([]*github.Repository, *github.Response, error) {
+	getAppInstallationRepos = func(ctx context.Context, ic *github.Client) ([]*github.Repository, *github.Response, error) {
 		gaicalled = true
 		return nil, nil, nil
 	}
@@ -597,110 +598,95 @@ func TestSuspendedEnforce(t *testing.T) {
 }
 
 func injective(s string) int64 {
+	if len(s) < 8 { // pad left
+		s = strings.Repeat("_", 8-len(s)) + s
+	}
 	return int64(binary.BigEndian.Uint64([]byte(s)))
 }
 
 func TestAllowedRepositories(t *testing.T) {
 	tests := []struct {
 		desc       string
-		repos      []string
+		orgs       []string
 		allowlist  []string
 		expected   []string
 		disallowed []string
 	}{
 		{
 			desc:      "all explicitly allowed",
-			repos:     []string{"org-1/repo-1", "org-1/repo-2", "org-2/repo-1"},
-			allowlist: []string{"org-1/repo-1", "org-1/repo-2", "org-2/repo-1"},
-			expected:  []string{"org-1/repo-1", "org-1/repo-2", "org-2/repo-1"},
+			orgs:      []string{"org-1", "org-2"},
+			allowlist: []string{"org-1", "org-2"},
+			expected:  []string{"org-1", "org-2"},
 		},
 		{
-			desc:      "all allowed by glob",
-			repos:     []string{"org-1/repo-1", "org-1/repo-2", "org-2/repo-1"},
-			allowlist: []string{"org-1/*", "org-2/*"},
-			expected:  []string{"org-1/repo-1", "org-1/repo-2", "org-2/repo-1"},
-		},
-		{
-			desc:      "big glob",
-			repos:     []string{"org-1/repo-1", "org-1/repo-2", "org-2/repo-1"},
-			allowlist: []string{"*"},
-			expected:  []string{"org-1/repo-1", "org-1/repo-2", "org-2/repo-1"},
-		},
-		{
-			desc:      "all allowed glob + explicit",
-			repos:     []string{"org-1/repo-1", "org-1/repo-2", "org-2/repo-1"},
-			allowlist: []string{"org-1/*", "org-2/repo-1"},
-			expected:  []string{"org-1/repo-1", "org-1/repo-2", "org-2/repo-1"},
+			desc:      "some allowed (with duplicate installation)",
+			orgs:      []string{"org-1", "org-1", "org-2"},
+			allowlist: []string{"org-1"},
+			expected:  []string{"org-1", "org-1"},
 		},
 		{
 			desc:       "none allowed",
-			repos:      []string{"org-1/repo-1", "org-1/repo-2", "org-2/repo-1"},
-			allowlist:  []string{"org-3/*"},
+			orgs:       []string{"org-1", "org-1", "org-2"},
+			allowlist:  []string{"org-3"},
 			expected:   []string{},
-			disallowed: []string{"org-1/repo-1", "org-1/repo-2", "org-2/repo-1"},
+			disallowed: []string{"org-1", "org-1", "org-2"},
 		},
 		{
-			desc:  "empty allowlist allows all by default",
-			repos: []string{"org-1/repo-1", "org-1/repo-2", "org-2/repo-1"},
-			// allowlist: []string{"*"},
+			desc:      "empty allowlist allows all by default",
+			orgs:      []string{"org-1", "org-2", "org-3"},
+			allowlist: []string{},
 			// allowed: []string{},
-			expected: []string{"org-1/repo-1", "org-1/repo-2", "org-2/repo-1"},
-		},
-		{
-			desc:       "some allowed",
-			repos:      []string{"org-1/repo-1", "org-1/repo-2", "org-2/repo-1"},
-			allowlist:  []string{"org-1/repo-*"},
-			expected:   []string{"org-1/repo-1", "org-1/repo-2"},
-			disallowed: []string{"org-2/repo-1"},
+			expected: []string{"org-1", "org-2", "org-3"},
 		},
 	}
 
 	for _, tt := range tests {
-		t.Logf("TEST: %s", tt.desc)
-		listRepos = func(ctx context.Context, c *github.Client) ([]*github.Repository, *github.Response, error) {
-			repos := []*github.Repository{}
-			for _, r := range tt.repos {
-				r := r
-				i := injective(r)
-				repos = append(repos, &github.Repository{Name: &r, ID: &i})
+		t.Run(tt.desc, func(t *testing.T) {
+			listInstallations = func(ctx context.Context, ac *github.Client) ([]*github.Installation, error) {
+				repos := []*github.Installation{}
+				for _, r := range tt.orgs {
+					r := r
+					i := injective(r)
+					repos = append(repos, &github.Installation{Account: &github.User{Login: &r}, ID: &i})
+				}
+				return repos, nil
 			}
-			return repos, nil, nil
-		}
 
-		removed := []int64{}
-		removeRepository = func(ctx context.Context, ic *github.Client, instID, repoID int64) (*github.Response, error) {
-			removed = append(removed, repoID)
-			return nil, nil
-		}
+			removed := []int64{}
+			deleteInstallation = func(ctx context.Context, ic *github.Client, instID int64) (*github.Response, error) {
+				removed = append(removed, instID)
+				return &github.Response{Response: &http.Response{StatusCode: 200}}, nil
+			}
 
-		getAppInstallationRepos = getAppInstallationReposReal
-		operator.AllowedRepositories = tt.allowlist
-		repos, _, err := getAppInstallationRepos(context.Background(), &github.Client{}, 0)
-		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
-		}
+			getAppInstallations = getAppInstallationsReal
+			operator.AllowedOrganizations = tt.allowlist
+			insts, err := getAppInstallations(context.Background(), &github.Client{})
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
-		// Ensure that all repos expected to be disallowed are also uninstalled
-		for _, r := range tt.disallowed {
-			i := injective(r)
-			var contains bool
-			for _, r := range removed {
-				if r == i {
-					contains = true
+			// Ensure that all repos expected to be disallowed are also uninstalled
+			for _, r := range tt.disallowed {
+				i := injective(r)
+				var contains bool
+				for _, r := range removed {
+					if r == i {
+						contains = true
+					}
+				}
+				if !contains {
+					t.Errorf("expected disallowed repo %s to be removed but wasn't", r)
 				}
 			}
-			if !contains {
-				t.Errorf("expected disallowed repo %s to be removed but wasn't", r)
-			}
-		}
 
-		// Ensure that returned repos as expected
-		rn := []string{}
-		for _, r := range repos {
-			rn = append(rn, *r.Name)
-		}
-		if !reflect.DeepEqual(rn, tt.expected) {
-			t.Errorf("expected allowed repos %+v got allowed repos %+v", tt.expected, rn)
-		}
+			// Ensure that returned repos as expected
+			rn := []string{}
+			for _, r := range insts {
+				rn = append(rn, *r.Account.Login)
+			}
+			if !reflect.DeepEqual(rn, tt.expected) {
+				t.Errorf("expected allowed repos %+v got allowed repos %+v", tt.expected, rn)
+			}
+		})
 	}
 }
