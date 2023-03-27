@@ -84,10 +84,10 @@ const GitHubIssueFooter = `This issue will auto resolve when the policy is in co
 
 Issue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer.`
 
-// AllowedRepositories is the set of GitHub repositories on which this Allstar instance
+// AllowedOrganizations is the set of GitHub repositories on which this Allstar instance
 // is allowed to be installed. This allows a public GitHub app to be shared between GitHub
 // organizations and repos while restricting installation of the app
-var AllowedRepositories []string
+var AllowedOrganizations []string
 
 // NoticePingDuration is the duration (in hours) to wait between pinging notice actions,
 // such as updating a GitHub issue.
@@ -145,6 +145,6 @@ func setVars() {
 		NoticePingDuration = setNoticePingDurationHrs
 	}
 
-	allowedRepositories := os.Getenv("GITHUB_ALLOWED_REPOS")
-	AllowedRepositories = strings.Split(allowedRepositories, ",")
+	allowedOrgs := os.Getenv("GITHUB_ALLOWED_ORGS")
+	AllowedOrganizations = strings.Split(allowedOrgs, ",")
 }

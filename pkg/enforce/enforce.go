@@ -22,7 +22,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gobwas/glob"
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/ghclients"
@@ -45,10 +44,10 @@ var issueEnsure func(context.Context, *github.Client, string, string, string, st
 var issueClose func(context.Context, *github.Client, string, string, string) error
 var configIsBotEnabled func(context.Context, *github.Client, string, string) bool
 var getAppInstallations func(context.Context, *github.Client) ([]*github.Installation, error)
-var getAppInstallationRepos func(context.Context, *github.Client, int64) ([]*github.Repository, *github.Response, error)
+var getAppInstallationRepos func(context.Context, *github.Client) ([]*github.Repository, *github.Response, error)
 var runPolicies func(context.Context, *github.Client, string, string, bool, string) (EnforceRepoResults, error)
-var listRepos func(context.Context, *github.Client) ([]*github.Repository, *github.Response, error)
-var removeRepository func(ctx context.Context, ic *github.Client, instID int64, repoID int64) (*github.Response, error)
+var deleteInstallation func(context.Context, *github.Client, int64) (*github.Response, error)
+var listInstallations func(context.Context, *github.Client) ([]*github.Installation, error)
 
 func init() {
 	policiesGetPolicies = policies.GetPolicies
@@ -58,8 +57,8 @@ func init() {
 	getAppInstallations = getAppInstallationsReal
 	getAppInstallationRepos = getAppInstallationReposReal
 	runPolicies = runPoliciesReal
-	listRepos = listReposReal
-	removeRepository = removeRepositoryReal
+	deleteInstallation = deleteInstallationReal
+	listInstallations = listInstallationsReal
 }
 
 // EnforceAll iterates through all available installations and repos Allstar
@@ -111,7 +110,7 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificP
 
 		g.Go(func() error {
 
-			repos, _, err := getAppInstallationRepos(ctx, ic, iid)
+			repos, _, err := getAppInstallationRepos(ctx, ic)
 
 			if specificRepoArg != "" {
 				var found github.Repository
@@ -209,48 +208,81 @@ func runPoliciesOnInstRepos(ctx context.Context, repos []*github.Repository, ghc
 	return instResults, repoLoopErr
 }
 
-func getAppInstallationsReal(ctx context.Context, ac *github.Client) ([]*github.Installation, error) {
+func listInstallationsReal(ctx context.Context, ac *github.Client) ([]*github.Installation, error) {
 	var insts []*github.Installation
-	opt := &github.ListOptions{
+	opts := &github.ListOptions{
 		PerPage: 100,
 	}
+	var err error
 	for {
-		is, resp, err := ac.Apps.ListInstallations(ctx, opt)
+		is, resp, err := ac.Apps.ListInstallations(ctx, opts)
+
 		if err != nil {
-			return nil, err
+			return insts, err
 		}
+
 		insts = append(insts, is...)
+
 		if resp.NextPage == 0 {
 			break
 		}
-		opt.Page = resp.NextPage
+
+		opts.Page = resp.NextPage
 	}
+
+	return insts, err
+}
+
+func getAppInstallationsReal(ctx context.Context, ac *github.Client) ([]*github.Installation, error) {
+	is, err := listInstallations(ctx, ac)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(operator.AllowedOrganizations) == 0 {
+		return is, nil
+	}
+
+	var insts []*github.Installation
+	for i := range is {
+		var m bool
+		for j := range operator.AllowedOrganizations {
+			// Account.Login holds the name of the GitHub Organization
+			// that Allstar is installed on
+			if operator.AllowedOrganizations[j] == *is[i].Account.Login {
+				m = true
+			}
+		}
+		if !m {
+			resp, err := deleteInstallation(ctx, ac, *is[i].ID)
+			if err != nil || resp.StatusCode != 200 {
+				log.Error().
+					Err(err).
+					Msg("couldn't disable allstar on disallowed repo")
+			}
+
+			continue
+		}
+		insts = append(insts, is[i])
+	}
+
 	return insts, nil
 }
 
-func removeRepositoryReal(ctx context.Context, ic *github.Client, instID int64, repoID int64) (*github.Response, error) {
-	resp, err := ic.Apps.RemoveRepository(ctx, instID, repoID)
-	if err != nil || resp.StatusCode != 200 {
-		log.Error().
-			Err(err).
-			Msg("couldn't disable allstar on disallowed repo")
-	}
+func deleteInstallationReal(ctx context.Context, ic *github.Client, instID int64) (*github.Response, error) {
+	resp, err := ic.Apps.DeleteInstallation(ctx, instID)
 	return resp, err
 }
 
-func uninstallAppOnRepo(ctx context.Context, ic *github.Client, instID int64, repoID int64) {
-	removeRepository(ctx, ic, instID, repoID)
-}
-
-func listReposReal(ctx context.Context, ic *github.Client) ([]*github.Repository, *github.Response, error) {
+func getAppInstallationReposReal(ctx context.Context, ic *github.Client) ([]*github.Repository, *github.Response, error) {
 	var repos []*github.Repository
 	opt := &github.ListOptions{
 		PerPage: 100,
 	}
 	var err error
-	var rs *github.ListRepositories
 	var resp *github.Response
 	for {
+		var rs *github.ListRepositories
 		rs, resp, err = ic.Apps.ListRepos(ctx, opt)
 		if err != nil {
 			break
@@ -261,43 +293,7 @@ func listReposReal(ctx context.Context, ic *github.Client) ([]*github.Repository
 		}
 		opt.Page = resp.NextPage
 	}
-
 	return repos, resp, err
-}
-
-func getAppInstallationReposReal(ctx context.Context, ic *github.Client, instID int64) ([]*github.Repository, *github.Response, error) {
-	repos, resp, err := listRepos(ctx, ic)
-
-	disallowedRepos := []*github.Repository{}
-	allowedRepos := []*github.Repository{}
-
-	// Backwards compat - if a user hasn't specified a list of allowed repositories, fail open
-	// Remove this when we bump versions
-	if len(operator.AllowedRepositories) == 0 {
-		return repos, resp, err
-	}
-
-	for i := range repos {
-		var allowed bool
-		for j := range operator.AllowedRepositories {
-			if g := glob.MustCompile(operator.AllowedRepositories[j]); g.Match(*repos[i].Name) {
-				allowed = true
-				break
-			}
-		}
-		if allowed {
-			allowedRepos = append(allowedRepos, repos[i])
-		} else {
-			disallowedRepos = append(disallowedRepos, repos[i])
-		}
-	}
-
-	for i := range disallowedRepos {
-		r := disallowedRepos[i]
-		uninstallAppOnRepo(ctx, ic, instID, *r.ID)
-	}
-
-	return allowedRepos, resp, err
 }
 
 // EnforceJob is a reconciliation job that enforces policies on all repos every
