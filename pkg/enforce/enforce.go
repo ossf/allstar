@@ -218,7 +218,7 @@ func listInstallationsReal(ctx context.Context, ac *github.Client) ([]*github.In
 		is, resp, err := ac.Apps.ListInstallations(ctx, opts)
 
 		if err != nil {
-			return insts, err
+			return nil, err
 		}
 
 		insts = append(insts, is...)
@@ -244,26 +244,29 @@ func getAppInstallationsReal(ctx context.Context, ac *github.Client) ([]*github.
 	}
 
 	var insts []*github.Installation
-	for i := range is {
+	for _, i := range is {
 		var m bool
-		for j := range operator.AllowedOrganizations {
+		for _, ao := range operator.AllowedOrganizations {
 			// Account.Login holds the name of the GitHub Organization
 			// that Allstar is installed on
-			if operator.AllowedOrganizations[j] == *is[i].Account.Login {
+			if i.Account != nil && ao == i.Account.GetLogin() {
 				m = true
 			}
 		}
 		if !m {
-			resp, err := deleteInstallation(ctx, ac, *is[i].ID)
+			resp, err := deleteInstallation(ctx, ac, i.GetID())
 			if err != nil || resp.StatusCode != 200 {
 				log.Error().
 					Err(err).
+					Str("area", "bot").
+					Str("account", i.Account.GetLogin()).
+					Int64("id", i.GetID()).
 					Msg("couldn't disable allstar on disallowed repo")
 			}
 
 			continue
 		}
-		insts = append(insts, is[i])
+		insts = append(insts, i)
 	}
 
 	return insts, nil
