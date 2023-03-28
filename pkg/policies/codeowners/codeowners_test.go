@@ -170,8 +170,6 @@ func TestCheck(t *testing.T) {
 				Pass:       false,
 				NotifyText: "CODEOWNERS file not present.\n" + notifyText,
 				Details: details{
-					Enabled:         false,
-					URL:             "",
 					CodeownersFound: false,
 				},
 			},
@@ -192,14 +190,12 @@ func TestCheck(t *testing.T) {
 				Pass:       true,
 				NotifyText: "",
 				Details: details{
-					Enabled:         true,
-					URL:             "",
 					CodeownersFound: true,
 				},
 			},
 		},
 		{
-			Name: "FailWithErrors",
+			Name: "FailWithCodeOwnerErrors",
 			Org: OrgConfig{
 				OptConfig: config.OrgOptConfig{
 					OptOutStrategy: true,
@@ -213,16 +209,15 @@ func TestCheck(t *testing.T) {
 			Exp: policydef.Result{
 				Enabled: true,
 				Pass:    false,
-				NotifyText: `CODEOWNERS file present but has 2 errors.
+				NotifyText: notifyText + `\nCODEOWNERS file present but has 2 errors.
 				- .github/CODEOWNERS
 				  - test1
 				- CODEOWNERS
 				  - test2`,
 				Details: details{
-					Enabled:         true,
-					URL:             "",
-					CodeownersFound: true,
-					ErrorCount:      2,
+					CodeownersFound:  true,
+					ErrorCount:       2,
+					CodeownersErrors: github.CodeownersErrors{Errors: []*github.CodeownersError{&github.CodeownersError{Message: "test1", Path: ".github/CODEOWNERS"}, &github.CodeownersError{Message: "test2", Path: "CODEOWNERS"}}},
 				},
 			},
 		},
@@ -248,7 +243,7 @@ func TestCheck(t *testing.T) {
 					}
 					return &github.CodeownersErrors{Errors: make([]*github.CodeownersError, test.ErrorCount)}, nil, nil
 				}
-				return &github.CodeownersErrors{Errors: make([]*github.CodeownersError, test.ErrorCount)}, nil, errors.New("Fake error")
+				return &github.CodeownersErrors{Errors: make([]*github.CodeownersError, test.ErrorCount)}, &github.Response{Response: &http.Response{StatusCode: http.StatusNotFound}}, errors.New("Fake error")
 			}
 			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig,
 				c *github.Client, owner, repo string) (bool, error) {
