@@ -160,7 +160,7 @@ func TestCheck(t *testing.T) {
 	}{
 		{
 			Name:           "FailNotPresent",
-			Org:            OrgConfig{},
+			Org:            OrgConfig{RequireCODEOWNERS: true, OptConfig: config.OrgOptConfig{OptOutStrategy: true}},
 			Repo:           RepoConfig{},
 			CodeOwnPresent: false,
 			cofigEnabled:   false,
