@@ -35,7 +35,7 @@ const notifyText = `A CODEOWNERS file can give users information about who is re
 To fix this, add a CODEOWNERS file to your repository, following the official Github documentation and maybe your company's policy.
 https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners`
 
-// OrgConfig is the org-level config definition for Branch Protection.
+// OrgConfig is the org-level config definition for CODEOWNERS
 type OrgConfig struct {
 	// OptConfig is the standard org-level opt in/out config, RepoOverride applies to all
 	// BP config.
@@ -44,16 +44,22 @@ type OrgConfig struct {
 	// Action defines which action to take, default log, other: issue...
 	Action string `json:"action"`
 
-	//TODO add default contents for "fix" action
+	// RequireCODEOWNERS : set to true to require presence of a CODEOWNERS on the repositories (creates an issue if not present)
+	// default false (only checks if existing CODEOWNERS is valid, creates issues if not valid).
+	RequireCODEOWNERS bool `json:"requireCODEOWNERS"`
 }
 
-// RepoConfig is the repo-level config for Branch Protection
+// RepoConfig is the repo-level config for CODEOWNERS
 type RepoConfig struct {
 	// OptConfig is the standard repo-level opt in/out config.
 	OptConfig config.RepoOptConfig `json:"optConfig"`
 
 	// Action overrides the same setting in org-level, only if present.
 	Action *string `json:"action"`
+
+	// RequireCODEOWNERS : set to true to require presence of a CODEOWNERS on the repositories (creates an issue if not present)
+	// default false (only checks if existing CODEOWNERS is valid, creates issues if not valid).
+	RequireCODEOWNERS *bool `json:"requireCODEOWNERS"`
 }
 
 type repositories interface {
@@ -61,7 +67,8 @@ type repositories interface {
 }
 
 type mergedConfig struct {
-	Action string
+	Action            string
+	RequireCODEOWNERS bool
 }
 
 type details struct {
@@ -154,13 +161,25 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 
 	} else if resp != nil && resp.StatusCode == http.StatusNotFound {
 		// "CODEOWNERS" does not exist, err is also not nil but we don't need it
+
+		// if we require CODEOWNERS on all repositories in the Org
+		if oc.RequireCODEOWNERS {
+			d.CodeownersFound = false
+			return &policydef.Result{
+				Enabled:    enabled,
+				Pass:       false,
+				NotifyText: "CODEOWNERS file not present.\n" + notifyText,
+				Details:    d,
+			}, nil
+		}
 		d.CodeownersFound = false
 		return &policydef.Result{
 			Enabled:    enabled,
-			Pass:       false,
+			Pass:       true,
 			NotifyText: "CODEOWNERS file not present.\n" + notifyText,
 			Details:    d,
 		}, nil
+
 	} else {
 		// Unknown error getting "CODEOWNERS", this could be an HTTP 500
 		return nil, nil
@@ -190,7 +209,8 @@ func (s Codeowners) GetAction(ctx context.Context, c *github.Client, owner, repo
 
 func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgConfig, *RepoConfig, *RepoConfig) {
 	oc := &OrgConfig{ // Fill out non-zero defaults
-		Action: "log",
+		Action:            "log",
+		RequireCODEOWNERS: false,
 	}
 	if err := configFetchConfig(ctx, c, owner, "", configFile, config.OrgLevel, oc); err != nil {
 		log.Error().
@@ -229,7 +249,8 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 
 func mergeConfig(oc *OrgConfig, orc *RepoConfig, rc *RepoConfig, repo string) *mergedConfig {
 	mc := &mergedConfig{
-		Action: oc.Action,
+		Action:            oc.Action,
+		RequireCODEOWNERS: oc.RequireCODEOWNERS,
 	}
 	mc = mergeInRepoConfig(mc, orc, repo)
 
@@ -242,6 +263,9 @@ func mergeConfig(oc *OrgConfig, orc *RepoConfig, rc *RepoConfig, repo string) *m
 func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedConfig {
 	if rc.Action != nil {
 		mc.Action = *rc.Action
+	}
+	if rc.RequireCODEOWNERS != nil {
+		mc.RequireCODEOWNERS = *rc.RequireCODEOWNERS
 	}
 	return mc
 }
