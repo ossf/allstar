@@ -18,6 +18,7 @@ package codeowners
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
@@ -64,10 +65,9 @@ type mergedConfig struct {
 }
 
 type details struct {
-	Enabled         bool
-	URL             string
-	CodeownersFound bool
-	ErrorCount      int
+	CodeownersFound  bool
+	ErrorCount       int
+	CodeownersErrors github.CodeownersErrors
 }
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
@@ -110,12 +110,13 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	enabled, err := configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
-	var d details
-	d.Enabled = enabled
-	d.URL = ""
+
 	if err != nil {
 		return nil, err
 	}
+
+	var d details
+
 	log.Info().
 		Str("org", owner).
 		Str("repo", repo).
@@ -123,10 +124,36 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		Bool("enabled", enabled).
 		Msg("Check repo enabled")
 
-	codeownererrors, _, err := rep.GetCodeownersErrors(context.Background(), owner, repo)
+	codeownererrors, resp, err := rep.GetCodeownersErrors(ctx, owner, repo)
 
-	// this is a 404, CODEOWNERS is not the in the repository
-	if err != nil {
+	if err == nil {
+		// "CODEOWNERS" exists
+		d.ErrorCount = len(codeownererrors.Errors)
+		d.CodeownersFound = true
+		// the CODEOWNERS is present and has no errors, pass
+		if d.ErrorCount == 0 {
+			return &policydef.Result{
+				Enabled:    enabled,
+				Pass:       true,
+				NotifyText: "",
+				Details:    d,
+			}, nil
+		}
+		// otherwise, fail because CODEOWNERS exists and has errors
+		d.CodeownersErrors = *codeownererrors
+		var errorMessage = fmt.Sprintf("%s\nCODEOWNERS file present but has %d errors.\n", notifyText, d.ErrorCount)
+		for _, e := range codeownererrors.Errors {
+			errorMessage += fmt.Sprintf("- %s\n  - %s\n", e.Path, e.Message)
+		}
+		return &policydef.Result{
+			Enabled:    enabled,
+			Pass:       false,
+			NotifyText: errorMessage,
+			Details:    d,
+		}, nil
+
+	} else if resp != nil && resp.StatusCode == http.StatusNotFound {
+		// "CODEOWNERS" does not exist, err is also not nil but we don't need it
 		d.CodeownersFound = false
 		return &policydef.Result{
 			Enabled:    enabled,
@@ -134,30 +161,10 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 			NotifyText: "CODEOWNERS file not present.\n" + notifyText,
 			Details:    d,
 		}, nil
+	} else {
+		// Unknown error getting "CODEOWNERS", this could be an HTTP 500
+		return nil, nil
 	}
-
-	d.ErrorCount = len(codeownererrors.Errors)
-	d.CodeownersFound = true
-	// the CODEOWNERS is present and has no errors, pass
-	if d.ErrorCount == 0 {
-		return &policydef.Result{
-			Enabled:    enabled,
-			Pass:       true,
-			NotifyText: "",
-			Details:    d,
-		}, nil
-	}
-	// otherwise, fail because CODEOWNERS has errors
-	var errorMessage = fmt.Sprintf("CODEOWNERS file present but has %d errors.\n", d.ErrorCount)
-	for _, e := range codeownererrors.Errors {
-		errorMessage += fmt.Sprintf("- %s\n  - %s", e.Path, e.Message)
-	}
-	return &policydef.Result{
-		Enabled:    enabled,
-		Pass:       false,
-		NotifyText: errorMessage,
-		Details:    d,
-	}, nil
 
 }
 
