@@ -180,11 +180,9 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 			Details:    d,
 		}, nil
 
-	} else {
-		// Unknown error getting "CODEOWNERS", this could be an HTTP 500
-		return nil, nil
 	}
-
+	// Unknown error getting "CODEOWNERS", this could be an HTTP 500
+	return nil, err
 }
 
 // Fix implementing policydef.Policy.Fix(). Currently not supported. Plan
