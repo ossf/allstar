@@ -30,11 +30,13 @@ func TestSetVars(t *testing.T) {
 		NoticePingDurationHrs string
 		PrivateKey            string
 		DoNothingOnOptOut     string
+		OperatorAllowlist     string
 		ExpAppID              int64
 		ExpKeySecret          string
 		ExpDoNothingOnOptOut  bool
 		ExpPrivateKey         string
 		ExpNoticePingDuration time.Duration
+		ExpOperatorAllowlist  []string
 	}{
 		{
 			Name:                  "NoVars",
@@ -45,6 +47,7 @@ func TestSetVars(t *testing.T) {
 			ExpKeySecret:          setKeySecret,
 			ExpDoNothingOnOptOut:  setDoNothingOnOptOut,
 			ExpNoticePingDuration: (24 * time.Hour),
+			ExpOperatorAllowlist:  []string{""},
 		},
 		{
 			Name:                  "SetVars",
@@ -55,6 +58,7 @@ func TestSetVars(t *testing.T) {
 			ExpKeySecret:          "asdf",
 			ExpDoNothingOnOptOut:  true,
 			ExpNoticePingDuration: (24 * time.Hour),
+			ExpOperatorAllowlist:  []string{""},
 		},
 		{
 			Name:                  "BadInt",
@@ -65,6 +69,7 @@ func TestSetVars(t *testing.T) {
 			ExpKeySecret:          setKeySecret,
 			ExpDoNothingOnOptOut:  setDoNothingOnOptOut,
 			ExpNoticePingDuration: (24 * time.Hour),
+			ExpOperatorAllowlist:  []string{""},
 		},
 		{
 			Name:                  "BadBool",
@@ -75,6 +80,7 @@ func TestSetVars(t *testing.T) {
 			ExpKeySecret:          setKeySecret,
 			ExpDoNothingOnOptOut:  setDoNothingOnOptOut,
 			ExpNoticePingDuration: (24 * time.Hour),
+			ExpOperatorAllowlist:  []string{""},
 		},
 		{
 			Name:                  "HasPrivateKey",
@@ -87,6 +93,7 @@ func TestSetVars(t *testing.T) {
 			ExpDoNothingOnOptOut:  setDoNothingOnOptOut,
 			ExpPrivateKey:         "fake-private-key",
 			ExpNoticePingDuration: (24 * time.Hour),
+			ExpOperatorAllowlist:  []string{""},
 		},
 		{
 			Name:                  "SetNoticePingDuration",
@@ -98,6 +105,7 @@ func TestSetVars(t *testing.T) {
 			ExpKeySecret:          setKeySecret,
 			ExpDoNothingOnOptOut:  setDoNothingOnOptOut,
 			ExpNoticePingDuration: (48 * time.Hour),
+			ExpOperatorAllowlist:  []string{""},
 		},
 		{
 			Name:                  "HasPrivateKey",
@@ -110,6 +118,46 @@ func TestSetVars(t *testing.T) {
 			ExpDoNothingOnOptOut:  setDoNothingOnOptOut,
 			ExpPrivateKey:         "fake-private-key",
 			ExpNoticePingDuration: (24 * time.Hour),
+			ExpOperatorAllowlist:  []string{""},
+		},
+		{
+			Name:                  "EmptyAllowlist",
+			AppID:                 "",
+			KeySecret:             "",
+			DoNothingOnOptOut:     "",
+			NoticePingDurationHrs: "",
+			ExpAppID:              setAppID,
+			ExpKeySecret:          setKeySecret,
+			ExpDoNothingOnOptOut:  setDoNothingOnOptOut,
+			ExpNoticePingDuration: (24 * time.Hour),
+			OperatorAllowlist:     "",
+			ExpOperatorAllowlist:  []string{""},
+		},
+		{
+			Name:                  "AllowlistTrailingComma",
+			AppID:                 "",
+			KeySecret:             "",
+			DoNothingOnOptOut:     "",
+			NoticePingDurationHrs: "",
+			ExpAppID:              setAppID,
+			ExpKeySecret:          setKeySecret,
+			ExpDoNothingOnOptOut:  setDoNothingOnOptOut,
+			ExpNoticePingDuration: (24 * time.Hour),
+			OperatorAllowlist:     "org-1,",
+			ExpOperatorAllowlist:  []string{"org-1", ""},
+		},
+		{
+			Name:                  "Allowlist",
+			AppID:                 "",
+			KeySecret:             "",
+			DoNothingOnOptOut:     "",
+			NoticePingDurationHrs: "",
+			ExpAppID:              setAppID,
+			ExpKeySecret:          setKeySecret,
+			ExpDoNothingOnOptOut:  setDoNothingOnOptOut,
+			ExpNoticePingDuration: (24 * time.Hour),
+			OperatorAllowlist:     "org-1,org-2,org-3",
+			ExpOperatorAllowlist:  []string{"org-1", "org-2", "org-3"},
 		},
 	}
 	for _, test := range tests {
@@ -130,6 +178,9 @@ func TestSetVars(t *testing.T) {
 				if in == "PRIVATE_KEY" {
 					return test.PrivateKey
 				}
+				if in == "GITHUB_ALLOWED_ORGS" {
+					return test.OperatorAllowlist
+				}
 				return ""
 			}
 			setVars()
@@ -146,6 +197,9 @@ func TestSetVars(t *testing.T) {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 			if diff := cmp.Diff(test.PrivateKey, PrivateKey); diff != "" {
+				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+			}
+			if diff := cmp.Diff(test.ExpOperatorAllowlist, AllowedOrganizations); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 		})

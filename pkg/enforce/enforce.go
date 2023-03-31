@@ -239,7 +239,8 @@ func getAppInstallationsReal(ctx context.Context, ac *github.Client) ([]*github.
 		return nil, err
 	}
 
-	if len(operator.AllowedOrganizations) == 0 {
+	if len(operator.AllowedOrganizations) == 0 ||
+		(len(operator.AllowedOrganizations) == 1 && operator.AllowedOrganizations[0] == "") {
 		return is, nil
 	}
 
