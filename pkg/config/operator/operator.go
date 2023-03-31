@@ -145,6 +145,6 @@ func setVars() {
 		NoticePingDuration = setNoticePingDurationHrs
 	}
 
-	allowedOrgs := os.Getenv("GITHUB_ALLOWED_ORGS")
+	allowedOrgs := osGetenv("GITHUB_ALLOWED_ORGS")
 	AllowedOrganizations = strings.Split(allowedOrgs, ",")
 }
