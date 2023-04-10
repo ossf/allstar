@@ -786,8 +786,8 @@ github.com/bombsimon/wsl/v3 v3.1.0/go.mod h1:st10JtZYLE4D5sC7b8xV4zTKZwAQjCH/Hy2
 github.com/bombsimon/wsl/v3 v3.3.0/go.mod h1:st10JtZYLE4D5sC7b8xV4zTKZwAQjCH/Hy2Pm1FNZIc=
 github.com/bradfitz/go-smtpd v0.0.0-20170404230938-deb6d6237625/go.mod h1:HYsPBTaaSFSlLx/70C2HPIMNZpVV8+vt/A+FMnYP11g=
 github.com/bradleyfalzon/ghinstallation/v2 v2.1.0/go.mod h1:Xg3xPRN5Mcq6GDqeUVhFbjEWMb4JHCyWEeeBGEYQoTU=
-github.com/bradleyfalzon/ghinstallation/v2 v2.2.0 h1:AVvVU33rE8wdTS1aNnenwpigEBA9mvzI5OhjhZfH/LU=
-github.com/bradleyfalzon/ghinstallation/v2 v2.2.0/go.mod h1:xo3iIfK0lDKECe0s19nbxT0KKvk7LsrGc4NxR5ckKMA=
+github.com/bradleyfalzon/ghinstallation/v2 v2.3.0 h1:RRGTqFWOe++1YmvYmO0PvMGzYTaZ6f8X3Su8WKmM+Ds=
+github.com/bradleyfalzon/ghinstallation/v2 v2.3.0/go.mod h1:8rdGt82ERhM7sjY5FLx2gV4aPhxn6YUE8XlDMKG1z/Y=
 github.com/breml/bidichk v0.1.1/go.mod h1:zbfeitpevDUGI7V91Uzzuwrn4Vls8MoBMrwtt78jmso=
 github.com/bshuster-repo/logrus-logstash-hook v0.4.1/go.mod h1:zsTqEiSzDgAa/8GZR7E1qaXrhYNDKBYy5/dWPTIflbk=
 github.com/buger/jsonparser v0.0.0-20180808090653-f4dd9f5a6b44/go.mod h1:bbYlZJ7hK1yFx9hf58LP0zeX7UjIGs20ufpu3evjr+s=
@@ -1433,7 +1433,6 @@ github.com/google/go-github/v28 v28.1.1/go.mod h1:bsqJWQX05omyWVmc00nEUql9mhQyv3
 github.com/google/go-github/v38 v38.1.0 h1:C6h1FkaITcBFK7gAmq4eFzt6gbhEhk7L5z6R3Uva+po=
 github.com/google/go-github/v38 v38.1.0/go.mod h1:cStvrz/7nFr0FoENgG6GLbp53WaelXucT+BBz/3VKx4=
 github.com/google/go-github/v45 v45.2.0/go.mod h1:FObaZJEDSTa/WGCzZ2Z3eoCDXWJKMenWWTrd8jrta28=
-github.com/google/go-github/v50 v50.1.0/go.mod h1:Ev4Tre8QoKiolvbpOSG3FIi4Mlon3S2Nt9W5JYqKiwA=
 github.com/google/go-github/v50 v50.2.0 h1:j2FyongEHlO9nxXLc+LP3wuBSVU9mVxfpdYUexMpIfk=
 github.com/google/go-github/v50 v50.2.0/go.mod h1:VBY8FB6yPIjrtKhozXv4FQupxKLS6H4m6xFZlT43q8Q=
 github.com/google/go-querystring v1.0.0/go.mod h1:odCYkC5MyYFN7vkCjXpyrEuKhc/BUO6wN/zVPAxq5ck=
