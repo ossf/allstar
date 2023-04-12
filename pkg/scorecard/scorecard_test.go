@@ -23,13 +23,13 @@ import (
 	"github.com/ossf/scorecard/v4/clients"
 )
 
-var initRepo func(clients.Repo, string, int) error
+var initRepo func(clients.Repo, string) error
 var close func() error
 
 type mockRC struct{}
 
-func (m mockRC) InitRepo(r clients.Repo, s string, i int) error {
-	return initRepo(r, s, i)
+func (m mockRC) InitRepo(r clients.Repo, s string) error {
+	return initRepo(r, s)
 }
 
 func (m mockRC) URI() string {
@@ -80,9 +80,9 @@ func (m mockRC) ListIssues() ([]clients.Issue, error) {
 	return nil, nil
 }
 
-func (m mockRC) ListLicenses() ([]clients.License, error) {
-	return nil, nil
-}
+// func (m mockRC) ListLicenses() ([]clients.License, error) {
+// 	return nil, nil
+// }
 
 func (m mockRC) ListReleases() ([]clients.Release, error) {
 	return nil, nil
@@ -134,7 +134,7 @@ func TestGetNew(t *testing.T) {
 		createCalled = true
 		return mockRC{}
 	}
-	initRepo = func(r clients.Repo, s string, i int) error {
+	initRepo = func(r clients.Repo, s string) error {
 		initCalled = true
 		return nil
 	}
@@ -164,7 +164,7 @@ func TestGetExisting(t *testing.T) {
 		createCalled = true
 		return mockRC{}
 	}
-	initRepo = func(r clients.Repo, s string, i int) error {
+	initRepo = func(r clients.Repo, s string) error {
 		initCalled = true
 		return nil
 	}
@@ -194,7 +194,7 @@ func TestClose(t *testing.T) {
 	githubrepoCreateGitHubRepoClientWithTransport = func(c context.Context, tr http.RoundTripper) clients.RepoClient {
 		return mockRC{}
 	}
-	initRepo = func(r clients.Repo, s string, i int) error {
+	initRepo = func(r clients.Repo, s string) error {
 		return nil
 	}
 	close = func() error {
@@ -218,7 +218,7 @@ func TestRecreate(t *testing.T) {
 		createCalled = true
 		return mockRC{}
 	}
-	initRepo = func(r clients.Repo, s string, i int) error {
+	initRepo = func(r clients.Repo, s string) error {
 		initCalled = true
 		return nil
 	}
