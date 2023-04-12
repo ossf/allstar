@@ -44,11 +44,11 @@ func (m mockRC) ListFiles(predicate func(string) (bool, error)) ([]string, error
 	return nil, nil
 }
 
-func (m mockRC) GetFileContent(filename string) ([]byte, error) {
-	return nil, nil
+func (m mockRC) LocalPath() (string, error) {
+	return "", nil
 }
 
-func (m mockRC) ListBranches() ([]*clients.BranchRef, error) {
+func (m mockRC) GetFileContent(filename string) ([]byte, error) {
 	return nil, nil
 }
 
@@ -60,12 +60,16 @@ func (m mockRC) GetCreatedAt() (time.Time, error) {
 	return time.Now(), nil
 }
 
+func (m mockRC) GetDefaultBranchName() (string, error) {
+	return "", nil
+}
+
 func (m mockRC) GetDefaultBranch() (*clients.BranchRef, error) {
 	return nil, nil
 }
 
-func (m mockRC) GetDefaultBranchName() (string, error) {
-	return "", nil
+func (m mockRC) GetOrgRepoClient(context.Context) (clients.RepoClient, error) {
+	return m, nil
 }
 
 func (m mockRC) ListCommits() ([]clients.Commit, error) {
@@ -73,6 +77,10 @@ func (m mockRC) ListCommits() ([]clients.Commit, error) {
 }
 
 func (m mockRC) ListIssues() ([]clients.Issue, error) {
+	return nil, nil
+}
+
+func (m mockRC) ListLicenses() ([]clients.License, error) {
 	return nil, nil
 }
 
@@ -106,14 +114,6 @@ func (m mockRC) ListProgrammingLanguages() ([]clients.Language, error) {
 
 func (m mockRC) Search(request clients.SearchRequest) (clients.SearchResponse, error) {
 	return clients.SearchResponse{}, nil
-}
-
-func (m mockRC) ListLicenses() ([]clients.License, error) {
-	return nil, nil
-}
-
-func (m mockRC) LocalPath() (string, error) {
-	return "", nil
 }
 
 func (m mockRC) SearchCommits(request clients.SearchCommitsOptions) ([]clients.Commit, error) {
