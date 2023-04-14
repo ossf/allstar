@@ -13,7 +13,7 @@ require (
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79
 	github.com/moby/buildkit v0.11.4 // indirect
 	github.com/onsi/ginkgo/v2 v2.8.3 // indirect
-	github.com/ossf/scorecard/v4 v4.6.1-0.20220921202020-0f8709499744
+	github.com/ossf/scorecard/v4 v4.6.1-0.20220912203352-9e269b8e3c57
 	github.com/rhysd/actionlint v1.6.23
 	github.com/rs/zerolog v1.29.0
 	github.com/shurcooL/githubv4 v0.0.0-20210725200734-83ba7b4c9228
