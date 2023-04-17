@@ -336,6 +336,7 @@ func runPoliciesReal(ctx context.Context, c *github.Client, owner, repo string, 
 		ps[0] = found
 	}
 
+	defer scorecard.Close(fmt.Sprintf("%s/%s", owner, repo))
 	for _, p := range ps {
 		repo_enabled, err := p.IsEnabled(ctx, c, owner, repo)
 		if err != nil {
@@ -402,6 +403,6 @@ func runPoliciesReal(ctx context.Context, c *github.Client, owner, repo string, 
 			}
 		}
 	}
-	scorecard.Close(fmt.Sprintf("%s/%s", owner, repo))
+
 	return enforceResults, nil
 }
