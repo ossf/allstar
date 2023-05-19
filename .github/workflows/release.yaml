@@ -10,18 +10,19 @@ jobs:
   release:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
-    - uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v4
       with:
         go-version: '1.20'
         check-latest: true
-    - uses: ko-build/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
+    - uses: sigstore/cosign-installer@v3
+    - uses: ko-build/setup-ko@v0.6
     - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.workflow }} --password-stdin
     - run: KO_DOCKER_REPO=ghcr.io/${{ github.repository_owner }} ko publish -B ./cmd/allstar > container
     - run: docker pull $(cat container)
     - run: docker tag $(cat container) ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}
     - run: docker push ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}
-    - run: COSIGN_EXPERIMENTAL=1 cosign sign -a git_sha=$GITHUB_SHA ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}
+    - run: cosign sign --yes -a git_sha=$GITHUB_SHA ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}
     - run: gh release create ${{ github.ref_name }} --notes "ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}"
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
