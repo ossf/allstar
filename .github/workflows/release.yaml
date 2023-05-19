@@ -13,9 +13,9 @@ jobs:
     - uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
     - uses: actions/setup-go@6edd4406fa81c3da01a34fa6f6343087c207a568
       with:
-        go-version: '~1.20'
-    - uses: sigstore/cosign-installer@9becc617647dfa20ae7b1151972e9b3a2c338a2b
-    - run: go install github.com/google/ko@v0.12.0
+        go-version: '1.20'
+        check-latest: true
+    - uses: ko-build/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
     - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.workflow }} --password-stdin
     - run: KO_DOCKER_REPO=ghcr.io/${{ github.repository_owner }} ko publish -B ./cmd/allstar > container
     - run: docker pull $(cat container)
