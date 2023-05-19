@@ -10,25 +10,25 @@ jobs:
   codeql:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: github/codeql-action/init@v2
+    - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+    - uses: github/codeql-action/init@f31a31c052207cc13b328d6295c5b728bb49568c # v2.3.3
       with:
         languages: go
-    - uses: github/codeql-action/autobuild@v2
-    - uses: github/codeql-action/analyze@v2
+    - uses: github/codeql-action/autobuild@f31a31c052207cc13b328d6295c5b728bb49568c # v2.3.3
+    - uses: github/codeql-action/analyze@f31a31c052207cc13b328d6295c5b728bb49568c # v2.3.3
   scorecard:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - uses: ossf/scorecard-action@v2.1.2
+    - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+    - uses: ossf/scorecard-action@80e868c13c90f172d68d1f4501dee99e2479f7af # v2.1.3
       with:
         results_file: results.sarif
         results_format: sarif
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
       with:
         name: SARIF file
         path: results.sarif
         retention-days: 5
-    - uses: github/codeql-action/upload-sarif@v2
+    - uses: github/codeql-action/upload-sarif@f31a31c052207cc13b328d6295c5b728bb49568c # v2.3.3
       with:
         sarif_file: results.sarif
