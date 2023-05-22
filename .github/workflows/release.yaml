@@ -1,28 +1,40 @@
+name: release
+
 on:
   push:
     tags:
       - '*'
+
 permissions:
   id-token: write # Undocumented OIDC support.
   packages: write # To publish container images to GHCR
   contents: write # To create a release
+
 jobs:
   release:
     runs-on: ubuntu-20.04
     steps:
-    - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
-    - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753
-      with:
-        go-version: '1.20'
-        check-latest: true
-    - uses: sigstore/cosign-installer@dd6b2e2b610a11fd73dd187a43d57cc1394e35f9
-    - uses: ko-build/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa
-    - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.workflow }} --password-stdin
-    - run: KO_DOCKER_REPO=ghcr.io/${{ github.repository_owner }} ko publish -B ./cmd/allstar > container
-    - run: docker pull $(cat container)
-    - run: docker tag $(cat container) ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}
-    - run: docker push ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}
-    - run: cosign sign --yes -a git_sha=$GITHUB_SHA ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}
-    - run: gh release create ${{ github.ref_name }} --notes "ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}"
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+
+      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version: '1.20'
+          check-latest: true
+
+      - uses: sigstore/cosign-installer@dd6b2e2b610a11fd73dd187a43d57cc1394e35f9 # v3.0.5
+
+      - uses: ko-build/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
+
+      - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.workflow }} --password-stdin
+
+      - run: ko publish -B ./cmd/allstar --tags ${{ github.ref_name }} --image-refs allstar.ref
+        env:
+          KO_DOCKER_REPO: ghcr.io/${{ github.repository_owner }}
+
+      - run: |
+          echo "signing $(cat allstar.ref)"
+          cosign sign --yes -a git_sha="$GITHUB_SHA" "$(cat allstar.ref)"
+
+      - run: gh release create ${{ github.ref_name }} --notes "ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
