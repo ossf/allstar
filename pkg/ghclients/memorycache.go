@@ -21,6 +21,7 @@
 package ghclients
 
 import (
+	"strings"
 	"sync"
 
 	"github.com/rs/zerolog/log"
@@ -44,6 +45,7 @@ func (c *memoryCache) Get(key string) (resp []byte, ok bool) {
 	log.Debug().
 		Str("area", "bot").
 		Str("key", key).
+		Bool("hit", ok).
 		Msg("Cache GET request")
 
 	return resp, ok
@@ -51,6 +53,13 @@ func (c *memoryCache) Get(key string) (resp []byte, ok bool) {
 
 // Set saves response resp to the cache with key
 func (c *memoryCache) Set(key string, resp []byte) {
+	if strings.Contains(key, ".tar.gz") {
+		// Don't cache tarballs.  Currently GitHub redirects tarball downloads to a
+		// URL that looks like this:
+		// "https://codeload.github.com/<owner>/<repo>/legacy.tar.gz/refs/heads/main"
+		// Hopefully this continues to have ".tar.gz" in it.
+		return
+	}
 	c.mu.Lock()
 	c.items[key] = resp
 	c.mu.Unlock()
@@ -58,6 +67,7 @@ func (c *memoryCache) Set(key string, resp []byte) {
 	log.Debug().
 		Str("area", "bot").
 		Str("key", key).
+		Int("size", len(resp)).
 		Msg("Cache SET request")
 }
 
