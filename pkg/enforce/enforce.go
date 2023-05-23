@@ -113,14 +113,14 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificP
 			repos, _, err := getAppInstallationRepos(ctx, ic)
 
 			if specificRepoArg != "" {
-				var found github.Repository
-				for _, r := range repos {
-					if *r.FullName == specificRepoArg {
-						found = *r
+				searchRepos := repos
+				repos = make([]*github.Repository, 0, 1)
+				for _, r := range searchRepos {
+					if r.GetFullName() == specificRepoArg {
+						repos = append(repos, r)
+						break
 					}
 				}
-				repos = []*github.Repository{}
-				repos = append(repos, &found)
 			}
 
 			// FIXME, not getting a rsp for this one, instead I think it is a special
