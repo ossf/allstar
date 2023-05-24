@@ -3,7 +3,7 @@ module github.com/ossf/allstar
 go 1.16
 
 require (
-	github.com/Masterminds/semver/v3 v3.2.0
+	github.com/Masterminds/semver/v3 v3.2.1
 	github.com/bradleyfalzon/ghinstallation/v2 v2.4.0
 	github.com/evanphx/json-patch v5.6.0+incompatible
 	github.com/gobwas/glob v0.2.3
