@@ -44,6 +44,10 @@ func (m mockRC) ListFiles(predicate func(string) (bool, error)) ([]string, error
 	return nil, nil
 }
 
+func (m mockRC) LocalPath() (string, error) {
+	return "", nil
+}
+
 func (m mockRC) GetFileContent(filename string) ([]byte, error) {
 	return nil, nil
 }
@@ -61,6 +65,10 @@ func (m mockRC) GetCreatedAt() (time.Time, error) {
 }
 
 func (m mockRC) GetDefaultBranch() (*clients.BranchRef, error) {
+	return nil, nil
+}
+
+func (m mockRC) GetOrgRepoClient(context.Context) (clients.RepoClient, error) {
 	return nil, nil
 }
 
@@ -110,10 +118,6 @@ func (m mockRC) Search(request clients.SearchRequest) (clients.SearchResponse, e
 
 func (m mockRC) ListLicenses() ([]clients.License, error) {
 	return nil, nil
-}
-
-func (m mockRC) LocalPath() (string, error) {
-	return "", nil
 }
 
 func (m mockRC) SearchCommits(request clients.SearchCommitsOptions) ([]clients.Commit, error) {
