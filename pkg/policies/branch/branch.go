@@ -49,6 +49,7 @@ type OrgConfig struct {
 	EnforceBranches map[string][]string `json:"enforceBranches"`
 
 	// RequireApproval : set to true to enforce approval on PRs, default true.
+	// When this config is false, ApprovalCount will always be set to 0.
 	RequireApproval bool `json:"requireApproval"`
 
 	// RequireCodeOwnerReviews : set to true to enforce code owner reviews on PRs, default false.
@@ -758,6 +759,11 @@ func mergeConfig(oc *OrgConfig, orc, rc *RepoConfig, repo string) *mergedConfig 
 	if !oc.OptConfig.DisableRepoOverride {
 		mc = mergeInRepoConfig(mc, rc, repo)
 	}
+
+	if !mc.RequireApproval {
+		mc.ApprovalCount = 0
+	}
+
 	return mc
 }
 
