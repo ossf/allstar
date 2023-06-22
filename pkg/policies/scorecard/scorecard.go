@@ -189,8 +189,9 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 
 **Rule Description**
 This is a generic passthrough policy that runs the configured checks from Security Scorecards. Please see the [Security Scorecards Documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md) for more information on each check.
-
+The score was %v, and the passing threshold is %v.
 `
+				notify = fmt.Sprintf(notify, res.Score, mc.Threshold)
 			}
 			if len(logs) > 10 {
 				notify += fmt.Sprintf(
