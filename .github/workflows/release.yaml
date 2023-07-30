@@ -30,11 +30,19 @@ jobs:
       - run: ko publish -B ./cmd/allstar --tags ${{ github.ref_name }} --image-refs allstar.ref
         env:
           KO_DOCKER_REPO: ghcr.io/${{ github.repository_owner }}
-
+      - run: ko publish -B ./cmd/allstar --tags ${{ github.ref_name }}-busybox --image-refs allstar-busybox.ref
+        env:
+          KO_DOCKER_REPO: ghcr.io/${{ github.repository_owner }}
+          KO_DEFAULTBASEIMAGE: cgr.dev/chainguard/busybox
       - run: |
           echo "signing $(cat allstar.ref)"
           cosign sign --yes -a git_sha="$GITHUB_SHA" "$(cat allstar.ref)"
+          echo "signing $(cat allstar-busybox.ref)"
+          cosign sign --yes -a git_sha="$GITHUB_SHA" "$(cat allstar-busybox.ref)"
 
-      - run: gh release create ${{ github.ref_name }} --notes "ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}"
+      - run: >
+          gh release create ${{ github.ref_name }} --notes
+            "Standard Image: ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}\n
+            BusyBox (GitHub Action) Image: ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}-busybox"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
