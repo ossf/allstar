@@ -226,10 +226,14 @@ func listJoin(list []string) string {
 func convertLogs(logs []checker.CheckDetail) []string {
 	var s []string
 	for _, l := range logs {
-		if l.Msg.Finding.Location == nil {
-			s = append(s, fmt.Sprintf("%v", l.Msg.Finding.Message))
+		if l.Msg.Finding != nil {
+			if l.Msg.Finding.Location == nil {
+				s = append(s, fmt.Sprintf("%v", l.Msg.Finding.Message))
+			} else {
+				s = append(s, fmt.Sprintf("%v[%v]:%v", l.Msg.Finding.Location.Value, *l.Msg.Finding.Location.LineStart, l.Msg.Finding.Message))
+			}
 		} else {
-			s = append(s, fmt.Sprintf("%v[%v]:%v", l.Msg.Finding.Location.Value, *l.Msg.Finding.Location.LineStart, l.Msg.Finding.Message))
+			s = append(s, fmt.Sprintf("%v[%v]:%v", l.Msg.Path, l.Msg.Offset, l.Msg.Text))
 		}
 	}
 	return s
