@@ -1,0 +1,31 @@
+name: SAST (Static Application Security Testing)
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  polaris:
+    name: polaris / code-scan
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    if: (github.repository_owner == 'contentful') && (endsWith(github.actor, '[bot]') == false)
+    steps:
+      - name: Clone repo
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+        with:
+          fetch-depth: 0
+
+      - name: Synopsys Polaris
+        uses: contentful/polaris-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          polaris_url: ${{ secrets.POLARIS_SERVER_URL }}
+          polaris_access_token: ${{ secrets.POLARIS_ACCESS_TOKEN }}
+          debug: true
+          polaris_command: analyze -w --coverity-ignore-capture-failure
+          security_gate_filters: '{ "severity": ["High", "Medium"] }'
+          fail_on_error: false
+          report_url: "https://github.com/contentful/security-tools-config/issues/new?title=False%20positive%20in%20Polaris"
