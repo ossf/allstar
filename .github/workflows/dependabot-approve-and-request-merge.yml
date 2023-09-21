@@ -1,0 +1,15 @@
+name: "dependabot approve-and-request-merge"
+
+on: pull_request_target
+
+jobs:
+  worker:
+    permissions:
+      contents: write
+      id-token: write
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - uses: contentful/github-auto-merge@v1
+        with:
+          VAULT_URL: ${{ secrets.VAULT_URL }}
