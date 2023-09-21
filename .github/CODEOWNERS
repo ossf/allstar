@@ -1,1 +1,4 @@
-* @contentful/team-security @contentful-automation
+* @contentful/team-security
+go.mod
+go.sum
+.github/workflows
