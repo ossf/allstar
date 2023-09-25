@@ -1,0 +1,2 @@
+* When changes are merged to `main` a [Github Action](.github/workflows/docker-image.yaml) is kicked off that builds a new image and uploads it to ECR. 
+* This image is used by [allstar-agent](https://github.com/contentful/allstar-agent) and will kick off a new deployment(automatically??) of the agent to the `contentful-security-sandbox` organization.

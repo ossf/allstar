@@ -1,0 +1,1 @@
+[Miro board with current architecture](https://miro.com/app/board/uXjVM2g_HGQ=/?share_link_id=272309503681)
