@@ -13,7 +13,7 @@ require (
 	github.com/matryer/is v1.4.0 // indirect
 	github.com/ossf/scorecard/v4 v4.10.5
 	github.com/rhysd/actionlint v1.6.24
-	github.com/rs/zerolog v1.29.1
+	github.com/rs/zerolog v1.31.0
 	github.com/shurcooL/githubv4 v0.0.0-20210725200734-83ba7b4c9228
 	gocloud.dev v0.29.0
 	golang.org/x/sync v0.2.0
