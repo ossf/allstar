@@ -28,6 +28,7 @@
 - [Contentful Architecture](architecture.md)
 - [Creating a New Policy](create-a-new-policy.md)
 - [Deploying Changes](deployment.md)
+- [Opt-out of Checks](opt-out.md)
 ________
 ________
 
