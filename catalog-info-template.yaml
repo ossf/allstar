@@ -1,0 +1,28 @@
+# Backstage documentation
+# https://backstage.io/docs/features/software-catalog/descriptor-format/
+
+apiVersion: backstage.io/v1alpha1
+kind: unknown
+metadata:
+  name: ${{ github.event.repository.name }}
+  description: ${{ github.event.repository.description }}
+  annotations:
+    github.com/project-slug: ${{ github.repository }}
+    contentful.com/service-tier: "unknown" #1, 2, 3, 4
+
+  tags:
+    - update-me
+    #need to add sast.yaml to .github/workflows and enable it in polaris dashboard
+    #once that is done this can be changed to sast-enabled
+    - sast-disabled
+    #make this match the value from service-tier above
+    - tier-unknown
+spec:
+  #cli, component, contentful.com/template, documentation, function, library, service, template, website
+  type: unknown 
+  #deprecated, experimental, production, unknown
+  lifecycle: unknown  
+  system: unknown
+  #we can assign owner based on who created the repo or submitted the first PR but theres 
+  #no guarantee 1. they still work here, 2. are on the owning team anymore
+  owner: team-unknown 
