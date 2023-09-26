@@ -147,7 +147,7 @@ func check(ctx context.Context, c *github.Client, v4c v4client, owner,
 		return &policydef.Result{
 			Enabled:    enabled,
 			Pass:       false,
-			NotifyText: "catalog-info.yaml file not found.\n" + fmt.Sprintf(notifyText, owner, repo),
+			NotifyText: "catalog-info.yaml file not found.\n" + fmt.Sprint(notifyText, owner, repo),
 			Details: details{
 				Enabled: false,
 			},
