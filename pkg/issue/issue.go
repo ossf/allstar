@@ -24,9 +24,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/config/operator"
-	"github.com/ossf/allstar/pkg/config/schedule"
+	"github.com/contentful/allstar/pkg/config"
+	"github.com/contentful/allstar/pkg/config/operator"
+	"github.com/contentful/allstar/pkg/config/schedule"
 	"github.com/rs/zerolog/log"
 
 	"github.com/google/go-github/v50/github"
@@ -287,7 +287,7 @@ func createIssueBody(owner, repo, text, hash, footer string, isIssueRepo bool) s
 		refersTo = fmt.Sprintf(" and refers to [%s](https://github.com/%s)", ownerRepo, ownerRepo)
 	}
 	editHeader := issueSectionHeader(updateSectionName)
-	return fmt.Sprintf("_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)%s._\n\n**Security Policy Violation**\n"+
+	return fmt.Sprintf("_This issue was automatically created by [Allstar](https://github.com/contentful/allstar/)%s._\n\n**Security Policy Violation**\n"+
 		"%v\n\n---\n\n%s%s%s\n%v",
 		refersTo, text, editHeader, fmt.Sprintf(resultTextHashCommentFormat, hash), editHeader, footer)
 }

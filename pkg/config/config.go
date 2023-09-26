@@ -22,7 +22,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/ossf/allstar/pkg/config/operator"
+	"github.com/contentful/allstar/pkg/config/operator"
 
 	jsonpatch "github.com/evanphx/json-patch"
 	"github.com/google/go-github/v50/github"

@@ -19,7 +19,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/ossf/allstar/pkg/reviewbot"
+	"github.com/contentful/allstar/pkg/reviewbot"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )

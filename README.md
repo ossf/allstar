@@ -1,4 +1,4 @@
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/ossf/allstar/badge)](https://api.securityscorecards.dev/projects/github.com/ossf/allstar)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/contentful/allstar/badge)](https://api.securityscorecards.dev/projects/github.com/contentful/allstar)
 
 <img align="right" src="artwork/openssf_allstar_alt.png" width="300" height="400">
 
@@ -270,10 +270,7 @@ The `fix` action will open a PR creating a catalog-info.yaml with some default v
 
 ### Branch Protection
 
-This policy's config file is named `branch_protection.yaml`, and the [config
-definitions are
-here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/branch#OrgConfig).
-
+This policy's config file is named `branch_protection.yaml`
 The branch protection policy checks that GitHub's [branch protection
 settings](https://docs.github.com/en/github/administering-a-repository/defining-the-mergeability-of-pull-requests/about-protected-branches)
 are setup correctly according to the specified configuration. The issue text
@@ -285,10 +282,7 @@ The `fix` action will change the branch protection settings to be in compliance 
 
 ### Binary Artifacts
 
-This policy's config file is named `binary_artifacts.yaml`, and the [config
-definitions are
-here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/binary#OrgConfig).
-
+This policy's config file is named `binary_artifacts.yaml`
 This policy incorporates the [check from
 scorecard](https://github.com/ossf/scorecard/#scorecard-checks). Remove the
 binary artifact from the repository to achieve compliance. As the scorecard
@@ -297,10 +291,7 @@ itself](https://github.com/ossf/scorecard) to see all the detailed information.
 
 ### Outside Collaborators
 
-This policy's config file is named `outside.yaml`, and the [config definitions
-are
-here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/outside#OrgConfig).
-
+This policy's config file is named `outside.yaml`
 This policy checks if any [Outside
 Collaborators](https://docs.github.com/en/organizations/managing-access-to-your-organizations-repositories/adding-outside-collaborators-to-repositories-in-your-organization)
 have either administrator(default) or push(optional) access to the
@@ -309,10 +300,7 @@ untrusted members can change admin level settings and commit malicious code.
 
 ### SECURITY.md
 
-This policy's config file is named `security.yaml`, and the [config definitions
-are
-here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/security#OrgConfig).
-
+This policy's config file is named `security.yaml`
 This policy checks that the repository has a security policy file in
 `SECURITY.md` and that it is not empty. The created issue will have a link to
 the [GitHub
@@ -321,10 +309,7 @@ that helps you commit a security policy to your repository.
 
 ### Dangerous Workflow
 
-This policy's config file is named `dangerous_workflow.yaml`, and the [config
-definitions are
-here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/workflow#OrgConfig).
-
+This policy's config file is named `dangerous_workflow.yaml`
 This policy checks the GitHub Actions workflow configuration files
 (`.github/workflows`), for any patterns that match known dangerous
 behavior. See the [Security Scorecards
@@ -333,10 +318,7 @@ for more information on this check.
 
 ### Generic Scorecard Check
 
-This policy's config file is named `scorecard.yaml`, and the [config definitions
-are
-here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/scorecard#OrgConfig).
-
+This policy's config file is named `scorecard.yaml`
 This policy runs any scorecard check listed in the `checks` configuration. All
 checks run must have a score equal or above the `threshold` setting. Please see
 the [Security Scorecards
@@ -345,10 +327,7 @@ for more information on each check.
 
 ### GitHub Actions
 
-This policy's config file is named `actions.yaml`, and the [config definitions
-are
-here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/action#OrgConfig).
-
+This policy's config file is named `actions.yaml`
 This policy checks the GitHub Actions workflow configuration files
 (`.github/workflows`) (and workflow runs in some cases) in each repo to ensure
 they are in line with rules (eg. require, deny) defined in the
@@ -356,10 +335,7 @@ organization-level config for the policy.
 
 ### Repository Administrators
 
-This policy's config file is named `admin.yaml`, and the [config definitions
-are
-here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/admin#OrgConfig).
-
+This policy's config file is named `admin.yaml`
 This policy checks that by default all repositories must have a user or group assigned as an Administrator. It allows you to optionally configure if users are allowed to be administrators (as opposed to teams).
 
 ### Future Policies
@@ -378,8 +354,8 @@ organization.
 
 ### Configuration Definitions
 
-- [Organization level enable configuration](https://pkg.go.dev/github.com/ossf/allstar/pkg/config#OrgOptConfig)
-- [Repository Override enable configuration]( https://pkg.go.dev/github.com/ossf/allstar/pkg/config#RepoOptConfig)
+- [Organization level enable configuration]()
+- [Repository Override enable configuration]()
 
 ### Secondary Org-Level configuration location
 

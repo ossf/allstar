@@ -12,30 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package codeowners implements the CODEOWNERS policy.
-package codeowners
+// Package roadie implements the Roadie catalog-info.yaml check policy.
+package catalog
 
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/contentful/allstar/pkg/config"
 	"github.com/contentful/allstar/pkg/policydef"
+	"github.com/shurcooL/githubv4"
 
 	"github.com/google/go-github/v50/github"
 	"github.com/rs/zerolog/log"
 )
 
-const configFile = "codeowners.yaml"
-const polName = "CODEOWNERS"
+const configFile = "catalog.yaml"
+const polName = "Catalog"
 
-const notifyText = `A CODEOWNERS file can give users information about who is responsible for the maintenance of the repository, or specific folders/files. This is different the access control/permissions on a repository.
+const notifyText = `A catalog-info.yaml file can give users information about which team is responsible for the maintenance of the repository.
 
-To fix this, add a CODEOWNERS file to your repository, following the official Github documentation and maybe your company's policy.
-https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners`
+To fix this, add a catalog-info.yaml file to your repository, following the official documentation.
+<add-confluence-link-here>`
 
-// OrgConfig is the org-level config definition for CODEOWNERS
+// OrgConfig is the org-level config definition for Catalog policy.
 type OrgConfig struct {
 	// OptConfig is the standard org-level opt in/out config, RepoOverride applies to all
 	// BP config.
@@ -44,12 +44,12 @@ type OrgConfig struct {
 	// Action defines which action to take, default log, other: issue...
 	Action string `json:"action"`
 
-	// RequireCODEOWNERS : set to true to require presence of a CODEOWNERS on the repositories (creates an issue if not present)
-	// default false (only checks if existing CODEOWNERS is valid, creates issues if not valid).
-	RequireCODEOWNERS bool `json:"requireCODEOWNERS"`
+	// RequireCatalog : set to true to require presence of a catalog-info.yaml on the repositories (creates an issue if not present)
+	// default false (only checks if existing catalog-info.yaml is valid, creates issues if not valid).
+	RequireCatalog bool `json:"requireCatalog"`
 }
 
-// RepoConfig is the repo-level config for CODEOWNERS
+// RepoConfig is the repo-level config for catalog-info.yaml
 type RepoConfig struct {
 	// OptConfig is the standard repo-level opt in/out config.
 	OptConfig config.RepoOptConfig `json:"optConfig"`
@@ -57,24 +57,22 @@ type RepoConfig struct {
 	// Action overrides the same setting in org-level, only if present.
 	Action *string `json:"action"`
 
-	// RequireCODEOWNERS : set to true to require presence of a CODEOWNERS on the repositories (creates an issue if not present)
-	// default false (only checks if existing CODEOWNERS is valid, creates issues if not valid).
-	RequireCODEOWNERS *bool `json:"requireCODEOWNERS"`
+	// RequireCatalog : set to true to require presence of a catalog-info.yaml on the repositories (creates an issue if not present)
+	// default false (only checks if existing catalog-info.yaml is valid, creates issues if not valid).
+	RequireCatalog *bool `json:"requireCatalog"`
 }
 
-type repositories interface {
-	GetCodeownersErrors(ctx context.Context, owner, repo string) (*github.CodeownersErrors, *github.Response, error)
+type v4client interface {
+	Query(context.Context, interface{}, map[string]interface{}) error
 }
 
 type mergedConfig struct {
-	Action            string
-	RequireCODEOWNERS bool
+	Action         string
+	RequireCatalog bool
 }
 
 type details struct {
-	CodeownersFound  bool
-	ErrorCount       int
-	CodeownersErrors github.CodeownersErrors
+	Enabled bool
 }
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
@@ -86,44 +84,41 @@ func init() {
 	configIsEnabled = config.IsEnabled
 }
 
-// Codeowners is the CODEOWNERS policy object, implements policydef.Policy.
-type Codeowners bool
+// Catalog is the catalog-info.yaml policy object, implements policydef.Policy.
+type Catalog bool
 
-// NewCodeowners returns a new CODEOWNERS policy.
-func NewCodeowners() policydef.Policy {
-	var s Codeowners
+// NewCatalog returns a new catalog-info.yaml policy.
+func NewCatalog() policydef.Policy {
+	var s Catalog
 	return s
 }
 
 // Name returns the name of this policy, implementing policydef.Policy.Name()
-func (s Codeowners) Name() string {
+func (s Catalog) Name() string {
 	return polName
 }
 
-// Check performs the policy check for CODEOWNERS policy based on the
+// Check performs the policy check for catalog-info.yaml policy based on the
 // configuration stored in the org/repo, implementing policydef.Policy.Check()
-func (s Codeowners) Check(ctx context.Context, c *github.Client, owner,
+func (s Catalog) Check(ctx context.Context, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
-	return check(ctx, c.Repositories, c, owner, repo)
+	v4c := githubv4.NewClient(c.Client())
+	return check(ctx, c, v4c, owner, repo)
 }
 
 // Check whether this policy is enabled or not
-func (s Codeowners) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
+func (s Catalog) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	return configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 }
 
-func check(ctx context.Context, rep repositories, c *github.Client, owner,
+func check(ctx context.Context, c *github.Client, v4c v4client, owner,
 	repo string) (*policydef.Result, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	enabled, err := configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
-
 	if err != nil {
 		return nil, err
 	}
-
-	var d details
-
 	log.Info().
 		Str("org", owner).
 		Str("repo", repo).
@@ -131,63 +126,46 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		Bool("enabled", enabled).
 		Msg("Check repo enabled")
 
-	codeownererrors, resp, err := rep.GetCodeownersErrors(ctx, owner, repo)
-
-	if err == nil {
-		// "CODEOWNERS" exists
-		d.ErrorCount = len(codeownererrors.Errors)
-		d.CodeownersFound = true
-		// the CODEOWNERS is present and has no errors, pass
-		if d.ErrorCount == 0 {
-			return &policydef.Result{
-				Enabled:    enabled,
-				Pass:       true,
-				NotifyText: "",
-				Details:    d,
-			}, nil
-		}
-		// otherwise, fail because CODEOWNERS exists and has errors
-		d.CodeownersErrors = *codeownererrors
-		var errorMessage = fmt.Sprintf("%s\nCODEOWNERS file present but has %d errors.\n", notifyText, d.ErrorCount)
-		for _, e := range codeownererrors.Errors {
-			errorMessage += fmt.Sprintf("- %s\n  - %s\n", e.Path, e.Message)
-		}
+	var q struct {
+		Repository struct {
+			Object struct {
+				Blob struct {
+					Text string
+				} `graphql:"... on Blob"`
+			} `graphql:"object(expression: $expression)"`
+		} `graphql:"repository(owner: $owner, name: $name)"`
+	}
+	variables := map[string]interface{}{
+		"owner":      githubv4.String(owner),
+		"name":       githubv4.String(repo),
+		"expression": githubv4.String(fmt.Sprintf("%s:%s", "HEAD", "catalog-info.yaml")),
+	}
+	if err := v4c.Query(ctx, &q, variables); err != nil {
+		return nil, err
+	}
+	if len(q.Repository.Object.Blob.Text) == 0 {
 		return &policydef.Result{
 			Enabled:    enabled,
 			Pass:       false,
-			NotifyText: errorMessage,
-			Details:    d,
+			NotifyText: "catalog-info.yaml file not found.\n" + fmt.Sprint(notifyText, owner, repo),
+			Details: details{
+				Enabled: false,
+			},
 		}, nil
-
-	} else if resp != nil && resp.StatusCode == http.StatusNotFound {
-		// "CODEOWNERS" does not exist, err is also not nil but we don't need it
-
-		// if we require CODEOWNERS on all repositories in the Org
-		if oc.RequireCODEOWNERS {
-			d.CodeownersFound = false
-			return &policydef.Result{
-				Enabled:    enabled,
-				Pass:       false,
-				NotifyText: "CODEOWNERS file not present.\n" + notifyText,
-				Details:    d,
-			}, nil
-		}
-		d.CodeownersFound = false
-		return &policydef.Result{
-			Enabled:    enabled,
-			Pass:       true,
-			NotifyText: "CODEOWNERS file not present.\n" + notifyText,
-			Details:    d,
-		}, nil
-
 	}
-	// Unknown error getting "CODEOWNERS", this could be an HTTP 500
-	return nil, err
+	return &policydef.Result{
+		Enabled:    enabled,
+		Pass:       true,
+		NotifyText: "",
+		Details: details{
+			Enabled: true,
+		},
+	}, nil
 }
 
 // Fix implementing policydef.Policy.Fix(). Currently not supported. Plan
 // to support this TODO.
-func (s Codeowners) Fix(ctx context.Context, c *github.Client, owner, repo string) error {
+func (s Catalog) Fix(ctx context.Context, c *github.Client, owner, repo string) error {
 	log.Warn().
 		Str("org", owner).
 		Str("repo", repo).
@@ -196,10 +174,10 @@ func (s Codeowners) Fix(ctx context.Context, c *github.Client, owner, repo strin
 	return nil
 }
 
-// GetAction returns the configured action from CODEOWNERS policy's
+// GetAction returns the configured action from catalog-info.yaml policy's
 // configuration stored in the org-level repo, default log. Implementing
 // policydef.Policy.GetAction()
-func (s Codeowners) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
+func (s Catalog) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	mc := mergeConfig(oc, orc, rc, repo)
 	return mc.Action
@@ -207,8 +185,8 @@ func (s Codeowners) GetAction(ctx context.Context, c *github.Client, owner, repo
 
 func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgConfig, *RepoConfig, *RepoConfig) {
 	oc := &OrgConfig{ // Fill out non-zero defaults
-		Action:            "log",
-		RequireCODEOWNERS: false,
+		Action:         "log",
+		RequireCatalog: false,
 	}
 	if err := configFetchConfig(ctx, c, owner, "", configFile, config.OrgLevel, oc); err != nil {
 		log.Error().
@@ -247,8 +225,8 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 
 func mergeConfig(oc *OrgConfig, orc *RepoConfig, rc *RepoConfig, repo string) *mergedConfig {
 	mc := &mergedConfig{
-		Action:            oc.Action,
-		RequireCODEOWNERS: oc.RequireCODEOWNERS,
+		Action:         oc.Action,
+		RequireCatalog: oc.RequireCatalog,
 	}
 	mc = mergeInRepoConfig(mc, orc, repo)
 
@@ -262,8 +240,8 @@ func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedCon
 	if rc.Action != nil {
 		mc.Action = *rc.Action
 	}
-	if rc.RequireCODEOWNERS != nil {
-		mc.RequireCODEOWNERS = *rc.RequireCODEOWNERS
+	if rc.RequireCatalog != nil {
+		mc.RequireCatalog = *rc.RequireCatalog
 	}
 	return mc
 }

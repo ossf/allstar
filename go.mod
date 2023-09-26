@@ -1,4 +1,4 @@
-module github.com/ossf/allstar
+module github.com/contentful/allstar
 
 go 1.16
 

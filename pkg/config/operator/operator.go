@@ -82,7 +82,7 @@ const GitHubIssueLabel = "allstar"
 // GitHubIssueFooter is added to the end of GitHub issues.
 const GitHubIssueFooter = `This issue will auto resolve when the policy is in compliance.
 
-Issue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer.`
+Issue created by Allstar. See https://github.com/contentful/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer.`
 
 // AllowedOrganizations is the set of GitHub repositories on which this Allstar instance
 // is allowed to be installed. This allows a public GitHub app to be shared between GitHub

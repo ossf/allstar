@@ -23,8 +23,8 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/policydef"
+	"github.com/contentful/allstar/pkg/config"
+	"github.com/contentful/allstar/pkg/policydef"
 	"github.com/rhysd/actionlint"
 
 	"github.com/google/go-github/v50/github"

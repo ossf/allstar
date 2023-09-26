@@ -19,7 +19,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/ossf/allstar/pkg/config/operator"
+	"github.com/contentful/allstar/pkg/config/operator"
 )
 
 type instLoc struct {

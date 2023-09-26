@@ -20,9 +20,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/policydef"
-	"github.com/ossf/allstar/pkg/scorecard"
+	"github.com/contentful/allstar/pkg/config"
+	"github.com/contentful/allstar/pkg/policydef"
+	"github.com/contentful/allstar/pkg/scorecard"
 	"github.com/ossf/scorecard/v4/checker"
 	"github.com/ossf/scorecard/v4/checks"
 
