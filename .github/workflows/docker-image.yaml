@@ -6,8 +6,7 @@ on:
   # publish on pushes to the main branch (image tagged as "latest")
   push:
     branches:
-      - "*"
-  workflow_dispatch:
+      - "main"
 
 env:
   REGISTRY: ghcr.io
@@ -15,6 +14,7 @@ env:
 
 jobs:
   build-and-push-image:
+    if: github.actor != 'dependabot[bot]' || github.actor != 'dependabot-preview[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
