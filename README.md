@@ -8,14 +8,6 @@
 
 -  [What Is Allstar?](#what-is-allstar)
 
-## What's new with Allstar
-
-- [whats-new.md](whats-new.md)
-
-## Disabling Unwanted Issues
-
--  [Help! I'm getting issues created by Allstar and I don't want them!](#disabling-unwanted-issues-1) 
-
 ## Getting Started
 
 -  [Background](#background)
@@ -27,14 +19,16 @@
 ## Policies and Actions
 - [Actions](#actions)
 - [Policies](#policies)
+- [Enabled Policies](#enabled-policies)
 
 ## Advanced
 - [Configuration Definitions](#configuration-definitions)
 - [Example Configurations](#example-config-repository)
 - [Run Your Own Instance of Allstar](operator.md)
-
-## Contribute
-- [Contributing](#contributing)
+- [Contentful Architecture](architecture.md)
+- [Creating a New Policy](create-a-new-policy.md)
+- [Deploying Changes](deployment.md)
+- [Opt-out of Checks](opt-out.md)
 ________
 ________
 
@@ -57,11 +51,6 @@ handle policy violations.  You can also develop or contribute new policies.
 Allstar is developed under the [OpenSSF](https://openssf.org/) organization, as
 a part of the [Securing Critical Projects Working
 Group](https://github.com/ossf/wg-securing-critical-projects).
-
-## [What's new with Allstar](whats-new.md)
-
-## Disabling Unwanted Issues
-If you're getting unwanted issues created by Allstar, follow [these directions](opt-out.md) to opt out. 
 
 ## Getting Started
 
@@ -165,34 +154,6 @@ configured at the org level. </td>
 
 Both the Quickstart and Manual Installation options involve installing the Allstar app. You may review the permissions requested. The app asks for read access to most settings and file contents to detect security compliance. It requests write access to issues and checks so that it can create issues and allow the `block` action.
 
-#### Quickstart Installation 
-This installation option will enable Allstar using the
-Opt Out strategy on all repositories in your  organization. All current policies
-will be enabled, and Allstar will alert you of
-policy violations by filing an issue. This is the quickest and easiest way to start using Allstar, and you can still change any configurations later. 
-
-Effort: very easy 
-
-Steps:
-
-1.  Install the Allstar app
-    1.  [Open the installation
-        page](https://github.com/apps/allstar-app) and click Configure
-    1.  If you have multiple organizations, select the one you want to
-        install Allstar on
-    1.  Select "All Repositories" under Repository Access, even if you
-        plan to disable Allstar on some repositories later
-1.  Fork the sample repository
-    1.  [Open the sample repository](https://github.com/jeffmendoza/dot-allstar-quickstart)
-        and click the "Use this template" button
-    1.  In the field for Repository Name, type `.allstar`
-    1.  Click "Create repository from template"
-
-That's it! All current Allstar [policies](#policies) are now enabled on all
-your repositories. Allstar will create an issue if a policy is violated. 
-
-To change any configurations, see the [manual installation directions](manual-install.md).
-
 #### Manual Installation
 This installation option will walk you through creating
 configuration files according to either the Opt In or Opt Out strategy. This
@@ -263,6 +224,49 @@ action: issue
 ```
 
 The details of how the `fix` action works for each policy is detailed below. If omitted below, the `fix` action is not applicable.
+
+## **Enabled Policies**
+The status of controls currently applied to the Contentful Github Org
+
+|Policy Name|Tracked|Enforced|
+|-----------|-------|--------|
+|[CODEOWNERS](#codeowners)|Yes|No|
+|[Roadie Info](#roadie-info)|In Progress|No|
+|[Branch Protection](#branch-protection)|Yes|No|
+|Binary Artifact|No|No|
+|Outside Collaborators|No|No|
+|SECURITY.md|No|No|
+|Dangerous Workflow|No|No|
+|Generic Scorecard|No|No|
+|Github Actions|No|No|
+|Repository Admins|No|No|
+
+
+### CODEOWNERS
+
+This policy's config file is named `codeowners.yaml`, and the [config
+definitions are
+here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/codeowners#OrgConfig).
+
+The branch protection policy checks that a valid [CODEOWNERS](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners) file exists in the repo 
+are setup correctly according to the specified configuration. The issue text
+will describe which setting is incorrect. See [GitHub's
+documentation](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners)
+for correcting settings.
+
+The `fix` action will open a PR creating a CODEOWNERS that sets the populates the owner based on the `owner` field in the repos catalog-info.yaml.
+
+### Roadie Info
+
+This policy's config file is named `roadie.yaml`, and the [config
+definitions are
+here](TODO).
+
+The branch protection policy checks that a valid [catalog-info.yaml](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners) file exists in the repo are setup correctly according to the specified configuration. See [Backstages'
+documentation](https://backstage.io/docs/features/software-catalog/descriptor-format/#contents)
+for correcting settings.
+
+The `fix` action will open a PR creating a catalog-info.yaml with some default values. The annotations are service/repo specific and will need to be updated to be accurate.
 
 ### Branch Protection
 
@@ -445,7 +449,3 @@ apply any changes in the current file on top of the base configuration. The
 method this is applied is described as a [JSON Merge
 Patch](https://datatracker.ietf.org/doc/html/rfc7396). The `baseConfig` must be
 a GitHub `<org>/<repository>`.
-
-## **Contributing**
-
-See [CONTRIBUTING.md](CONTRIBUTING.md)
