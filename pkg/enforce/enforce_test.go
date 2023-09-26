@@ -23,10 +23,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/contentful/allstar/pkg/config/operator"
+	"github.com/contentful/allstar/pkg/policydef"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v50/github"
-	"github.com/ossf/allstar/pkg/config/operator"
-	"github.com/ossf/allstar/pkg/policydef"
 )
 
 var policy1Results policyRepoResults

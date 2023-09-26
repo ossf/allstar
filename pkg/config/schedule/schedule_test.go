@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ossf/allstar/pkg/config"
+	"github.com/contentful/allstar/pkg/config"
 )
 
 func timeFromDay(wd time.Weekday) time.Time {

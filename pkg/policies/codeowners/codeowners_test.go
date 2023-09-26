@@ -20,10 +20,10 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/contentful/allstar/pkg/config"
+	"github.com/contentful/allstar/pkg/policydef"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v50/github"
-	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/policydef"
 )
 
 var GetCodeownersErrors func(ctx context.Context, owner, repo string) (*github.CodeownersErrors, *github.Response, error)

@@ -19,8 +19,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/policydef"
+	"github.com/contentful/allstar/pkg/config"
+	"github.com/contentful/allstar/pkg/policydef"
 
 	"github.com/google/go-github/v50/github"
 	"github.com/rs/zerolog/log"

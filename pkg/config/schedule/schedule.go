@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ossf/allstar/pkg/config"
+	"github.com/contentful/allstar/pkg/config"
 	"github.com/rs/zerolog/log"
 )
 

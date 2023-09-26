@@ -21,9 +21,9 @@ import (
 	"net/http"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
+	"github.com/contentful/allstar/pkg/config/operator"
 	"github.com/google/go-github/v50/github"
 	"github.com/gregjones/httpcache"
-	"github.com/ossf/allstar/pkg/config/operator"
 	"gocloud.dev/runtimevar"
 	_ "gocloud.dev/runtimevar/awssecretsmanager"
 	_ "gocloud.dev/runtimevar/filevar"
