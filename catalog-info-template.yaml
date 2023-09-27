@@ -25,4 +25,4 @@ spec:
   system: unknown
   #we can assign owner based on who created the repo or submitted the first PR but theres 
   #no guarantee 1. they still work here, 2. are on the owning team anymore
-  owner: team-unknown 
+  owner: group:team-unknown 
