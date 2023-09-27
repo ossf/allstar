@@ -4,10 +4,10 @@
 apiVersion: backstage.io/v1alpha1
 kind: unknown
 metadata:
-  name: ${{ github.event.repository.name }}
-  description: ${{ github.event.repository.description }}
+  name: $REPO_NAME
+  description: $REPO_DESCRIPTION
   annotations:
-    github.com/project-slug: ${{ github.repository }}
+    github.com/project-slug: $PROJECT_SLUG
     contentful.com/service-tier: "unknown" #1, 2, 3, 4
 
   tags:
