@@ -4,10 +4,10 @@
 apiVersion: backstage.io/v1alpha1
 kind: unknown
 metadata:
-  name: $REPO_NAME
-  description: $REPO_DESCRIPTION
+  name: $REPO_NAME #pulled from gh api
+  description: $REPO_DESCRIPTION #pulled from gh api
   annotations:
-    github.com/project-slug: $PROJECT_SLUG
+    github.com/project-slug: $PROJECT_SLUG #pulled from gh api
     contentful.com/service-tier: "unknown" #1, 2, 3, 4
 
   tags:
