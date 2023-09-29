@@ -133,12 +133,11 @@ func check(ctx context.Context, c *github.Client, v4c v4client, owner,
 					Text string
 				} `graphql:"... on Blob"`
 			} `graphql:"object(expression: $expression)"`
-		} `graphql:"repository(owner: $owner, name: $name, isArchived: false)"`
+		} `graphql:"repository(owner: $owner, name: $name)"`
 	}
 	variables := map[string]interface{}{
 		"owner":      githubv4.String(owner),
 		"name":       githubv4.String(repo),
-		"isArchived": githubv4.Boolean(false),
 		"expression": githubv4.String(fmt.Sprintf("%s:%s", "HEAD", "catalog-info.yaml")),
 	}
 	if err := v4c.Query(ctx, &q, variables); err != nil {
