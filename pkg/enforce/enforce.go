@@ -292,9 +292,17 @@ func getAppInstallationReposReal(ctx context.Context, ic *github.Client) ([]*git
 			break
 		}
 		for _, repo := range rs.Repositories {
-			if repo.GetArchived() {
+			if !repo.GetArchived() {
 				repos = append(repos, repo)
+				log.Info().
+					Str("repo", repo.GetFullName()).
+					Msg("Not Archived")
+				continue
 			}
+			log.Info().
+				Str("repo", repo.GetFullName()).
+				Msg("Archived Repo.")
+			continue
 		}
 		if resp.NextPage == 0 {
 			break
