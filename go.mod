@@ -21,7 +21,7 @@ require (
 	github.com/shurcooL/githubv4 v0.0.0-20210725200734-83ba7b4c9228
 	github.com/xanzy/go-gitlab v0.83.0 // indirect
 	gocloud.dev v0.34.0
-	golang.org/x/sync v0.3.0
+	golang.org/x/sync v0.4.0
 	gotest.tools/v3 v3.3.0 // indirect
 	sigs.k8s.io/yaml v1.3.0
 )
