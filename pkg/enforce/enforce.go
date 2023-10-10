@@ -291,7 +291,13 @@ func getAppInstallationReposReal(ctx context.Context, ic *github.Client) ([]*git
 		if err != nil {
 			break
 		}
-		repos = append(repos, rs.Repositories...)
+		for _, repo := range rs.Repositories {
+			if !repo.GetArchived() {
+				repos = append(repos, repo)
+				continue
+			}
+			continue
+		}
 		if resp.NextPage == 0 {
 			break
 		}
