@@ -28,6 +28,11 @@ import (
 type mockRepos struct{}
 type MockGhClient struct{}
 
+var catalogExists func(ctx context.Context, c *github.Client, owner, repo string) (bool, error)
+
+func (m mockRepos) catalogExists(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
+	return catalogExists(ctx, c, owner, repo)
+}
 func (m MockGhClient) Get(i int64) (*github.Client, error) {
 	return github.NewClient(&http.Client{}), nil
 }
@@ -200,6 +205,22 @@ func TestCheck(t *testing.T) {
 			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig,
 				c *github.Client, owner, repo string) (bool, error) {
 				return test.configEnabled, nil
+			}
+			catalogExists = func(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
+
+				path := "/contents/catalog-info.yaml"
+				opts := &github.RepositoryContentGetOptions{
+					Ref: "master",
+				}
+
+				//GetContentsURL returns the ContentsURL field if it's non-nil, zero value otherwise.
+				_, _, _, err := c.Repositories.GetContents(ctx, owner, repo, path, opts)
+				if err != nil {
+					t.Fatalf("Unexpected error checking for file: %v", err)
+					return false, nil
+				}
+
+				return true, nil
 			}
 			res, err := check(context.Background(), mockRepos{}, nil, "", "thisrepo")
 			if err != nil {
