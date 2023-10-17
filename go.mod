@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
-	github.com/bradleyfalzon/ghinstallation/v2 v2.4.0
+	github.com/bradleyfalzon/ghinstallation/v2 v2.8.0
 	github.com/evanphx/json-patch v5.6.0+incompatible
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-cmp v0.5.9
@@ -16,6 +16,7 @@ require (
 	github.com/rs/zerolog v1.29.1
 	github.com/shurcooL/githubv4 v0.0.0-20210725200734-83ba7b4c9228
 	gocloud.dev v0.29.0
+	golang.org/x/oauth2 v0.7.0 // indirect
 	golang.org/x/sync v0.2.0
 	sigs.k8s.io/yaml v1.3.0
 )
