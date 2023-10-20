@@ -1,4 +1,4 @@
-// Copyright 2023 Allstar Authors
+// Copyright 2021 Allstar Authors
 
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@ package catalog
 
 import (
 	"context"
-	"net/http"
 	"testing"
 
 	"github.com/contentful/allstar/pkg/config"
@@ -25,16 +24,12 @@ import (
 	"github.com/google/go-github/v50/github"
 )
 
-type mockRepos struct{}
-type MockGhClient struct{}
+var query func(context.Context, interface{}, map[string]interface{}) error
 
-var catalogExists func(ctx context.Context, c *github.Client, owner, repo string) (bool, error)
+type mockClient struct{}
 
-func (m mockRepos) catalogExists(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
-	return catalogExists(ctx, c, owner, repo)
-}
-func (m MockGhClient) Get(i int64) (*github.Client, error) {
-	return github.NewClient(&http.Client{}), nil
+func (m mockClient) Query(ctx context.Context, q interface{}, v map[string]interface{}) error {
+	return query(ctx, q, v)
 }
 
 func TestConfigPrecedence(t *testing.T) {
@@ -145,25 +140,30 @@ func TestConfigPrecedence(t *testing.T) {
 }
 
 func TestCheck(t *testing.T) {
+	const notifyText = `A catalog-info.yaml file can give users information about which team is responsible for the maintenance of the repository.
+
+To fix this, add a catalog-info.yaml file to your repository, following the official documentation.
+<add-confluence-link-here>`
 	tests := []struct {
-		Name          string
-		Org           OrgConfig
-		Repo          RepoConfig
-		configEnabled bool
-		Exp           policydef.Result
-		ErrorCount    int
+		Name         string
+		Org          OrgConfig
+		Repo         RepoConfig
+		CatalogAdded bool
+		cofigEnabled bool
+		Exp          policydef.Result
 	}{
 		{
-			Name:          "FailNotPresent",
-			Org:           OrgConfig{OptConfig: config.OrgOptConfig{OptOutStrategy: true}},
-			Repo:          RepoConfig{},
-			configEnabled: false,
-			ErrorCount:    0,
+			Name:         "NotEnabled",
+			Org:          OrgConfig{},
+			Repo:         RepoConfig{},
+			CatalogAdded: true,
+			cofigEnabled: false,
 			Exp: policydef.Result{
 				Enabled:    false,
-				Pass:       false,
-				NotifyText: "catalog-info file not present.\n" + notifyText,
+				Pass:       true,
+				NotifyText: "",
 				Details: details{
+					Enabled:      true,
 					CatalogFound: false,
 				},
 			},
@@ -175,15 +175,36 @@ func TestCheck(t *testing.T) {
 					OptOutStrategy: true,
 				},
 			},
-			Repo:          RepoConfig{},
-			configEnabled: true,
-			ErrorCount:    0,
+			Repo:         RepoConfig{},
+			CatalogAdded: true,
+			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
 				NotifyText: "",
 				Details: details{
-					CatalogFound: true,
+					Enabled:      true,
+					CatalogFound: false,
+				},
+			},
+		},
+		{
+			Name: "Fail",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+			},
+			Repo:         RepoConfig{},
+			CatalogAdded: false,
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: details{
+					Enabled:      true,
+					CatalogFound: false,
 				},
 			},
 		},
@@ -202,27 +223,29 @@ func TestCheck(t *testing.T) {
 				}
 				return nil
 			}
+			query = func(ctx context.Context, q interface{}, v map[string]interface{}) error {
+				qc, ok := q.(*struct {
+					Repository struct {
+						Object struct {
+							Blob struct {
+								Text string
+							} `graphql:"... on Blob"`
+						} `graphql:"object(expression: $expression)"`
+					} `graphql:"repository(owner: $owner, name: $name)"`
+				})
+				if !ok {
+					t.Errorf("Query() called with unexpected query structure.")
+				}
+				if len(qc.Repository.Object.Blob.Text) == 0 {
+					qc.Repository.Object.Blob.Text = " "
+				}
+				return nil
+			}
 			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig,
 				c *github.Client, owner, repo string) (bool, error) {
-				return test.configEnabled, nil
+				return test.cofigEnabled, nil
 			}
-			catalogExists = func(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
-
-				path := "/contents/catalog-info.yaml"
-				opts := &github.RepositoryContentGetOptions{
-					Ref: "master",
-				}
-
-				//GetContentsURL returns the ContentsURL field if it's non-nil, zero value otherwise.
-				_, _, _, err := c.Repositories.GetContents(ctx, owner, repo, path, opts)
-				if err != nil {
-					t.Fatalf("Unexpected error checking for file: %v", err)
-					return false, nil
-				}
-
-				return true, nil
-			}
-			res, err := check(context.Background(), mockRepos{}, nil, "", "thisrepo")
+			res, err := check(context.Background(), nil, mockClient{}, "", "thisrepo")
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
