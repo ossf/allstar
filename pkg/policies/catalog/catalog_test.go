@@ -201,7 +201,7 @@ To fix this, add a catalog-info.yaml file to your repository, following the offi
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
-				NotifyText: "",
+				NotifyText: "catalog-info.yaml file not present.\n" + notifyText,
 				Details: details{
 					Enabled:      true,
 					CatalogFound: false,
