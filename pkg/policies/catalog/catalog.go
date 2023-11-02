@@ -73,7 +73,6 @@ type mergedConfig struct {
 
 type details struct {
 	Enabled      bool
-	CatalogFound bool
 }
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
