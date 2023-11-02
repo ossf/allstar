@@ -199,8 +199,8 @@ To fix this, add a catalog-info.yaml file to your repository, following the offi
 			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
-				Pass:       false,
-				NotifyText: "catalog-info.yaml file not found.\n" + fmt.Sprint(notifyText, OrgConfig{}, RepoConfig{}),
+				Pass:       true,
+				NotifyText: "catalog-info.yaml file not present.\n" + notifyText,
 				Details: details{
 					Enabled: false,
 				},
