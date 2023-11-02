@@ -16,6 +16,7 @@ package catalog
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/contentful/allstar/pkg/config"
@@ -148,7 +149,7 @@ To fix this, add a catalog-info.yaml file to your repository, following the offi
 		Name         string
 		Org          OrgConfig
 		Repo         RepoConfig
-		CatalogAdded bool
+		CatalogAdded string
 		cofigEnabled bool
 		Exp          policydef.Result
 	}{
@@ -156,15 +157,14 @@ To fix this, add a catalog-info.yaml file to your repository, following the offi
 			Name:         "NotEnabled",
 			Org:          OrgConfig{},
 			Repo:         RepoConfig{},
-			CatalogAdded: true,
+			CatalogAdded: "catalog-info.yaml",
 			cofigEnabled: false,
 			Exp: policydef.Result{
 				Enabled:    false,
 				Pass:       true,
 				NotifyText: "",
 				Details: details{
-					Enabled:      true,
-					CatalogFound: false,
+					Enabled: true,
 				},
 			},
 		},
@@ -176,15 +176,14 @@ To fix this, add a catalog-info.yaml file to your repository, following the offi
 				},
 			},
 			Repo:         RepoConfig{},
-			CatalogAdded: true,
+			CatalogAdded: "catalog-info.yaml",
 			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
 				Pass:       true,
 				NotifyText: "",
 				Details: details{
-					Enabled:      true,
-					CatalogFound: false,
+					Enabled: true,
 				},
 			},
 		},
@@ -196,15 +195,14 @@ To fix this, add a catalog-info.yaml file to your repository, following the offi
 				},
 			},
 			Repo:         RepoConfig{},
-			CatalogAdded: false,
+			CatalogAdded: "",
 			cofigEnabled: true,
 			Exp: policydef.Result{
 				Enabled:    true,
-				Pass:       true,
-				NotifyText: "",
+				Pass:       false,
+				NotifyText: "catalog-info.yaml file not found.\n" + fmt.Sprint(notifyText, OrgConfig{}, RepoConfig{}),
 				Details: details{
-					Enabled:      true,
-					CatalogFound: false,
+					Enabled: false,
 				},
 			},
 		},
@@ -236,9 +234,7 @@ To fix this, add a catalog-info.yaml file to your repository, following the offi
 				if !ok {
 					t.Errorf("Query() called with unexpected query structure.")
 				}
-				if len(qc.Repository.Object.Blob.Text) == 0 {
-					qc.Repository.Object.Blob.Text = " "
-				}
+				qc.Repository.Object.Blob.Text = test.CatalogAdded
 				return nil
 			}
 			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig,
