@@ -19,6 +19,7 @@ package enforce
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync"
 	"time"
 
@@ -48,6 +49,7 @@ var getAppInstallationRepos func(context.Context, *github.Client) ([]*github.Rep
 var runPolicies func(context.Context, *github.Client, string, string, bool, string) (EnforceRepoResults, error)
 var deleteInstallation func(context.Context, *github.Client, int64) (*github.Response, error)
 var listInstallations func(context.Context, *github.Client) ([]*github.Installation, error)
+var isRepositoryEmpty func(context.Context, *github.Client, string, string, string) (bool, error)
 
 func init() {
 	policiesGetPolicies = policies.GetPolicies
@@ -59,6 +61,7 @@ func init() {
 	runPolicies = runPoliciesReal
 	deleteInstallation = deleteInstallationReal
 	listInstallations = listInstallationsReal
+	isRepositoryEmpty = isRepositoryEmptyReal
 }
 
 // EnforceAll iterates through all available installations and repos Allstar
@@ -318,6 +321,23 @@ func EnforceJob(ctx context.Context, ghc *ghclients.GHClients, d time.Duration, 
 	}
 }
 
+// returns true if the repository has content and false if it's empty
+func isRepositoryEmptyReal(ctx context.Context, c *github.Client, owner, repo, policy string) (bool, error) {
+	_, resp, err := c.Repositories.ListContributorsStats(ctx, owner, repo)
+	if err != nil {
+		return false, err
+	}
+	if resp.StatusCode == http.StatusNoContent {
+		log.Info().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("area", policy).
+			Msg("Repository is empty, skipping")
+	}
+
+	return true, nil
+}
+
 // runPoliciesReal enforces policies on the provided repo. It is meant to be called
 // from either jobs, webhooks, or delayed checks. TODO: implement concurrency
 // check to only run a single instance per repo at a time.
@@ -350,6 +370,16 @@ func runPoliciesReal(ctx context.Context, c *github.Client, owner, repo string, 
 				Msg("Policy run skipped as repo is not enabled and doNothingOnOptOut is configured.")
 			continue
 		}
+
+		isEmpty, err := isRepositoryEmpty(ctx, c, owner, repo, p.Name())
+		if err != nil {
+			return nil, err
+		}
+
+		if isEmpty {
+			continue
+		}
+
 		r, err := p.Check(ctx, c, owner, repo)
 		if err != nil {
 			return nil, err
