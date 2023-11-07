@@ -72,12 +72,14 @@ type mergedConfig struct {
 }
 
 type details struct {
-	Enabled bool
+	Enabled      bool
 }
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
 
 var configIsEnabled func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig, c *github.Client, owner, repo string) (bool, error)
+
+//var catalogExists func(ctx context.Context, c *github.Client, owner, repo string) (bool, error)
 
 func init() {
 	configFetchConfig = config.FetchConfig
