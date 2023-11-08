@@ -323,11 +323,12 @@ func EnforceJob(ctx context.Context, ghc *ghclients.GHClients, d time.Duration, 
 
 // returns true if the repository has content and false if it's empty
 func isRepositoryEmptyReal(ctx context.Context, c *github.Client, owner, repo, policy string) (bool, error) {
-	_, resp, err := c.Repositories.ListContributorsStats(ctx, owner, repo)
-	if err != nil {
+	opts := github.RepositoryContentGetOptions{}
+	file, dirs, resp, err := c.Repositories.GetContents(ctx, owner, repo, "", &opts)
+	if err != nil && resp.StatusCode != http.StatusNotFound {
 		return false, err
 	}
-	if resp.StatusCode == http.StatusNoContent {
+	if file == nil && len(dirs) == 0 {
 		log.Info().
 			Str("org", owner).
 			Str("repo", repo).
