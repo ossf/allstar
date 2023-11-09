@@ -334,9 +334,10 @@ func isRepositoryEmptyReal(ctx context.Context, c *github.Client, owner, repo, p
 			Str("repo", repo).
 			Str("area", policy).
 			Msg("Repository is empty, skipping")
+		return true, nil
 	}
 
-	return true, nil
+	return false, nil
 }
 
 // runPoliciesReal enforces policies on the provided repo. It is meant to be called
