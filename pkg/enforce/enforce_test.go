@@ -91,42 +91,6 @@ func (m MockGhClients) Get(i int64) (*github.Client, error) {
 
 func (m MockGhClients) LogCacheSize() {}
 
-func TestSkipEmptyRepositories(t *testing.T) {
-	policiesGetPolicies = func() []policydef.Policy {
-		return []policydef.Policy{
-			pol{},
-		}
-	}
-
-	isRepositoryEmpty = func(ctx context.Context, c *github.Client, s1, s2, s3 string) (bool, error) {
-		return true, nil
-	}
-
-	repo := "fake-repo"
-
-	tests := []struct {
-		Desc string
-	}{
-		{
-			Desc: "test skip a single empty repository",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.Desc, func(t *testing.T) {
-			enforceResults, err := runPoliciesReal(context.Background(), nil, "", repo, true, "")
-
-			if err != nil {
-				t.Fatalf("Unexpected error: %v", err)
-			}
-
-			if len(enforceResults) != 0 {
-				t.Errorf("expected no policy results, got %+v\n", enforceResults)
-			}
-		})
-	}
-}
-
 func TestRunPolicies(t *testing.T) {
 	policiesGetPolicies = func() []policydef.Policy {
 		return []policydef.Policy{
@@ -142,9 +106,6 @@ func TestRunPolicies(t *testing.T) {
 	issueClose = func(ctx context.Context, c *github.Client, owner, repo, policy string) error {
 		closeCalled = true
 		return nil
-	}
-	isRepositoryEmpty = func(ctx context.Context, c *github.Client, s1, s2, s3 string) (bool, error) {
-		return false, nil
 	}
 	repo := "fake-repo"
 	tests := []struct {
