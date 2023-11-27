@@ -36,7 +36,7 @@ type ScClient struct {
 	ScRepoClient clients.RepoClient
 }
 
-var scClients map[string]*ScClient
+var scClients map[string]*ScClient = make(map[string]*ScClient)
 var mMutex sync.RWMutex
 
 const defaultGitRef = "HEAD"
@@ -53,15 +53,6 @@ func init() {
 // exist. The github repo is initialized, which means the tarball is
 // downloaded.
 func Get(ctx context.Context, fullRepo string, tr http.RoundTripper) (*ScClient, error) {
-	mMutex.RLock()
-	if scClients == nil {
-		mMutex.RUnlock()
-		mMutex.Lock()
-		scClients = make(map[string]*ScClient)
-		mMutex.Unlock()
-	} else {
-		mMutex.RUnlock()
-	}
 	mMutex.Lock()
 	if scc, ok := scClients[fullRepo]; ok {
 		mMutex.Unlock()
