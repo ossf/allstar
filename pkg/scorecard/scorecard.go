@@ -62,17 +62,16 @@ func Get(ctx context.Context, fullRepo string, tr http.RoundTripper) (*ScClient,
 	} else {
 		mMutex.RUnlock()
 	}
-	mMutex.RLock()
+	mMutex.Lock()
 	if scc, ok := scClients[fullRepo]; ok {
-		mMutex.RUnlock()
+		mMutex.Unlock()
 		return scc, nil
 	}
-	mMutex.RUnlock()
 	scc, err := create(ctx, fullRepo, tr)
 	if err != nil {
+		mMutex.Unlock()
 		return nil, err
 	}
-	mMutex.Lock()
 	scClients[fullRepo] = scc
 	mMutex.Unlock()
 	return scc, nil
