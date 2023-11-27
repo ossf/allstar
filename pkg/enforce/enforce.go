@@ -67,7 +67,7 @@ func init() {
 //
 // TBD: determine if this should remain exported, or if it will only be called
 // from EnforceJob.
-func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificPolicyArg string, specificRepoArg string) (EnforceAllResults, error) {
+func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificPolicyArg string, specificRepoArg string, numWorkersArg int) (EnforceAllResults, error) {
 	var repoCount int
 	var enforceAllResults = make(EnforceAllResults)
 	ac, err := ghc.Get(0)
@@ -85,7 +85,7 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificP
 		Msg("Enforcing policies on installations.")
 
 	g, ctx := errgroup.WithContext(ctx)
-	g.SetLimit(5)
+	g.SetLimit(numWorkersArg)
 	var mu sync.Mutex
 
 	for _, i := range insts {
@@ -302,9 +302,9 @@ func getAppInstallationReposReal(ctx context.Context, ic *github.Client) ([]*git
 
 // EnforceJob is a reconciliation job that enforces policies on all repos every
 // d duration. It runs forever until the context is done.
-func EnforceJob(ctx context.Context, ghc *ghclients.GHClients, d time.Duration, specificPolicyArg string, specificRepoArg string) error {
+func EnforceJob(ctx context.Context, ghc *ghclients.GHClients, d time.Duration, specificPolicyArg string, specificRepoArg string, numWorkersArg int) error {
 	for {
-		_, err := EnforceAll(ctx, ghc, specificPolicyArg, specificRepoArg)
+		_, err := EnforceAll(ctx, ghc, specificPolicyArg, specificRepoArg, numWorkersArg)
 		if err != nil {
 			log.Error().
 				Err(err).
