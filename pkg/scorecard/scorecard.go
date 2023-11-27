@@ -71,18 +71,13 @@ func Get(ctx context.Context, fullRepo string, tr http.RoundTripper) (*ScClient,
 // Function Close will close the scorecard clients. This cleans up the
 // downloaded tarball.
 func Close(fullRepo string) {
-	mMutex.RLock()
-	if scClients == nil {
-		mMutex.RUnlock()
-		return
-	}
+	mMutex.Lock()
 	scc, ok := scClients[fullRepo]
-	mMutex.RUnlock()
 	if !ok {
+		mMutex.Unlock()
 		return
 	}
 	scc.ScRepoClient.Close()
-	mMutex.Lock()
 	delete(scClients, fullRepo)
 	mMutex.Unlock()
 }
