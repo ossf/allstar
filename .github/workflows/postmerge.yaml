@@ -24,7 +24,7 @@ jobs:
       with:
         results_file: results.sarif
         results_format: sarif
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: SARIF file
         path: results.sarif
