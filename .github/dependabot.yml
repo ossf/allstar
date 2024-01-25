@@ -9,3 +9,13 @@ updates:
   directory: "/"
   schedule:
     interval: "daily"
+- package-ecosystem: docker
+  directory: "/"
+  schedule:
+    interval: daily
+    time: "00:00"
+    timezone: UTC
+  open-pull-requests-limit: 15
+  commit-message:
+    prefix: build
+    include: scope
