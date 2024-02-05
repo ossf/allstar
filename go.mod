@@ -16,7 +16,7 @@ require (
 	github.com/onsi/ginkgo v1.16.5 // indirect
 	github.com/ossf/scorecard/v4 v4.10.5
 	github.com/rhysd/actionlint v1.6.24
-	github.com/rs/zerolog v1.31.0
+	github.com/rs/zerolog v1.32.0
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shurcooL/githubv4 v0.0.0-20210725200734-83ba7b4c9228
 	github.com/xanzy/go-gitlab v0.83.0 // indirect
