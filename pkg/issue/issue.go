@@ -29,7 +29,7 @@ import (
 	"github.com/ossf/allstar/pkg/config/schedule"
 	"github.com/rs/zerolog/log"
 
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v59/github"
 )
 
 const issueRepoTitle = "Security Policy violation for repository %q %v"

@@ -24,7 +24,7 @@ import (
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/config/operator"
 
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v59/github"
 )
 
 var listByRepo func(context.Context, string, string,
