@@ -136,7 +136,7 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 	}
 
 	logs := convertLogs(l.Flush())
-	pass := res.Score >= checker.MaxResultScore
+	pass := res.Score >= checker.MaxResultScore || res.Score == checker.InconclusiveResultScore
 	var notify string
 	if !pass {
 		notify = fmt.Sprintf(`Project is out of compliance with Dangerous Workflow policy: %v
