@@ -36,7 +36,7 @@ type ScClient struct {
 	ScRepoClient clients.RepoClient
 }
 
-var scClients map[string]*ScClient
+var scClients map[string]*ScClient = make(map[string]*ScClient)
 var mMutex sync.RWMutex
 
 const defaultGitRef = "HEAD"
@@ -53,26 +53,16 @@ func init() {
 // exist. The github repo is initialized, which means the tarball is
 // downloaded.
 func Get(ctx context.Context, fullRepo string, tr http.RoundTripper) (*ScClient, error) {
-	mMutex.RLock()
-	if scClients == nil {
-		mMutex.RUnlock()
-		mMutex.Lock()
-		scClients = make(map[string]*ScClient)
-		mMutex.Unlock()
-	} else {
-		mMutex.RUnlock()
-	}
-	mMutex.RLock()
+	mMutex.Lock()
 	if scc, ok := scClients[fullRepo]; ok {
-		mMutex.RUnlock()
+		mMutex.Unlock()
 		return scc, nil
 	}
-	mMutex.RUnlock()
 	scc, err := create(ctx, fullRepo, tr)
 	if err != nil {
+		mMutex.Unlock()
 		return nil, err
 	}
-	mMutex.Lock()
 	scClients[fullRepo] = scc
 	mMutex.Unlock()
 	return scc, nil
@@ -81,18 +71,13 @@ func Get(ctx context.Context, fullRepo string, tr http.RoundTripper) (*ScClient,
 // Function Close will close the scorecard clients. This cleans up the
 // downloaded tarball.
 func Close(fullRepo string) {
-	mMutex.RLock()
-	if scClients == nil {
-		mMutex.RUnlock()
-		return
-	}
+	mMutex.Lock()
 	scc, ok := scClients[fullRepo]
-	mMutex.RUnlock()
 	if !ok {
+		mMutex.Unlock()
 		return
 	}
 	scc.ScRepoClient.Close()
-	mMutex.Lock()
 	delete(scClients, fullRepo)
 	mMutex.Unlock()
 }

@@ -56,10 +56,13 @@ func main() {
 			supportedPoliciesMsg += policyName
 		}
 	}
-	boolArgPtr := flag.Bool("once", false, "Run EnforceAll once, instead of in a continuous loop.")
+	var runOnce bool
+	flag.BoolVar(&runOnce, "once", false, "Run EnforceAll once, instead of in a continuous loop.")
 
 	specificPolicyArg := flag.String("policy", "", fmt.Sprintf("Run a specific policy check. Supported policies: %s", supportedPoliciesMsg))
 	specificRepoArg := flag.String("repo", "", "Run on a specific \"owner/repo\". For example \"ossf/allstar\"")
+
+	numWorkersArg := flag.Int("workers", 5, "maximum number of active goroutines for Allstar scans")
 
 	flag.Parse()
 
@@ -79,8 +82,8 @@ func main() {
 			Msg(fmt.Sprintf("Allstar will only run on repository %s", *specificRepoArg))
 	}
 
-	if *boolArgPtr {
-		_, err := enforce.EnforceAll(ctx, ghc, *specificPolicyArg, *specificRepoArg)
+	if runOnce {
+		_, err := enforce.EnforceAll(ctx, ghc, *specificPolicyArg, *specificRepoArg, *numWorkersArg)
 		if err != nil {
 			log.Fatal().
 				Err(err).
@@ -93,7 +96,7 @@ func main() {
 		go func() {
 			defer wg.Done()
 			log.Info().
-				Err(enforce.EnforceJob(ctx, ghc, (5 * time.Minute), *specificPolicyArg, *specificRepoArg)).
+				Err(enforce.EnforceJob(ctx, ghc, (5 * time.Minute), *specificPolicyArg, *specificRepoArg, *numWorkersArg)).
 				Msg("Enforce job shutting down.")
 		}()
 		sigs := make(chan os.Signal, 1)
