@@ -1,0 +1,20 @@
+# Backstage documentation
+# https://backstage.io/docs/features/software-catalog/descriptor-format/
+
+apiVersion: backstage.io/v1alpha1
+kind: Component 
+metadata:
+  name: allstar 
+  description: Allstar is a GitHub App that continuously monitors GitHub organizations or repositories for adherence to security best practices
+  annotations:
+    github.com/project-slug: contentful/allstar 
+    contentful.com/service-tier: "4" 
+
+  tags:
+    - update-me
+    - sast-disabled
+    - tier-4
+spec:
+  type: service 
+  lifecycle: production  
+  owner: group:team-security 
