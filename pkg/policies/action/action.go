@@ -712,6 +712,10 @@ func listWorkflowsReal(ctx context.Context, c *github.Client, owner, repo string
 		if err != nil {
 			return nil, err
 		}
+		if fc == nil {
+			// skip directories
+			continue
+		}
 		content, err := fc.GetContent()
 		if err != nil {
 			return nil, err
