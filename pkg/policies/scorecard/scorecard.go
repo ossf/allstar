@@ -161,7 +161,18 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 			Dlogger:    l,
 		}
 
-		res := checksAllChecks[n].Fn(cr)
+		check, ok := checksAllChecks[n]
+		if !ok {
+			log.Warn().
+				Str("org", owner).
+				Str("repo", repo).
+				Str("area", polName).
+				Str("check", n).
+				Msg("Unknown scorecard check specified.")
+			break
+		}
+
+		res := check.Fn(cr)
 		if res.Error != nil {
 			// We are not sure that all checks are safe to run inside Allstar, some
 			// might error, and we don't want to abort a whole org enforcement loop
