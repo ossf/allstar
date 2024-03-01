@@ -238,7 +238,7 @@ func convertLogs(logs []checker.CheckDetail) []string {
 	var s []string
 	for _, l := range logs {
 		if l.Msg.Finding != nil {
-			if l.Msg.Finding.Location == nil {
+			if l.Msg.Finding.Location == nil || l.Msg.Finding.Location.Snippet == nil || l.Msg.Finding.Location.LineStart == nil {
 				s = append(s, fmt.Sprintf("%v", l.Msg.Finding.Message))
 			} else {
 				s = append(s, fmt.Sprintf("%v[%v]:%v", *l.Msg.Finding.Location.Snippet, *l.Msg.Finding.Location.LineStart, l.Msg.Finding.Message))
