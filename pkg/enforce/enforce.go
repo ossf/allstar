@@ -156,6 +156,7 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificP
 				}
 				enforceAllResults[policyName]["totalFailed"] += results["totalFailed"]
 			}
+			ghc.Free(iid)
 			mu.Unlock()
 
 			if err != nil {
@@ -170,7 +171,6 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificP
 	if err := g.Wait(); err != nil {
 		return enforceAllResults, err
 	}
-	ghc.LogCacheSize()
 	log.Info().
 		Str("area", "bot").
 		Int("count", repoCount).
