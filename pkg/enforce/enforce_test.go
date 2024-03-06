@@ -89,7 +89,7 @@ func (m MockGhClients) Get(i int64) (*github.Client, error) {
 	return github.NewClient(&http.Client{}), nil
 }
 
-func (m MockGhClients) LogCacheSize() {}
+func (m MockGhClients) Free(i int64) {}
 
 func TestRunPolicies(t *testing.T) {
 	policiesGetPolicies = func() []policydef.Policy {
