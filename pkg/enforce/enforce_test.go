@@ -549,8 +549,7 @@ func TestEnforceAll(t *testing.T) {
 			policy1Results = test.Policy1Results
 			policy2Results = test.Policy2Results
 
-			numWorkers := 1
-			enforceAllResults, err := EnforceAll(context.Background(), mockGhc, "", "", numWorkers)
+			enforceAllResults, err := EnforceAll(context.Background(), mockGhc, "", "")
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -582,8 +581,7 @@ func TestSuspendedEnforce(t *testing.T) {
 	}
 	suspended = false
 	gaicalled = false
-	numWorkers := 1
-	if _, err := EnforceAll(context.Background(), &MockGhClients{}, "", "", numWorkers); err != nil {
+	if _, err := EnforceAll(context.Background(), &MockGhClients{}, "", ""); err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 	if !gaicalled {
@@ -591,7 +589,7 @@ func TestSuspendedEnforce(t *testing.T) {
 	}
 	suspended = true
 	gaicalled = false
-	if _, err := EnforceAll(context.Background(), &MockGhClients{}, "", "", numWorkers); err != nil {
+	if _, err := EnforceAll(context.Background(), &MockGhClients{}, "", ""); err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 	if gaicalled {
