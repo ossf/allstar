@@ -10,3 +10,4 @@ env_variables:
   APP_ID: 119816
   KEY_SECRET: "gcpsecretmanager://projects/allstar-ossf/secrets/allstar-private-key?decoder=bytes"
   DO_NOTHING_ON_OPT_OUT: true
+  ALLSTAR_NUM_WORKERS: 1

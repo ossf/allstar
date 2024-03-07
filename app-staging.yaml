@@ -10,3 +10,4 @@ resources:
 env_variables:
   APP_ID: 166485
   KEY_SECRET: "gcpsecretmanager://projects/allstar-ossf/secrets/allstar-staging-private-key?decoder=bytes"
+  ALLSTAR_NUM_WORKERS: 1
