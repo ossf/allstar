@@ -139,7 +139,7 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 	if !strings.Contains(issue.GetBody(), hash) && hasIssueSection(issue.GetBody(), updateSectionName) {
 		// Comment update and update issue body
 		commentBody := fmt.Sprintf("The policy result has been updated.\n\n---\n\n%s", text)
-		comment, _, err := issues.CreateComment(ctx, owner, repo, issue.GetNumber(), &github.IssueComment{
+		comment, _, err := issues.CreateComment(ctx, owner, issueRepo, issue.GetNumber(), &github.IssueComment{
 			Body: &commentBody,
 		})
 		if err != nil {
@@ -159,7 +159,7 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		}
 		// Ensure issue is open as well
 		state := "open"
-		_, _, err = issues.Edit(ctx, owner, repo, issue.GetNumber(), &github.IssueRequest{
+		_, _, err = issues.Edit(ctx, owner, issueRepo, issue.GetNumber(), &github.IssueRequest{
 			State: &state,
 			Body:  &newBody,
 		})
