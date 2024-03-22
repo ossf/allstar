@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
-	github.com/bradleyfalzon/ghinstallation/v2 v2.9.0
+	github.com/bradleyfalzon/ghinstallation/v2 v2.10.0
 	github.com/evanphx/json-patch/v5 v5.9.0
 	github.com/gobwas/glob v0.2.3
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
