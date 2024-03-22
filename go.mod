@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
-	github.com/bradleyfalzon/ghinstallation/v2 v2.4.0
+	github.com/bradleyfalzon/ghinstallation/v2 v2.10.0
 	github.com/cloudflare/circl v1.3.7 // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/evanphx/json-patch v5.9.0+incompatible
