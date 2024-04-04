@@ -7,6 +7,9 @@ WORKDIR /ko-app
 # Copy the Go application source code
 COPY . .
 
+# Tidy em packages
+RUN go mod tidy
+
 # Build the Go application
 RUN CGO_ENABLED=0 go build -o allstar ./cmd/allstar
 
