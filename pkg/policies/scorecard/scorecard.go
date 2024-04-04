@@ -26,7 +26,7 @@ import (
 	"github.com/ossf/scorecard/v4/checker"
 	"github.com/ossf/scorecard/v4/checks"
 
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v59/github"
 	"github.com/rs/zerolog/log"
 )
 
@@ -161,7 +161,18 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 			Dlogger:    l,
 		}
 
-		res := checksAllChecks[n].Fn(cr)
+		check, ok := checksAllChecks[n]
+		if !ok {
+			log.Warn().
+				Str("org", owner).
+				Str("repo", repo).
+				Str("area", polName).
+				Str("check", n).
+				Msg("Unknown scorecard check specified.")
+			break
+		}
+
+		res := check.Fn(cr)
 		if res.Error != nil {
 			// We are not sure that all checks are safe to run inside Allstar, some
 			// might error, and we don't want to abort a whole org enforcement loop
@@ -227,10 +238,10 @@ func convertLogs(logs []checker.CheckDetail) []string {
 	var s []string
 	for _, l := range logs {
 		if l.Msg.Finding != nil {
-			if l.Msg.Finding.Location == nil {
+			if l.Msg.Finding.Location == nil || l.Msg.Finding.Location.Snippet == nil || l.Msg.Finding.Location.LineStart == nil {
 				s = append(s, fmt.Sprintf("%v", l.Msg.Finding.Message))
 			} else {
-				s = append(s, fmt.Sprintf("%v[%v]:%v", l.Msg.Finding.Location.Value, *l.Msg.Finding.Location.LineStart, l.Msg.Finding.Message))
+				s = append(s, fmt.Sprintf("%v[%v]:%v", *l.Msg.Finding.Location.Snippet, *l.Msg.Finding.Location.LineStart, l.Msg.Finding.Message))
 			}
 		} else {
 			s = append(s, fmt.Sprintf("%v[%v]:%v", l.Msg.Path, l.Msg.Offset, l.Msg.Text))

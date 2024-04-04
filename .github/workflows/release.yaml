@@ -1,0 +1,48 @@
+name: release
+
+on:
+  push:
+    tags:
+      - '*'
+
+permissions:
+  id-token: write # Undocumented OIDC support.
+  packages: write # To publish container images to GHCR
+  contents: write # To create a release
+
+jobs:
+  release:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v4 # v3.5.2
+
+      - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version: '1.20'
+          check-latest: true
+
+      - uses: sigstore/cosign-installer@e1523de7571e31dbe865fd2e80c5c7c23ae71eb4 # v3.4.0
+
+      - uses: ko-build/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
+
+      - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.workflow }} --password-stdin
+
+      - run: ko publish -B ./cmd/allstar --tags ${{ github.ref_name }} --image-refs allstar.ref
+        env:
+          KO_DOCKER_REPO: ghcr.io/${{ github.repository_owner }}
+      - run: ko publish -B ./cmd/allstar --tags ${{ github.ref_name }}-busybox --image-refs allstar-busybox.ref
+        env:
+          KO_DOCKER_REPO: ghcr.io/${{ github.repository_owner }}
+          KO_DEFAULTBASEIMAGE: cgr.dev/chainguard/busybox
+      - run: |
+          echo "signing $(cat allstar.ref)"
+          cosign sign --yes -a git_sha="$GITHUB_SHA" "$(cat allstar.ref)"
+          echo "signing $(cat allstar-busybox.ref)"
+          cosign sign --yes -a git_sha="$GITHUB_SHA" "$(cat allstar-busybox.ref)"
+
+      - run: |
+          gh release create ${{ github.ref_name }} --notes "Images:
+          * ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}
+          * ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}-busybox"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -21,10 +21,10 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/contentful/allstar/pkg/config"
-	"github.com/contentful/allstar/pkg/policydef"
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v59/github"
+	"github.com/ossf/allstar/pkg/config"
+	"github.com/ossf/allstar/pkg/policydef"
 )
 
 var get func(context.Context, string, string) (*github.Repository,

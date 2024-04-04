@@ -23,7 +23,7 @@ import (
 	"github.com/contentful/allstar/pkg/config"
 	"github.com/contentful/allstar/pkg/policydef"
 
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v59/github"
 	"github.com/rs/zerolog/log"
 )
 
@@ -63,7 +63,7 @@ type RepoConfig struct {
 }
 
 type repositories interface {
-	GetCodeownersErrors(ctx context.Context, owner, repo string) (*github.CodeownersErrors, *github.Response, error)
+	GetCodeownersErrors(ctx context.Context, owner, repo string, op *github.GetCodeownersErrorsOptions) (*github.CodeownersErrors, *github.Response, error)
 }
 
 type mergedConfig struct {
@@ -131,7 +131,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		Bool("enabled", enabled).
 		Msg("Check repo enabled")
 
-	codeownererrors, resp, err := rep.GetCodeownersErrors(ctx, owner, repo)
+	codeownererrors, resp, err := rep.GetCodeownersErrors(ctx, owner, repo, nil)
 
 	if err == nil {
 		// "CODEOWNERS" exists

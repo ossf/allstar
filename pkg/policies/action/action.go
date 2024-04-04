@@ -18,7 +18,6 @@ package action
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -27,14 +26,12 @@ import (
 	"github.com/contentful/allstar/pkg/policydef"
 	"github.com/rhysd/actionlint"
 
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v59/github"
 	"github.com/rs/zerolog/log"
 )
 
 const configFile = "actions.yaml"
 const polName = "GitHub Actions"
-
-var actionNameVersionRegex = regexp.MustCompile(`^([a-zA-Z0-9_\-.]+\/[a-zA-Z0-9_\-.]+)@([a-zA-Z0-9\-.]+)$`)
 
 const failText = "This policy, specified at the organization level, sets requirements for Action use by repos within the organization. This repo is failing to fully comply with organization policies, as explained below.\n\n```\n%s```\n\nSee the org-level %s policy configuration for details."
 
@@ -270,8 +267,8 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 					// Missing uses in step
 					continue
 				}
-				sm := actionNameVersionRegex.FindStringSubmatch(actionStep.Uses.Value)
-				if sm == nil {
+				sm := strings.SplitN(actionStep.Uses.Value, "@", 2)
+				if len(sm) != 2 {
 					// Ignore invalid Action
 					log.Warn().
 						Str("org", owner).
@@ -281,8 +278,8 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 						Msg("Ignoring invalid action")
 					continue
 				}
-				name := sm[1]
-				version := sm[2]
+				name := sm[0]
+				version := sm[1]
 				actions = append(actions, &actionMetadata{
 					name:             name,
 					version:          version,
@@ -714,6 +711,10 @@ func listWorkflowsReal(ctx context.Context, c *github.Client, owner, repo string
 		fc, _, _, err := c.Repositories.GetContents(ctx, owner, repo, wff.GetPath(), &github.RepositoryContentGetOptions{})
 		if err != nil {
 			return nil, err
+		}
+		if fc == nil {
+			// skip directories
+			continue
 		}
 		content, err := fc.GetContent()
 		if err != nil {

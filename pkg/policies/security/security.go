@@ -22,7 +22,7 @@ import (
 	"github.com/contentful/allstar/pkg/config"
 	"github.com/contentful/allstar/pkg/policydef"
 
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v59/github"
 	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
 )

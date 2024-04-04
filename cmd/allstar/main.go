@@ -56,7 +56,8 @@ func main() {
 			supportedPoliciesMsg += policyName
 		}
 	}
-	boolArgPtr := flag.Bool("once", false, "Run EnforceAll once, instead of in a continuous loop.")
+	var runOnce bool
+	flag.BoolVar(&runOnce, "once", false, "Run EnforceAll once, instead of in a continuous loop.")
 
 	specificPolicyArg := flag.String("policy", "", fmt.Sprintf("Run a specific policy check. Supported policies: %s", supportedPoliciesMsg))
 	specificRepoArg := flag.String("repo", "", "Run on a specific \"owner/repo\". For example \"ossf/allstar\"")
@@ -79,7 +80,7 @@ func main() {
 			Msg(fmt.Sprintf("Allstar will only run on repository %s", *specificRepoArg))
 	}
 
-	if *boolArgPtr {
+	if runOnce {
 		_, err := enforce.EnforceAll(ctx, ghc, *specificPolicyArg, *specificRepoArg)
 		if err != nil {
 			log.Fatal().

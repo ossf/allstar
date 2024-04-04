@@ -31,7 +31,7 @@ import (
 	"github.com/contentful/allstar/pkg/scorecard"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v59/github"
 	"github.com/rs/zerolog/log"
 )
 
@@ -85,10 +85,13 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificP
 		Msg("Enforcing policies on installations.")
 
 	g, ctx := errgroup.WithContext(ctx)
-	g.SetLimit(5)
+	g.SetLimit(operator.NumWorkers)
 	var mu sync.Mutex
 
 	for _, i := range insts {
+		if ctx.Err() != nil {
+			break
+		}
 		if i.SuspendedAt != nil {
 			log.Info().
 				Str("area", "bot").
@@ -156,6 +159,7 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificP
 				}
 				enforceAllResults[policyName]["totalFailed"] += results["totalFailed"]
 			}
+			ghc.Free(iid)
 			mu.Unlock()
 
 			if err != nil {
@@ -170,7 +174,6 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificP
 	if err := g.Wait(); err != nil {
 		return enforceAllResults, err
 	}
-	ghc.LogCacheSize()
 	log.Info().
 		Str("area", "bot").
 		Int("count", repoCount).
@@ -356,6 +359,7 @@ func runPoliciesReal(ctx context.Context, c *github.Client, owner, repo string, 
 				Msg("Policy run skipped as repo is not enabled and doNothingOnOptOut is configured.")
 			continue
 		}
+
 		r, err := p.Check(ctx, c, owner, repo)
 		if err != nil {
 			return nil, err

@@ -95,6 +95,12 @@ const setNoticePingDurationHrs = (24 * time.Hour)
 
 var NoticePingDuration time.Duration
 
+// NumWorkers is the number of concurrent orginazations/installations the
+// Allstar binary will scan concurrently.
+const setNumWorkers = 5
+
+var NumWorkers int
+
 var osGetenv func(string) string
 
 func init() {
@@ -147,4 +153,12 @@ func setVars() {
 
 	allowedOrgs := osGetenv("GITHUB_ALLOWED_ORGS")
 	AllowedOrganizations = strings.Split(allowedOrgs, ",")
+
+	nws := osGetenv("ALLSTAR_NUM_WORKERS")
+	nw, err := strconv.Atoi(nws)
+	if err == nil {
+		NumWorkers = nw
+	} else {
+		NumWorkers = setNumWorkers
+	}
 }

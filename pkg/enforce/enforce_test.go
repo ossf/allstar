@@ -26,7 +26,9 @@ import (
 	"github.com/contentful/allstar/pkg/config/operator"
 	"github.com/contentful/allstar/pkg/policydef"
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v59/github"
+	"github.com/ossf/allstar/pkg/config/operator"
+	"github.com/ossf/allstar/pkg/policydef"
 )
 
 var policy1Results policyRepoResults
@@ -89,7 +91,7 @@ func (m MockGhClients) Get(i int64) (*github.Client, error) {
 	return github.NewClient(&http.Client{}), nil
 }
 
-func (m MockGhClients) LogCacheSize() {}
+func (m MockGhClients) Free(i int64) {}
 
 func TestRunPolicies(t *testing.T) {
 	policiesGetPolicies = func() []policydef.Policy {

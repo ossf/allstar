@@ -19,10 +19,10 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/contentful/allstar/pkg/config"
-	"github.com/contentful/allstar/pkg/scorecard"
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v59/github"
+	"github.com/ossf/allstar/pkg/config"
+	"github.com/ossf/allstar/pkg/scorecard"
 	"github.com/ossf/scorecard/v4/checker"
 )
 

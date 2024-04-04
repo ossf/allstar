@@ -18,9 +18,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/contentful/allstar/pkg/config"
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v59/github"
+	"github.com/ossf/allstar/pkg/config"
 )
 
 func TestConfigPrecedence(t *testing.T) {

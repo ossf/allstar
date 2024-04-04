@@ -21,9 +21,9 @@ import (
 	"net/http"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
-	"github.com/contentful/allstar/pkg/config/operator"
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v59/github"
 	"github.com/gregjones/httpcache"
+	"github.com/ossf/allstar/pkg/config/operator"
 	"gocloud.dev/runtimevar"
 	_ "gocloud.dev/runtimevar/awssecretsmanager"
 	_ "gocloud.dev/runtimevar/filevar"
@@ -49,7 +49,7 @@ func init() {
 
 type GhClientsInterface interface {
 	Get(i int64) (*github.Client, error)
-	LogCacheSize()
+	Free(i int64)
 }
 
 // GHClients stores clients per-installation for re-use throughout a process.
@@ -57,7 +57,6 @@ type GHClients struct {
 	clients map[int64]*github.Client
 	tr      http.RoundTripper
 	key     []byte
-	cache   *memoryCache
 }
 
 // NewGHClients returns a new GHClients. The provided RoundTripper will be
@@ -71,8 +70,11 @@ func NewGHClients(ctx context.Context, t http.RoundTripper) (*GHClients, error) 
 		clients: make(map[int64]*github.Client),
 		tr:      t,
 		key:     key,
-		cache:   newMemoryCache(),
 	}, nil
+}
+
+func (g *GHClients) Free(i int64) {
+	delete(g.clients, i)
 }
 
 // Get gets the client for installation id i, If i is 0 it gets the client for
@@ -85,7 +87,7 @@ func (g *GHClients) Get(i int64) (*github.Client, error) {
 
 	ctr := &httpcache.Transport{
 		Transport:           g.tr,
-		Cache:               g.cache,
+		Cache:               newMemoryCache(),
 		MarkCachedResponses: true,
 	}
 
@@ -101,10 +103,6 @@ func (g *GHClients) Get(i int64) (*github.Client, error) {
 	}
 	g.clients[i] = github.NewClient(&http.Client{Transport: tr})
 	return g.clients[i], nil
-}
-
-func (g *GHClients) LogCacheSize() {
-	g.cache.LogCacheSize()
 }
 
 func getKeyFromSecretReal(ctx context.Context, keySecretVal string) ([]byte, error) {
