@@ -12,9 +12,11 @@ Conduct.](https://openssf.org/community/code-of-conduct/)
 * When contributing large features, upate [whats-new.md](whats-new.md)
 * All git commits must have [DCO](https://wiki.linuxfoundation.org/dco)
 
-## Contribitor Ladder
+## Contributor Ladder
 
-[contributor-ladder.md](contributor-ladder.md)
+Allstar follows the [OpenSSF Scorecard contributor ladder](https://github.com/ossf/scorecard/blob/main/CONTRIBUTOR_LADDER.md).
+
+Details on the previous Allstar contributor ladder can be found [here](/contributor-ladder.md).
 
 ## Community
 
