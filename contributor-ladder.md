@@ -4,6 +4,8 @@
 
 Contributors to Allstar are documented in [MAINTAINERS.md](/MAINTAINERS.md).
 
+Appeals will be discussed as an agenda item in the [OpenSSF Scorecard project meetings](https://github.com/ossf/scorecard#connect-with-the-scorecard-community).
+
 ## Changes
 
 This section briefly details key differences between the OpenSSF Scorecard contributor ladder and the legacy Allstar contributor ladder.

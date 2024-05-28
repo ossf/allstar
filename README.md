@@ -54,9 +54,7 @@ that affect the security of your projects.  You can choose which security
 policies to monitor at both the organization and repository level, and how to
 handle policy violations.  You can also develop or contribute new policies.
 
-Allstar is developed under the [OpenSSF](https://openssf.org/) organization, as
-a part of the [Securing Critical Projects Working
-Group](https://github.com/ossf/wg-securing-critical-projects).
+Allstar is developed as a part of the [OpenSSF Scorecard](https://github.com/ossf/scorecard) project.
 
 ## [What's new with Allstar](whats-new.md)
 
