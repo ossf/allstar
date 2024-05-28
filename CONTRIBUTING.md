@@ -20,19 +20,11 @@ Details on the previous Allstar contributor ladder can be found [here](/contribu
 
 ## Community
 
-Allstar is a project under the [OpenSSF](https://openssf.org/)
-[Securing Critical
-Projects](https://github.com/ossf/wg-securing-critical-projects)
-Working Group ([Mailing
-List](https://lists.openssf.org/g/openssf-wg-securing-crit-prjs)).
+Allstar is a part of the [OpenSSF Scorecard](https://github.com/ossf/scorecard) project.
 
-Allstar [Slack Channel](https://openssf.slack.com/#allstar) for
-discussion.
+We're hanging out in [#allstar](https://openssf.slack.com/archives/C02UQ2RL0HM) on the OpenSSF Slack workspace.
 
-Bi-weekly meetings are Thursdays, 1-2pm, Pacific time. See the
-[OpenSSF
-Calendar](https://calendar.google.com/calendar/u/0?cid=czYzdm9lZmhwNWk5cGZsdGI1cTY3bmdwZXNAZ3JvdXAuY2FsZW5kYXIuZ29vZ2xlLmNvbQ)
-for the invite.
+Meetings and additional community details are [here](https://github.com/ossf/scorecard#connect-with-the-scorecard-community).
 
 ## Development
 
