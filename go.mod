@@ -13,7 +13,7 @@ require (
 	github.com/google/go-github/v50 v50.2.0
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79
 	github.com/ossf/scorecard/v4 v4.10.5
-	github.com/rhysd/actionlint v1.7.0
+	github.com/rhysd/actionlint v1.7.1
 	github.com/rs/zerolog v1.33.0
 	github.com/shurcooL/githubv4 v0.0.0-20210725200734-83ba7b4c9228
 	gocloud.dev v0.37.0
@@ -58,7 +58,7 @@ require (
 	github.com/docker/docker v25.0.0+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
-	github.com/fatih/color v1.16.0 // indirect
+	github.com/fatih/color v1.17.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/frankban/quicktest v1.14.5 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
