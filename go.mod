@@ -6,7 +6,7 @@ toolchain go1.21.4
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
-	github.com/bradleyfalzon/ghinstallation/v2 v2.10.0
+	github.com/bradleyfalzon/ghinstallation/v2 v2.11.0
 	github.com/evanphx/json-patch v5.9.0+incompatible
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-cmp v0.6.0
@@ -73,7 +73,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-containerregistry v0.15.2 // indirect
 	github.com/google/go-github/v38 v38.1.0 // indirect
-	github.com/google/go-github/v60 v60.0.0 // indirect
+	github.com/google/go-github/v62 v62.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/osv-scanner v1.2.1-0.20230302232134-592acbc2539b // indirect
 	github.com/google/pprof v0.0.0-20240117000934-35fc243c5815 // indirect
