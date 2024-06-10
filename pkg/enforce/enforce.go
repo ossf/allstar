@@ -22,13 +22,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/config/operator"
-	"github.com/ossf/allstar/pkg/ghclients"
-	"github.com/ossf/allstar/pkg/issue"
-	"github.com/ossf/allstar/pkg/policies"
-	"github.com/ossf/allstar/pkg/policydef"
-	"github.com/ossf/allstar/pkg/scorecard"
+	"github.com/contentful/allstar/pkg/config"
+	"github.com/contentful/allstar/pkg/config/operator"
+	"github.com/contentful/allstar/pkg/ghclients"
+	"github.com/contentful/allstar/pkg/issue"
+	"github.com/contentful/allstar/pkg/policies"
+	"github.com/contentful/allstar/pkg/policydef"
+	"github.com/contentful/allstar/pkg/scorecard"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/google/go-github/v59/github"
@@ -294,7 +294,13 @@ func getAppInstallationReposReal(ctx context.Context, ic *github.Client) ([]*git
 		if err != nil {
 			break
 		}
-		repos = append(repos, rs.Repositories...)
+		for _, repo := range rs.Repositories {
+			if !repo.GetArchived() {
+				repos = append(repos, repo)
+				continue
+			}
+			continue
+		}
 		if resp.NextPage == 0 {
 			break
 		}

@@ -25,9 +25,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/ossf/allstar/pkg/enforce"
-	"github.com/ossf/allstar/pkg/ghclients"
-	"github.com/ossf/allstar/pkg/policies"
+	"github.com/contentful/allstar/pkg/enforce"
+	"github.com/contentful/allstar/pkg/ghclients"
+	"github.com/contentful/allstar/pkg/policies"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
