@@ -1,0 +1,7 @@
+# CODEOWNERS reference: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# These owners will be the default owners for everything in
+# the repo. Unless a later match takes precedence,
+# the following users/teams will be requested for
+# review when someone opens a pull request.
+* @ossf/allstar-maintainers
