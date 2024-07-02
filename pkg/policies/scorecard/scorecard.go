@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package scorecard implements the generic Security Scorecards policy
+// Package scorecard implements the generic OpenSSF Scorecard policy
 package scorecard
 
 import (
@@ -31,7 +31,7 @@ import (
 )
 
 const configFile = "scorecard.yaml"
-const polName = "Security Scorecards"
+const polName = "OpenSSF Scorecard"
 
 // OrgConfig is the org-level config definition for this policy.
 type OrgConfig struct {
@@ -42,11 +42,12 @@ type OrgConfig struct {
 	// Action defines which action to take, default log, other: issue...
 	Action string `json:"action"`
 
-	// Checks is a list of check names to run from Security Scorecards. These
-	// must match the name that the check uses in it's call to
-	// "registerCheck". See the check code for each name:
-	// https://github.com/ossf/scorecard/tree/main/checks For example, the name
-	// for the Signed Releases check is "Signed-Releases".
+	// Checks is a list of check names to run from OpenSSF Scorecard. These
+	// must match the name that the check uses in its call to "registerCheck".
+	// For example, the name for the Signed Releases check is "Signed-Releases".
+	//
+	// See the checks code for each name:
+	// https://github.com/ossf/scorecard/tree/main/checks
 	Checks []string `json:"checks"`
 
 	// Threshold is the score threshold that checks must meet to pass the
@@ -196,10 +197,10 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 		if res.Score < mc.Threshold && res.Score != checker.InconclusiveResultScore {
 			pass = false
 			if notify == "" {
-				notify = `Project is out of compliance with Security Scorecards policy
+				notify = `Project is out of compliance with OpenSSF Scorecard policy.
 
 **Rule Description**
-This is a generic passthrough policy that runs the configured checks from Security Scorecards. Please see the [Security Scorecards Documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md) for more information on each check.
+This is a generic passthrough policy that runs the configured checks from OpenSSF Scorecard. Please see the [OpenSSF Scorecard documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md) for more information on each check.
 The score was %v, and the passing threshold is %v.
 `
 				notify = fmt.Sprintf(notify, res.Score, mc.Threshold)
@@ -207,7 +208,7 @@ The score was %v, and the passing threshold is %v.
 			if len(logs) > 10 {
 				notify += fmt.Sprintf(
 					"**First 10 Results from policy: %v : %v**\n\n%v"+
-						"- Run a Scorecards scan to see full list.\n\n",
+						"- Run a Scorecard scan to see full list.\n\n",
 					res.Name, res.Reason, listJoin(logs[:10]))
 			} else {
 				notify += fmt.Sprintf("**Results from policy: %v : %v**\n\n%v\n",

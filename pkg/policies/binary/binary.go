@@ -159,7 +159,7 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		notify = fmt.Sprintf(`Project is out of compliance with Binary Artifacts policy: %v
 
 **Rule Description**
-Binary Artifacts are an increased security risk in your repository. Binary artifacts cannot be reviewed, allowing the introduction of possibly obsolete or maliciously subverted executables. For more information see the [Security Scorecards Documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md#binary-artifacts) for Binary Artifacts.
+Binary artifacts are an increased security risk in your repository. Binary artifacts cannot be reviewed, allowing the introduction of possibly obsolete or maliciously subverted executables. For more information, see the [OpenSSF Scorecard documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md#binary-artifacts) on binary artifacts.
 
 **Remediation Steps**
 To remediate, remove the generated executable artifacts from the repository.
@@ -169,13 +169,13 @@ To remediate, remove the generated executable artifacts from the repository.
 		if len(logs) > 10 {
 			notify += fmt.Sprintf(
 				"**First 10 Artifacts Found**\n\n%v"+
-					"- Run a Scorecards scan to see full list.\n\n",
+					"- Run a Scorecard scan to see full list.\n\n",
 				listJoin(logs[:10]))
 		} else {
 			notify += fmt.Sprintf("**Artifacts Found**\n\n%v\n", listJoin(logs))
 		}
 		notify += `**Additional Information**
-This policy is drawn from [Security Scorecards](https://github.com/ossf/scorecard/), which is a tool that scores a project's adherence to security best practices. You may wish to run a Scorecards scan directly on this repository for more details.`
+This policy uses [OpenSSF Scorecard](https://github.com/ossf/scorecard/). You may wish to run a Scorecard scan directly on this repository for more details.`
 	}
 
 	return &policydef.Result{
