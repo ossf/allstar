@@ -142,24 +142,22 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 		notify = fmt.Sprintf(`Project is out of compliance with Dangerous Workflow policy: %v
 
 **Rule Description**
-Dangerous Workflows are GitHub Action workflows that exhibit dangerous patterns that could render them vulnerable to attack. A vulnerable workflow is susceptible to leaking repository secrets, or allowing an attacker write access using the GITHUB_TOKEN. For more information about the particular patterns that are detected see the [Security Scorecards Documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md#dangerous-workflow) for Dangerous Workflow.
+Dangerous workflows are GitHub Action workflows that exhibit dangerous patterns that could render them vulnerable to attack. A vulnerable workflow is susceptible to leaking repository secrets, or allowing an attacker write access using the GITHUB_TOKEN. For more information about the particular patterns that are detected, see the [OpenSSF Scorecard documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md#dangerous-workflow) on dangerous workflows.
 
 **Remediation Steps**
 Avoid the dangerous workflow patterns. See this [post](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/) for information on avoiding untrusted code checkouts. See this [document](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#understanding-the-risk-of-script-injections) for information on avoiding and mitigating the risk of script injections.
-
-
 `,
 			res.Reason)
 		if len(logs) > 10 {
 			notify += fmt.Sprintf(
 				"**First 10 Dangerous Patterns Found**\n\n%v"+
-					"- Run a Scorecards scan to see full list.\n\n",
+					"- Run a Scorecard scan to see full list.\n\n",
 				listJoin(logs[:10]))
 		} else {
 			notify += fmt.Sprintf("**Dangerous Patterns Found**\n\n%v\n", listJoin(logs))
 		}
 		notify += `**Additional Information**
-This policy is drawn from [Security Scorecards](https://github.com/ossf/scorecard/), which is a tool that scores a project's adherence to security best practices. You may wish to run a Scorecards scan directly on this repository for more details.`
+This policy uses [OpenSSF Scorecard](https://github.com/ossf/scorecard/). You may wish to run a Scorecard scan directly on this repository for more details.`
 	}
 
 	return &policydef.Result{
