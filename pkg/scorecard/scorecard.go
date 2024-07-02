@@ -25,8 +25,8 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/ossf/scorecard/v4/clients"
-	"github.com/ossf/scorecard/v4/clients/githubrepo"
+	"github.com/ossf/scorecard/v5/clients"
+	"github.com/ossf/scorecard/v5/clients/githubrepo"
 )
 
 // Type ScClient is returned from Get. It contains the clients needed to call
