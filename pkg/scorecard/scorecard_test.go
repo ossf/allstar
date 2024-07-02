@@ -21,7 +21,7 @@ import (
 	"testing"
 	time "time"
 
-	"github.com/ossf/scorecard/v4/clients"
+	"github.com/ossf/scorecard/v5/clients"
 )
 
 var initRepo func(clients.Repo, string, int) error
