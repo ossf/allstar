@@ -1,6 +1,7 @@
 module github.com/ossf/allstar
 
-go 1.21.8
+go 1.21.12
+
 toolchain go1.22.5
 
 require (
