@@ -42,6 +42,9 @@ const setKeySecret = "gcpsecretmanager://projects/allstar-ossf/secrets/allstar-p
 
 var KeySecret string
 
+// GitHubEnterpriseUrl allows to configure the usage a GitHub enterprise instance
+var GitHubEnterpriseUrl string
+
 // OrgConfigRepo is the name of the expected org-level repo to contain config.
 const OrgConfigRepo = ".allstar"
 
@@ -125,6 +128,8 @@ func setVars() {
 	} else {
 		KeySecret = setKeySecret
 	}
+
+	GitHubEnterpriseUrl = osGetenv("ALLSTAR_GHE_URL")
 
 	doNothingOnOptOutStr := osGetenv("DO_NOTHING_ON_OPT_OUT")
 	doNothingOnOptOut, err := strconv.ParseBool(doNothingOnOptOutStr)

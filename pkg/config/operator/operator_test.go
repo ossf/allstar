@@ -27,6 +27,7 @@ func TestSetVars(t *testing.T) {
 		Name                  string
 		AppID                 string
 		KeySecret             string
+		GitHubEnterpriseUrl   string
 		NoticePingDurationHrs string
 		PrivateKey            string
 		DoNothingOnOptOut     string
@@ -42,6 +43,7 @@ func TestSetVars(t *testing.T) {
 			Name:                  "NoVars",
 			AppID:                 "",
 			KeySecret:             "",
+			GitHubEnterpriseUrl:   "",
 			DoNothingOnOptOut:     "",
 			ExpAppID:              setAppID,
 			ExpKeySecret:          setKeySecret,
@@ -53,6 +55,7 @@ func TestSetVars(t *testing.T) {
 			Name:                  "SetVars",
 			AppID:                 "123",
 			KeySecret:             "asdf",
+			GitHubEnterpriseUrl:   "https://ghe.example.com",
 			DoNothingOnOptOut:     "true",
 			ExpAppID:              123,
 			ExpKeySecret:          "asdf",
@@ -169,6 +172,9 @@ func TestSetVars(t *testing.T) {
 				if in == "KEY_SECRET" {
 					return test.KeySecret
 				}
+				if in == "ALLSTAR_GHE_URL" {
+					return test.GitHubEnterpriseUrl
+				}
 				if in == "DO_NOTHING_ON_OPT_OUT" {
 					return test.DoNothingOnOptOut
 				}
@@ -188,6 +194,9 @@ func TestSetVars(t *testing.T) {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 			if diff := cmp.Diff(test.ExpKeySecret, KeySecret); diff != "" {
+				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+			}
+			if diff := cmp.Diff(test.GitHubEnterpriseUrl, GitHubEnterpriseUrl); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 			if diff := cmp.Diff(test.ExpDoNothingOnOptOut, DoNothingOnOptOut); diff != "" {

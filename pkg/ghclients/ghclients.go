@@ -98,10 +98,16 @@ func (g *GHClients) Get(i int64) (*github.Client, error) {
 	} else {
 		tr, err = ghinstallationNew(ctr, operator.AppID, i, g.key)
 	}
+
+	c := github.NewClient(&http.Client{Transport: tr})
+	if operator.GitHubEnterpriseUrl != "" {
+		c, err = c.WithEnterpriseURLs(operator.GitHubEnterpriseUrl, operator.GitHubEnterpriseUrl)
+	}
 	if err != nil {
 		return nil, err
 	}
-	g.clients[i] = github.NewClient(&http.Client{Transport: tr})
+
+	g.clients[i] = c
 	return g.clients[i], nil
 }
 
