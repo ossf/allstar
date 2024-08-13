@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/ossf/allstar/pkg/config"
+	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/policydef"
 
 	"github.com/google/go-github/v59/github"
@@ -97,7 +98,13 @@ func (s Security) Name() string {
 // configuration stored in the org/repo, implementing policydef.Policy.Check()
 func (s Security) Check(ctx context.Context, c *github.Client, owner,
 	repo string) (*policydef.Result, error) {
-	v4c := githubv4.NewClient(c.Client())
+
+	var v4c v4client
+	if operator.GitHubEnterpriseUrl == "" {
+		v4c = githubv4.NewClient(c.Client())
+	} else {
+		v4c = githubv4.NewEnterpriseClient(operator.GitHubEnterpriseUrl, c.Client())
+	}
 	return check(ctx, c, v4c, owner, repo)
 }
 

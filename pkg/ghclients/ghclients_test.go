@@ -23,6 +23,7 @@ import (
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-cmp/cmp"
+	"github.com/ossf/allstar/pkg/config/operator"
 )
 
 func TestGet(t *testing.T) {
@@ -128,6 +129,61 @@ func TestGetKey(t *testing.T) {
 			}
 			if diff := cmp.Diff([]byte(test.ExpKey), ghc.key); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestGitHubEnterpriseClient(t *testing.T) {
+	tests := []struct {
+		Name                string
+		GitHubEnterpriseUrl string
+		installId           int64
+		expectedBaseUrl     string
+		expectedUploadUrl   string
+	}{
+		{
+			Name:                "ZeroAppId",
+			GitHubEnterpriseUrl: "https://ghezero.example.com",
+			installId:           0,
+			expectedBaseUrl:     "https://ghezero.example.com/api/v3/",
+			expectedUploadUrl:   "https://ghezero.example.com/api/uploads/",
+		},
+		{
+			Name:                "NonZeroAppId",
+			GitHubEnterpriseUrl: "https://ghenonzero.example.com",
+			installId:           123,
+			expectedBaseUrl:     "https://ghenonzero.example.com/api/v3/",
+			expectedUploadUrl:   "https://ghenonzero.example.com/api/uploads/",
+		},
+		{
+			Name:                "NoGitHubEnterpriseUrl",
+			GitHubEnterpriseUrl: "",
+			installId:           0,
+			expectedBaseUrl:     "https://api.github.com/",
+			expectedUploadUrl:   "https://uploads.github.com/",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			operator.GitHubEnterpriseUrl = test.GitHubEnterpriseUrl
+
+			ghc, err := NewGHClients(context.Background(), http.DefaultTransport)
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			c, err := ghc.Get(test.installId)
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			if c.BaseURL.String() != test.expectedBaseUrl {
+				t.Errorf("Did not read GitHub instance URL from operator config.\nExpected %s, got %s", test.expectedBaseUrl, c.BaseURL.String())
+			}
+			if c.UploadURL.String() != test.expectedUploadUrl {
+				t.Errorf("Did not read GitHub upload URL from operator config\nExpected %s, got %s", test.expectedUploadUrl, c.UploadURL.String())
 			}
 		})
 	}

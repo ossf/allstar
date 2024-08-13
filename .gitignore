@@ -2,3 +2,4 @@ cmd/allstar/allstar
 *.pem
 .vscode
 allstar.ref
+.idea/

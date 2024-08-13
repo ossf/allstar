@@ -55,12 +55,14 @@ conditions on enforcement actions, ex: pinging an issue twice at the same time.
 ## Configuration via Environment Variables
 
 Allstar supports various operator configuration options which can be set via environment variables:
-|Name|Description|Default|
-|----|----|----|
-|APP_ID|The application ID of the created GitHub App.||
-|PRIVATE_KEY|The raw value of the private key for the GitHub App. KEY_SECRET must be set to "direct".||
-|KEY_SECRET|The name of a secret containing a private key.||
-|DO_NOTHING_ON_OPT_OUT|Boolean flag which defines if allstar should do nothing and skip the corresponding checks when a repository is opted out.|false|
-|ALLSTAR_LOG_LEVEL|The minimum logging level that allstar should use when emitting logs. Acceptable values are: panic ; fatal ; error ; warn ; info ; debug ; trace|info|
-|NOTICE_PING_DURATION_HOURS|The duration (in hours) to wait between pinging notice actions, such as updating a GitHub issue.|24|
+
+| Name                       | Description                                                                                                                                      | Default |
+|----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|---------|
+| APP_ID                     | The application ID of the created GitHub App.                                                                                                    ||
+| PRIVATE_KEY                | The raw value of the private key for the GitHub App. KEY_SECRET must be set to "direct".                                                         ||
+| KEY_SECRET                 | The name of a secret containing a private key.                                                                                                   ||
+| ALLSTAR_GHE_URL            | The URL of the GitHub Enterprise instance to use. Leave empty to use github.com                                                                  ||
+| DO_NOTHING_ON_OPT_OUT      | Boolean flag which defines if allstar should do nothing and skip the corresponding checks when a repository is opted out.                        | false   |
+| ALLSTAR_LOG_LEVEL          | The minimum logging level that allstar should use when emitting logs. Acceptable values are: panic ; fatal ; error ; warn ; info ; debug ; trace | info    |
+| NOTICE_PING_DURATION_HOURS | The duration (in hours) to wait between pinging notice actions, such as updating a GitHub issue.                                                 | 24      |
 
