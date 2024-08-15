@@ -103,7 +103,7 @@ func (s Security) Check(ctx context.Context, c *github.Client, owner,
 	if operator.GitHubEnterpriseUrl == "" {
 		v4c = githubv4.NewClient(c.Client())
 	} else {
-		v4c = githubv4.NewEnterpriseClient(operator.GitHubEnterpriseUrl, c.Client())
+		v4c = githubv4.NewEnterpriseClient(operator.GitHubEnterpriseUrl+"/api/graphql", c.Client())
 	}
 	return check(ctx, c, v4c, owner, repo)
 }
