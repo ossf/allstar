@@ -66,3 +66,16 @@ Allstar supports various operator configuration options which can be set via env
 | ALLSTAR_LOG_LEVEL          | The minimum logging level that allstar should use when emitting logs. Acceptable values are: panic ; fatal ; error ; warn ; info ; debug ; trace | info    |
 | NOTICE_PING_DURATION_HOURS | The duration (in hours) to wait between pinging notice actions, such as updating a GitHub issue.                                                 | 24      |
 
+## Self-hosted GitHub Enterprise specifics
+
+In case you want to operate Allstar with a self-hosted GitHub Enterprise instance, you need to set the `ALLSTAR_GHE_URL` environment variable to the URL of your GitHub Enterprise instance URL.
+The different API endpoints for API and upload are appended automatically.
+
+Example: 
+
+Given, your GHE instance URL is "https://my-ghe.example.com", you need to set the following environment variables:
+
+```shell
+export ALLSTAR_GHE_URL="https://my-ghe.example.com"
+export GH_HOST="my-ghe.example.com"  # This is somehow used within a dependency and (as of now) is unclear how to set it programmatically. 
+```
