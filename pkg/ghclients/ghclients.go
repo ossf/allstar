@@ -19,6 +19,7 @@ package ghclients
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v59/github"
@@ -92,23 +93,43 @@ func (g *GHClients) Get(i int64) (*github.Client, error) {
 	}
 
 	var tr http.RoundTripper
-	var err error
 	if i == 0 {
-		tr, err = ghinstallationNewAppsTransport(ctr, operator.AppID, g.key)
+		appTransport, _ := ghinstallationNewAppsTransport(ctr, operator.AppID, g.key)
+		// other than clien.WithEnterpriseUrls, setting the BaseUrl plainly, we need to ensure the /api/v3 ending
+		appTransport.BaseURL = fullEnterpriseApiUrl(operator.GitHubEnterpriseUrl)
+		tr = appTransport
 	} else {
-		tr, err = ghinstallationNew(ctr, operator.AppID, i, g.key)
+		ghiTransport, _ := ghinstallationNew(ctr, operator.AppID, i, g.key)
+		if operator.GitHubEnterpriseUrl != "" {
+			ghiTransport.BaseURL = fullEnterpriseApiUrl(operator.GitHubEnterpriseUrl)
+		}
+		tr = ghiTransport
+
 	}
 
 	c := github.NewClient(&http.Client{Transport: tr})
 	if operator.GitHubEnterpriseUrl != "" {
-		c, err = c.WithEnterpriseURLs(operator.GitHubEnterpriseUrl, operator.GitHubEnterpriseUrl)
-	}
-	if err != nil {
-		return nil, err
+		newC, err := c.WithEnterpriseURLs(operator.GitHubEnterpriseUrl, operator.GitHubEnterpriseUrl)
+		if err != nil {
+			return nil, err
+		}
+		c = newC
 	}
 
 	g.clients[i] = c
 	return g.clients[i], nil
+}
+
+// fullEnterpriseApiUrl ensures the base url is in the correct format for GitHub Enterprise usage
+func fullEnterpriseApiUrl(baseUrl string) string {
+	if !strings.HasSuffix(baseUrl, "/") {
+		baseUrl += "/"
+	}
+	if !strings.HasSuffix(baseUrl, "api/v3/") {
+		baseUrl += "api/v3/"
+	}
+
+	return baseUrl
 }
 
 func getKeyFromSecretReal(ctx context.Context, keySecretVal string) ([]byte, error) {
