@@ -77,5 +77,5 @@ Given, your GHE instance URL is "https://my-ghe.example.com", you need to set th
 
 ```shell
 export ALLSTAR_GHE_URL="https://my-ghe.example.com"
-export GH_HOST="my-ghe.example.com"  # This is somehow used within a dependency and (as of now) is unclear how to set it programmatically. 
+export GH_HOST="my-ghe.example.com"  # This is used by the Scorecard dependency. Might result in errors if not set. 
 ```
