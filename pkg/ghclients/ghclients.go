@@ -94,12 +94,20 @@ func (g *GHClients) Get(i int64) (*github.Client, error) {
 
 	var tr http.RoundTripper
 	if i == 0 {
-		appTransport, _ := ghinstallationNewAppsTransport(ctr, operator.AppID, g.key)
+		appTransport, err := ghinstallationNewAppsTransport(ctr, operator.AppID, g.key)
+		if err != nil {
+			return nil, err
+		}
 		// other than clien.WithEnterpriseUrls, setting the BaseUrl plainly, we need to ensure the /api/v3 ending
-		appTransport.BaseURL = fullEnterpriseApiUrl(operator.GitHubEnterpriseUrl)
+		if operator.GitHubEnterpriseUrl != "" {
+			appTransport.BaseURL = fullEnterpriseApiUrl(operator.GitHubEnterpriseUrl)
+		}
 		tr = appTransport
 	} else {
-		ghiTransport, _ := ghinstallationNew(ctr, operator.AppID, i, g.key)
+		ghiTransport, err := ghinstallationNew(ctr, operator.AppID, i, g.key)
+		if err != nil {
+			return nil, err
+		}
 		if operator.GitHubEnterpriseUrl != "" {
 			ghiTransport.BaseURL = fullEnterpriseApiUrl(operator.GitHubEnterpriseUrl)
 		}
