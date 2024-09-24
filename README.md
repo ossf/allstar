@@ -96,7 +96,9 @@ Opt-Out strategies.
    like Allstar to run on. If you do not specify any repositories, Allstar will
    not run despite being installed. Choose the Opt In strategy if you want to enforce
    policies on only a small number of your total repositories, or want to try
-   out Allstar on a single repository before enabling it on more. 
+   out Allstar on a single repository before enabling it on more. Since the
+   v4.3 release, globs are supported to easily add multiple repositories with
+   a similar name.
 
 -  The Opt Out strategy (recommended) enables Allstar on all repositories
    and allows you to manually select the repositories to opt out of Allstar
@@ -104,6 +106,8 @@ Opt-Out strategies.
    private repos. Choose this option if you want to run Allstar on all
    repositories in an organization, or want to opt out only a small number of
    repositories or specific type (i.e., public vs. private) of repository.
+   Since the v4.3 release, globs are supported to easily add multiple
+   repositories with a similar name.
 
 <table>
 <thead>
