@@ -206,10 +206,43 @@ func TestIsEnabled(t *testing.T) {
 			Expect:        true,
 		},
 		{
+			Name: "OptInOrg",
+			Org: OrgOptConfig{
+				OptOutStrategy: false,
+				OptInRepos:     []string{"this*"},
+			},
+			OrgRepo:       RepoOptConfig{},
+			Repo:          RepoOptConfig{},
+			IsPrivateRepo: false,
+			Expect:        true,
+		},
+		{
 			Name: "NoOptInOrg",
 			Org: OrgOptConfig{
 				OptOutStrategy: false,
 				OptInRepos:     []string{"otherrepo"},
+			},
+			OrgRepo:       RepoOptConfig{},
+			Repo:          RepoOptConfig{},
+			IsPrivateRepo: false,
+			Expect:        false,
+		},
+		{
+			Name: "NoOptInOrg",
+			Org: OrgOptConfig{
+				OptOutStrategy: false,
+				OptInRepos:     []string{"other*"},
+			},
+			OrgRepo:       RepoOptConfig{},
+			Repo:          RepoOptConfig{},
+			IsPrivateRepo: false,
+			Expect:        false,
+		},
+		{
+			Name: "NoOptInOrg",
+			Org: OrgOptConfig{
+				OptOutStrategy: false,
+				OptInRepos:     []string{"this*xyz"},
 			},
 			OrgRepo:       RepoOptConfig{},
 			Repo:          RepoOptConfig{},

@@ -22,6 +22,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/gobwas/glob"
 	"github.com/ossf/allstar/pkg/config/operator"
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
@@ -131,6 +132,8 @@ type ScheduleConfig struct {
 	Days []string `json:"days"`
 }
 
+type globCache map[string]glob.Glob
+
 const githubConfRepo = ".github"
 
 // ConfigLevel is an enum to indicate which level config to retrieve for the
@@ -154,6 +157,8 @@ const (
 var walkGC func(context.Context, repositories, string, string, string,
 	*github.RepositoryContentGetOptions) (*github.RepositoryContent,
 	[]*github.RepositoryContent, *github.Response, error)
+
+var gc = globCache{}
 
 func init() {
 	walkGC = walkGetContents
@@ -298,7 +303,7 @@ func isEnabled(ctx context.Context, o OrgOptConfig, orc, r RepoOptConfig, rep re
 
 	if o.OptOutStrategy {
 		enabled = true
-		if contains(o.OptOutRepos, repo) {
+		if matches(o.OptOutRepos, repo, gc) {
 			enabled = false
 		}
 		if o.OptOutPrivateRepos && gr.GetPrivate() {
@@ -321,7 +326,7 @@ func isEnabled(ctx context.Context, o OrgOptConfig, orc, r RepoOptConfig, rep re
 		}
 	} else {
 		enabled = false
-		if contains(o.OptInRepos, repo) {
+		if matches(o.OptInRepos, repo, gc) {
 			enabled = true
 		}
 		if orc.OptIn {
@@ -404,11 +409,32 @@ func getAppConfigs(ctx context.Context, r repositories, owner, repo string) (*Or
 	return oc, orc, rc
 }
 
-func contains(s []string, e string) bool {
+func matches(s []string, e string, gc globCache) bool {
 	for _, v := range s {
-		if v == e {
+		g, err := gc.compileGlob(v)
+		if err != nil {
+			log.Warn().
+				Str("repo", e).
+				Str("glob", v).
+				Err(err).
+				Msg("Unexpected error compiling the glob.")
+		} else if g.Match(e) {
 			return true
 		}
+
 	}
 	return false
+}
+
+// compileGlob returns cached glob if present, otherwise attempts glob.Compile.
+func (g globCache) compileGlob(s string) (glob.Glob, error) {
+	if glob, ok := g[s]; ok {
+		return glob, nil
+	}
+	c, err := glob.Compile(s)
+	if err != nil {
+		return nil, err
+	}
+	g[s] = c
+	return c, nil
 }
