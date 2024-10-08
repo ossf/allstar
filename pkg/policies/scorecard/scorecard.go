@@ -20,14 +20,16 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/google/go-github/v59/github"
+	"github.com/ossf/scorecard/v5/checker"
+	"github.com/ossf/scorecard/v5/checks"
+	"github.com/ossf/scorecard/v5/clients"
+	sc "github.com/ossf/scorecard/v5/pkg/scorecard"
+	"github.com/rs/zerolog/log"
+
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
 	"github.com/ossf/allstar/pkg/scorecard"
-	"github.com/ossf/scorecard/v5/checker"
-	"github.com/ossf/scorecard/v5/checks"
-
-	"github.com/google/go-github/v59/github"
-	"github.com/rs/zerolog/log"
 )
 
 const configFile = "scorecard.yaml"
@@ -86,14 +88,15 @@ type details struct {
 var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
 var configIsEnabled func(context.Context, config.OrgOptConfig, config.RepoOptConfig, config.RepoOptConfig, *github.Client, string, string) (bool, error)
 var scorecardGet func(context.Context, string, http.RoundTripper) (*scorecard.ScClient, error)
-
 var checksAllChecks checker.CheckNameToFnMap
+var scRun func(context.Context, clients.Repo, ...sc.Option) (sc.Result, error)
 
 func init() {
 	configFetchConfig = config.FetchConfig
 	configIsEnabled = config.IsEnabled
 	checksAllChecks = checks.GetAll()
 	scorecardGet = scorecard.Get
+	scRun = sc.Run
 }
 
 // Scorecard is the Security Scorecard policy object, implements
@@ -149,20 +152,7 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 
 	for _, n := range mc.Checks {
 
-		if n == checks.CheckVulnerabilities {
-			// FIXME Rolling back support for Vulns, needs more testing.
-			continue
-		}
-
-		l := checker.NewLogger()
-		cr := &checker.CheckRequest{
-			Ctx:        ctx,
-			RepoClient: scc.ScRepoClient,
-			Repo:       scc.ScRepo,
-			Dlogger:    l,
-		}
-
-		check, ok := checksAllChecks[n]
+		_, ok := checksAllChecks[n]
 		if !ok {
 			log.Warn().
 				Str("org", owner).
@@ -173,7 +163,33 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 			break
 		}
 
-		res := check.Fn(cr)
+		// Run each check seperately for now.
+		allRes, err := scRun(ctx, scc.ScRepo,
+			sc.WithRepoClient(scc.ScRepoClient),
+			sc.WithChecks([]string{n}),
+		)
+		if err != nil {
+			log.Warn().
+				Str("org", owner).
+				Str("repo", repo).
+				Str("area", polName).
+				Str("check", n).
+				Err(err).
+				Msg("Scorecard check errored.")
+			break
+		}
+		if len(allRes.Checks) != 1 {
+			log.Warn().
+				Str("org", owner).
+				Str("repo", repo).
+				Str("area", polName).
+				Str("check", n).
+				Int("chk_len", len(allRes.Checks)).
+				Msg("Scorecard did not return expected checks.")
+			break
+		}
+		res := allRes.Checks[0]
+
 		if res.Error != nil {
 			// We are not sure that all checks are safe to run inside Allstar, some
 			// might error, and we don't want to abort a whole org enforcement loop
@@ -190,7 +206,7 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 			break
 		}
 
-		logs := convertLogs(l.Flush())
+		logs := convertLogs(res.Details)
 		if len(logs) > 0 {
 			f[n] = logs
 		}

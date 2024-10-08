@@ -20,14 +20,15 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/google/go-github/v59/github"
+	"github.com/ossf/scorecard/v5/checker"
+	"github.com/ossf/scorecard/v5/checks"
+	sc "github.com/ossf/scorecard/v5/pkg/scorecard"
+	"github.com/rs/zerolog/log"
+
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
 	"github.com/ossf/allstar/pkg/scorecard"
-	"github.com/ossf/scorecard/v5/checker"
-	"github.com/ossf/scorecard/v5/checks"
-
-	"github.com/google/go-github/v59/github"
-	"github.com/rs/zerolog/log"
 )
 
 const configFile = "dangerous_workflow.yaml"
@@ -110,15 +111,42 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 		return nil, err
 	}
 
-	l := checker.NewLogger()
-	cr := &checker.CheckRequest{
-		Ctx:        ctx,
-		RepoClient: scc.ScRepoClient,
-		Repo:       scc.ScRepo,
-		Dlogger:    l,
+	allRes, err := sc.Run(ctx, scc.ScRepo,
+		sc.WithRepoClient(scc.ScRepoClient),
+		sc.WithChecks([]string{checks.CheckDangerousWorkflow}),
+	)
+	if err != nil {
+		msg := "Error while running checks.DangerousWorkflow"
+		log.Warn().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("area", polName).
+			Err(err).
+			Msg(msg)
+		return &policydef.Result{
+			Enabled:    enabled,
+			Pass:       true,
+			NotifyText: fmt.Sprintf("%s: %v", msg, err),
+			Details:    details{},
+		}, nil
 	}
+	if len(allRes.Checks) != 1 {
+		msg := "Error while running checks.DangerousWorkflow : did not get expected checks"
+		log.Warn().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("area", polName).
+			Int("chk_len", len(allRes.Checks)).
+			Msg(msg)
+		return &policydef.Result{
+			Enabled:    enabled,
+			Pass:       true,
+			NotifyText: msg,
+			Details:    details{},
+		}, nil
+	}
+	res := allRes.Checks[0]
 
-	res := checks.DangerousWorkflow(cr)
 	if res.Error != nil {
 		msg := "Error while running checks.DangerousWorkflow"
 		log.Warn().
@@ -135,7 +163,7 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 		}, nil
 	}
 
-	logs := convertLogs(l.Flush())
+	logs := convertLogs(res.Details)
 	pass := res.Score >= checker.MaxResultScore || res.Score == checker.InconclusiveResultScore
 	var notify string
 	if !pass {
