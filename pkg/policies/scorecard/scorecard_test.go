@@ -24,6 +24,8 @@ import (
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/scorecard"
 	"github.com/ossf/scorecard/v5/checker"
+	"github.com/ossf/scorecard/v5/clients"
+	sc "github.com/ossf/scorecard/v5/pkg/scorecard"
 )
 
 func TestConfigPrecedence(t *testing.T) {
@@ -196,10 +198,11 @@ func TestCheck(t *testing.T) {
 				return &scorecard.ScClient{}, nil
 			}
 			checksAllChecks = checker.CheckNameToFnMap{}
-			checksAllChecks["test"] = checker.Check{
-				Fn: func(cr *checker.CheckRequest) checker.CheckResult {
-					return test.Result
-				},
+			checksAllChecks["test"] = checker.Check{}
+			scRun = func(context.Context, clients.Repo, ...sc.Option) (sc.Result, error) {
+				return sc.Result{
+					Checks: []checker.CheckResult{test.Result},
+				}, nil
 			}
 			s := NewScorecard()
 			res, err := s.Check(context.Background(), github.NewClient(nil), "", "")
