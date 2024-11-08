@@ -14,7 +14,7 @@
 
 ## Disabling Unwanted Issues
 
--  [Help! I'm getting issues created by Allstar and I don't want them!](#disabling-unwanted-issues-1) 
+-  [Help! I'm getting issues created by Allstar and I don't want them!](#disabling-unwanted-issues-1)
 
 ## Getting Started
 
@@ -59,18 +59,18 @@ Allstar is developed as a part of the [OpenSSF Scorecard](https://github.com/oss
 ## [What's new with Allstar](whats-new.md)
 
 ## Disabling Unwanted Issues
-If you're getting unwanted issues created by Allstar, follow [these directions](opt-out.md) to opt out. 
+If you're getting unwanted issues created by Allstar, follow [these directions](opt-out.md) to opt out.
 
 ## Getting Started
 
 ### Background
 
-Allstar is highly configurable. There are three main levels of controls: 
+Allstar is highly configurable. There are three main levels of controls:
 
-- **Org level**: Organization administrators can choose to enable Allstar on: 
-   -  all repositories in the org; 
-   -  most repositories, except some that are opted out; 
-   -  just a few repositories that are opted in. 
+- **Org level**: Organization administrators can choose to enable Allstar on:
+   -  all repositories in the org;
+   -  most repositories, except some that are opted out;
+   -  just a few repositories that are opted in.
 
 These configurations are done in the organization's `.allstar` repository.
 
@@ -84,13 +84,13 @@ These configurations are done in the organization's `.allstar` repository.
    are enabled on specific repos and which actions Allstar takes when a policy
    is violated. These configurations are done in a policy yaml file in either
    the organization's `.allstar` repository (admins), or the repository's
-   `.allstar` directory (maintainers). 
+   `.allstar` directory (maintainers).
 
-### Org-Level Options 
+### Org-Level Options
 
 Before installing Allstar at the org level, you should decide approximately how many repositories
 you want Allstar to run on. This will help you choose between the Opt-In and
-Opt-Out strategies. 
+Opt-Out strategies.
 
 -  The Opt In strategy allows you to manually add the repositories you'd
    like Allstar to run on. If you do not specify any repositories, Allstar will
@@ -167,13 +167,13 @@ configured at the org level. </td>
 
 Both the Quickstart and Manual Installation options involve installing the Allstar app. You may review the permissions requested. The app asks for read access to most settings and file contents to detect security compliance. It requests write access to issues and checks so that it can create issues and allow the `block` action.
 
-#### Quickstart Installation 
+#### Quickstart Installation
 This installation option will enable Allstar using the
 Opt Out strategy on all repositories in your  organization. All current policies
 will be enabled, and Allstar will alert you of
-policy violations by filing an issue. This is the quickest and easiest way to start using Allstar, and you can still change any configurations later. 
+policy violations by filing an issue. This is the quickest and easiest way to start using Allstar, and you can still change any configurations later.
 
-Effort: very easy 
+Effort: very easy
 
 Steps:
 
@@ -191,7 +191,7 @@ Steps:
     1.  Click "Create repository from template"
 
 That's it! All current Allstar [policies](#policies) are now enabled on all
-your repositories. Allstar will create an issue if a policy is violated. 
+your repositories. Allstar will create an issue if a policy is violated.
 
 To change any configurations, see the [manual installation directions](manual-install.md).
 
@@ -202,12 +202,12 @@ option provides more granular control over configurations right from the start.
 
 Effort: moderate
 
-Steps:   
+Steps:
 1) Install the [Allstar app](https://github.com/apps/allstar-app) (choose "All
 Repositories" under Repository Access,  even if you don't plan to use Allstar on
-all your repositories)  
-2) Follow the [manual installation directions](manual-install.md) to create org-level or 
-repository-level Allstar config files and individual policy files.  
+all your repositories)
+2) Follow the [manual installation directions](manual-install.md) to create org-level or
+repository-level Allstar config files and individual policy files.
 
 ## Policies and Actions
 
@@ -292,6 +292,14 @@ scorecard](https://github.com/ossf/scorecard/#scorecard-checks). Remove the
 binary artifact from the repository to achieve compliance. As the scorecard
 results can be verbose, you may need to run [scorecard
 itself](https://github.com/ossf/scorecard) to see all the detailed information.
+
+### CODEOWNERS
+
+This policy's config file is named `codeowners.yaml`, and the [config
+definitions are
+here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/codeowners#OrgConfig).
+
+This policy checks for the presence of a [`CODEOWNERS` file](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners) on your repositories.
 
 ### Outside Collaborators
 
