@@ -30,10 +30,12 @@ jobs:
       - run: ko publish -B ./cmd/allstar --tags ${{ github.ref_name }} --image-refs allstar.ref
         env:
           KO_DOCKER_REPO: ghcr.io/${{ github.repository_owner }}
+          KO_DEFAULTPLATFORMS: linux/arm64,linux/amd64
       - run: ko publish -B ./cmd/allstar --tags ${{ github.ref_name }}-busybox --image-refs allstar-busybox.ref
         env:
           KO_DOCKER_REPO: ghcr.io/${{ github.repository_owner }}
           KO_DEFAULTBASEIMAGE: cgr.dev/chainguard/busybox
+          KO_DEFAULTPLATFORMS: linux/arm64,linux/amd64
       - run: |
           echo "signing $(cat allstar.ref)"
           cosign sign --yes -a git_sha="$GITHUB_SHA" "$(cat allstar.ref)"
