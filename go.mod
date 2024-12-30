@@ -13,7 +13,7 @@ require (
 	github.com/google/go-github/v59 v59.0.0
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79
 	github.com/ossf/scorecard/v5 v5.0.0
-	github.com/rhysd/actionlint v1.7.4
+	github.com/rhysd/actionlint v1.7.5
 	github.com/rs/zerolog v1.33.0
 	github.com/shurcooL/githubv4 v0.0.0-20210725200734-83ba7b4c9228
 	gocloud.dev v0.40.0
@@ -67,7 +67,7 @@ require (
 	github.com/docker/distribution v2.8.3+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.8.2 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
-	github.com/fatih/color v1.17.0 // indirect
+	github.com/fatih/color v1.18.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
@@ -101,6 +101,7 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mattn/go-runewidth v0.0.16 // indirect
+	github.com/mattn/go-shellwords v1.0.12 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/moby/buildkit v0.15.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
