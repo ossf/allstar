@@ -331,6 +331,8 @@ This policy's config file is named `dangerous_workflow.yaml`, and the [config
 definitions are
 here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/workflow#OrgConfig).
 
+This policy will run against **all** branches, see rationale [here](https://github.com/ossf/allstar/issues/569).
+
 This policy checks the GitHub Actions workflow configuration files
 (`.github/workflows`), for any patterns that match known dangerous
 behavior. See the [OpenSSF Scorecard
