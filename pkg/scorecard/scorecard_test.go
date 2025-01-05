@@ -150,7 +150,7 @@ func TestGetNew(t *testing.T) {
 	close = func() error {
 		return nil
 	}
-	_, _ = Get(context.Background(), "org/repo", nil)
+	_, _ = Get(context.Background(), "org/repo", false, nil)
 	if !makeCalled {
 		t.Error("githubrepo.MakeGithubRepo not called for new repo")
 	}
@@ -180,9 +180,9 @@ func TestGetExisting(t *testing.T) {
 	close = func() error {
 		return nil
 	}
-	_, _ = Get(context.Background(), "org/repo", nil)
+	_, _ = Get(context.Background(), "org/repo", false, nil)
 	makeCalled, createCalled, initCalled = false, false, false
-	_, _ = Get(context.Background(), "org/repo", nil)
+	_, _ = Get(context.Background(), "org/repo", false, nil)
 	if makeCalled {
 		t.Error("githubrepo.MakeGithubRepo called for existing repo")
 	}
@@ -210,7 +210,7 @@ func TestClose(t *testing.T) {
 		closeCalled = true
 		return nil
 	}
-	_, _ = Get(context.Background(), "org/repo", nil)
+	_, _ = Get(context.Background(), "org/repo", false, nil)
 	Close("org/repo")
 	if !closeCalled {
 		t.Error("repoclient.Close not called for Close")
@@ -234,10 +234,10 @@ func TestRecreate(t *testing.T) {
 	close = func() error {
 		return nil
 	}
-	_, _ = Get(context.Background(), "org/repo", nil)
+	_, _ = Get(context.Background(), "org/repo", false, nil)
 	Close("org/repo")
 	makeCalled, createCalled, initCalled = false, false, false
-	_, _ = Get(context.Background(), "org/repo", nil)
+	_, _ = Get(context.Background(), "org/repo", false, nil)
 	if !makeCalled {
 		t.Error("githubrepo.MakeGithubRepo not called for new repo")
 	}
@@ -248,4 +248,31 @@ func TestRecreate(t *testing.T) {
 		t.Error("repoclient.InitRepo not called for new repo")
 	}
 	Close("org/repo")
+}
+
+func TestLocal(t *testing.T) {
+	repo := "go-git/go-git"
+	scc, err := Get(context.Background(), repo, true, nil)
+	if err != nil {
+		t.Fatalf("Get error: %s", err)
+	}
+	branches, err := scc.FetchBranches()
+	if err != nil {
+		t.Fatalf("FetchBranches error: %s", err)
+	}
+	err = scc.SwitchLocalBranch(branches[0])
+	if err != nil {
+		t.Fatalf("SwitchLocalBranch error: %s", err)
+	}
+
+	// fetch again and make sure the reference is the same
+	sccB, err := Get(context.Background(), repo, true, nil)
+	if err != nil {
+		t.Fatalf("Get error: %s", err)
+	}
+	if scc != sccB {
+		t.Fatalf("Get error: unexpected different reference returned")
+	}
+
+	Close(repo)
 }

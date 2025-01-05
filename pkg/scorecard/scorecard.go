@@ -23,10 +23,15 @@ package scorecard
 import (
 	"context"
 	"net/http"
+	"os"
 	"sync"
 
+	"github.com/go-git/go-git/v5"
+	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/ossf/scorecard/v5/clients"
 	"github.com/ossf/scorecard/v5/clients/githubrepo"
+	"github.com/ossf/scorecard/v5/clients/localdir"
+	"github.com/rs/zerolog/log"
 )
 
 // Type ScClient is returned from Get. It contains the clients needed to call
@@ -34,9 +39,12 @@ import (
 type ScClient struct {
 	ScRepo       clients.Repo
 	ScRepoClient clients.RepoClient
+	localPath    string
+	gitRepo      *git.Repository
 }
 
-var scClients map[string]*ScClient = make(map[string]*ScClient)
+var scClientsRemote map[string]*ScClient = make(map[string]*ScClient)
+var scClientsLocal map[string]*ScClient = make(map[string]*ScClient)
 var mMutex sync.RWMutex
 
 const defaultGitRef = "HEAD"
@@ -52,37 +60,130 @@ func init() {
 // Function Get will get the scorecard clients and create them if they don't
 // exist. The github repo is initialized, which means the tarball is
 // downloaded.
-func Get(ctx context.Context, fullRepo string, tr http.RoundTripper) (*ScClient, error) {
+// If local is set, a local copy of the repo will be used instead, this allows for branch
+// changes without another scorecard repo download.
+func Get(ctx context.Context, fullRepo string, local bool, tr http.RoundTripper) (*ScClient, error) {
+	defer mMutex.Unlock()
 	mMutex.Lock()
-	if scc, ok := scClients[fullRepo]; ok {
-		mMutex.Unlock()
+	if local {
+		if scc, ok := scClientsLocal[fullRepo]; ok {
+			return scc, nil
+		}
+		scc, err := createLocal(ctx, fullRepo)
+		if err != nil {
+			return nil, err
+		}
+		scClientsLocal[fullRepo] = scc
+		return scc, nil
+
+	} else {
+		// remote
+		if scc, ok := scClientsRemote[fullRepo]; ok {
+			return scc, nil
+		}
+		scc, err := createRemote(ctx, fullRepo, tr)
+		if err != nil {
+			return nil, err
+		}
+		scClientsRemote[fullRepo] = scc
 		return scc, nil
 	}
-	scc, err := create(ctx, fullRepo, tr)
+}
+
+// Switch the local repo between branches
+func (scc ScClient) SwitchLocalBranch(branchName string) error {
+	log.Info().
+		Str("branch", branchName).
+		Msg("Branch checkout")
+
+	w, err := scc.gitRepo.Worktree()
 	if err != nil {
-		mMutex.Unlock()
+		return err
+	}
+	err = w.Checkout(&git.CheckoutOptions{Branch: plumbing.ReferenceName(branchName)})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// Fetch branches from the local repo (used for workflow rule checking)
+func (scc ScClient) FetchBranches() ([]string, error) {
+	refs, err := scc.gitRepo.References()
+	if err != nil {
 		return nil, err
 	}
-	scClients[fullRepo] = scc
-	mMutex.Unlock()
-	return scc, nil
+
+	var ret []string
+	refs.ForEach(func(ref *plumbing.Reference) error {
+		if ref.Name().IsRemote() {
+			ret = append(ret, ref.Name().String())
+		}
+		return nil
+	})
+	return ret, nil
+}
+
+// Checkout a repo into a local directory
+// returns the path to the local repo and a git repo reference
+func checkoutRepo(fullRepo string) (string, *git.Repository, error) {
+	log.Info().
+		Str("repo", fullRepo).
+		Msg("Repo checkout")
+	// create a temp dir to store the repo
+	dir, err := os.MkdirTemp("", "allstar")
+	if err != nil {
+		return "", nil, err
+	}
+
+	// checkout to the temp dir
+	repo, err := git.PlainClone(dir, false, &git.CloneOptions{
+		URL: "https://github.com/" + fullRepo,
+	})
+	if err != nil {
+		return "", nil, err
+	}
+	return dir, repo, nil
 }
 
 // Function Close will close the scorecard clients. This cleans up the
 // downloaded tarball.
 func Close(fullRepo string) {
+	defer mMutex.Unlock()
 	mMutex.Lock()
-	scc, ok := scClients[fullRepo]
-	if !ok {
-		mMutex.Unlock()
-		return
+	// local
+	scc, ok := scClientsLocal[fullRepo]
+	if ok {
+		// delete local temp directory
+		os.RemoveAll(scc.localPath)
+		delete(scClientsLocal, fullRepo)
 	}
-	scc.ScRepoClient.Close()
-	delete(scClients, fullRepo)
-	mMutex.Unlock()
+	// remote
+	scc, ok = scClientsRemote[fullRepo]
+	if ok {
+		scc.ScRepoClient.Close()
+		delete(scClientsRemote, fullRepo)
+	}
 }
 
-func create(ctx context.Context, fullRepo string, tr http.RoundTripper) (*ScClient, error) {
+func createLocal(ctx context.Context, fullRepo string) (*ScClient, error) {
+	localPath, gitRepo, err := checkoutRepo(fullRepo)
+	if err != nil {
+		return nil, err
+	}
+
+	scr, err := localdir.MakeLocalDirRepo(localPath)
+	if err != nil {
+		return nil, err
+	}
+	return &ScClient{
+		ScRepo:    scr,
+		localPath: localPath,
+		gitRepo:   gitRepo,
+	}, nil
+}
+
+func createRemote(ctx context.Context, fullRepo string, tr http.RoundTripper) (*ScClient, error) {
 	scr, err := githubrepoMakeGitHubRepo(fullRepo)
 	if err != nil {
 		return nil, err

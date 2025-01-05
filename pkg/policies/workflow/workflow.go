@@ -106,86 +106,105 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 
 	fullName := fmt.Sprintf("%s/%s", owner, repo)
 	tr := c.Client().Transport
-	scc, err := scorecard.Get(ctx, fullName, tr)
+	scc, err := scorecard.Get(ctx, fullName, true, tr)
+	if err != nil {
+		return nil, err
+	}
+	// Fetch branches and run sc.Run against every branch.
+	branches, err := scc.FetchBranches()
 	if err != nil {
 		return nil, err
 	}
 
-	allRes, err := sc.Run(ctx, scc.ScRepo,
-		sc.WithRepoClient(scc.ScRepoClient),
-		sc.WithChecks([]string{checks.CheckDangerousWorkflow}),
-	)
-	if err != nil {
-		msg := "Error while running checks.DangerousWorkflow"
-		log.Warn().
-			Str("org", owner).
-			Str("repo", repo).
-			Str("area", polName).
-			Err(err).
-			Msg(msg)
-		return &policydef.Result{
-			Enabled:    enabled,
-			Pass:       true,
-			NotifyText: fmt.Sprintf("%s: %v", msg, err),
-			Details:    details{},
-		}, nil
-	}
-	if len(allRes.Checks) != 1 {
-		msg := "Error while running checks.DangerousWorkflow : did not get expected checks"
-		log.Warn().
-			Str("org", owner).
-			Str("repo", repo).
-			Str("area", polName).
-			Int("chk_len", len(allRes.Checks)).
-			Msg(msg)
-		return &policydef.Result{
-			Enabled:    enabled,
-			Pass:       true,
-			NotifyText: msg,
-			Details:    details{},
-		}, nil
-	}
-	res := allRes.Checks[0]
-
-	if res.Error != nil {
-		msg := "Error while running checks.DangerousWorkflow"
-		log.Warn().
-			Str("org", owner).
-			Str("repo", repo).
-			Str("area", polName).
-			Err(res.Error).
-			Msg(msg)
-		return &policydef.Result{
-			Enabled:    enabled,
-			Pass:       true,
-			NotifyText: fmt.Sprintf("%s: %v", msg, res.Error),
-			Details:    details{},
-		}, nil
-	}
-
-	logs := convertLogs(res.Details)
-	pass := res.Score >= checker.MaxResultScore || res.Score == checker.InconclusiveResultScore
 	var notify string
-	if !pass {
-		notify = fmt.Sprintf(`Project is out of compliance with Dangerous Workflow policy: %v
-
-**Rule Description**
-Dangerous workflows are GitHub Action workflows that exhibit dangerous patterns that could render them vulnerable to attack. A vulnerable workflow is susceptible to leaking repository secrets, or allowing an attacker write access using the GITHUB_TOKEN. For more information about the particular patterns that are detected, see the [OpenSSF Scorecard documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md#dangerous-workflow) on dangerous workflows.
-
-**Remediation Steps**
-Avoid the dangerous workflow patterns. See this [post](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/) for information on avoiding untrusted code checkouts. See this [document](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#understanding-the-risk-of-script-injections) for information on avoiding and mitigating the risk of script injections.
-`,
-			res.Reason)
-		if len(logs) > 10 {
-			notify += fmt.Sprintf(
-				"**First 10 Dangerous Patterns Found**\n\n%v"+
-					"- Run a Scorecard scan to see full list.\n\n",
-				listJoin(logs[:10]))
-		} else {
-			notify += fmt.Sprintf("**Dangerous Patterns Found**\n\n%v\n", listJoin(logs))
+	var logs []string
+	pass := true
+	for _, branch := range branches {
+		err = scc.SwitchLocalBranch(branch)
+		if err != nil {
+			return nil, err
 		}
-		notify += `**Additional Information**
-This policy uses [OpenSSF Scorecard](https://github.com/ossf/scorecard/). You may wish to run a Scorecard scan directly on this repository for more details.`
+
+		allRes, err := sc.Run(ctx, scc.ScRepo,
+			sc.WithRepoClient(scc.ScRepoClient),
+			sc.WithChecks([]string{checks.CheckDangerousWorkflow}),
+		)
+		if err != nil {
+			msg := "Error while running checks.DangerousWorkflow"
+			log.Warn().
+				Str("org", owner).
+				Str("repo", repo).
+				Str("area", polName).
+				Err(err).
+				Msg(msg)
+			return &policydef.Result{
+				Enabled:    enabled,
+				Pass:       true,
+				NotifyText: fmt.Sprintf("%s: %v", msg, err),
+				Details:    details{},
+			}, nil
+		}
+		if len(allRes.Checks) != 1 {
+			msg := "Error while running checks.DangerousWorkflow : did not get expected checks"
+			log.Warn().
+				Str("org", owner).
+				Str("repo", repo).
+				Str("area", polName).
+				Int("chk_len", len(allRes.Checks)).
+				Msg(msg)
+			return &policydef.Result{
+				Enabled:    enabled,
+				Pass:       true,
+				NotifyText: msg,
+				Details:    details{},
+			}, nil
+		}
+		res := allRes.Checks[0]
+
+		if res.Error != nil {
+			msg := "Error while running checks.DangerousWorkflow"
+			log.Warn().
+				Str("org", owner).
+				Str("repo", repo).
+				Str("area", polName).
+				Err(res.Error).
+				Msg(msg)
+			return &policydef.Result{
+				Enabled:    enabled,
+				Pass:       true,
+				NotifyText: fmt.Sprintf("%s: %v", msg, res.Error),
+				Details:    details{},
+			}, nil
+		}
+
+		logs = convertLogs(res.Details)
+		branchPass := res.Score >= checker.MaxResultScore || res.Score == checker.InconclusiveResultScore
+		if !branchPass {
+			pass = false
+			if notify == "" {
+				notify = fmt.Sprintf(`Project is out of compliance with Dangerous Workflow policy: %v
+
+		**Rule Description**
+		Dangerous workflows are GitHub Action workflows that exhibit dangerous patterns that could render them vulnerable to attack. A vulnerable workflow is susceptible to leaking repository secrets, or allowing an attacker write access using the GITHUB_TOKEN. For more information about the particular patterns that are detected, see the [OpenSSF Scorecard documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md#dangerous-workflow) on dangerous workflows. Any vulnerable branch can be exploited, so this rule will check all branches (vulnerable list below).
+
+		**Remediation Steps**
+		Avoid the dangerous workflow patterns. See this [post](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/) for information on avoiding untrusted code checkouts. See this [document](https://docs.github.com/en/actions/security-guides/security-hardening-for-github-actions#understanding-the-risk-of-script-injections) for information on avoiding and mitigating the risk of script injections.
+		`,
+					res.Reason)
+				if len(logs) > 10 {
+					notify += fmt.Sprintf(
+						"**First 10 Dangerous Patterns Found**\n\n%v"+
+							"- Run a Scorecard scan to see full list.\n\n",
+						listJoin(logs[:10]))
+				} else {
+					notify += fmt.Sprintf("**Dangerous Patterns Found**\n\n%v\n", listJoin(logs))
+				}
+				notify += `**Additional Information**
+	This policy uses [OpenSSF Scorecard](https://github.com/ossf/scorecard/). You may wish to run a Scorecard scan directly on this repository for more details.
+`
+			}
+			notify += fmt.Sprintf("\nVulnerable Branch: %s", branch)
+		}
 	}
 
 	return &policydef.Result{

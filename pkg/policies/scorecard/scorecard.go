@@ -87,7 +87,7 @@ type details struct {
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
 var configIsEnabled func(context.Context, config.OrgOptConfig, config.RepoOptConfig, config.RepoOptConfig, *github.Client, string, string) (bool, error)
-var scorecardGet func(context.Context, string, http.RoundTripper) (*scorecard.ScClient, error)
+var scorecardGet func(context.Context, string, bool, http.RoundTripper) (*scorecard.ScClient, error)
 var checksAllChecks checker.CheckNameToFnMap
 var scRun func(context.Context, clients.Repo, ...sc.Option) (sc.Result, error)
 
@@ -141,7 +141,7 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 
 	fullName := fmt.Sprintf("%s/%s", owner, repo)
 	tr := c.Client().Transport
-	scc, err := scorecardGet(ctx, fullName, tr)
+	scc, err := scorecardGet(ctx, fullName, false, tr)
 	if err != nil {
 		return nil, err
 	}
