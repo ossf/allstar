@@ -193,7 +193,7 @@ func TestCheck(t *testing.T) {
 				error) {
 				return true, nil
 			}
-			scorecardGet = func(ctx context.Context, fullRepo string,
+			scorecardGet = func(ctx context.Context, fullRepo string, local bool,
 				tr http.RoundTripper) (*scorecard.ScClient, error) {
 				return &scorecard.ScClient{}, nil
 			}
