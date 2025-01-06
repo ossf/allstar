@@ -115,12 +115,15 @@ func (scc ScClient) FetchBranches() ([]string, error) {
 	}
 
 	var ret []string
-	refs.ForEach(func(ref *plumbing.Reference) error {
+	err = refs.ForEach(func(ref *plumbing.Reference) error {
 		if ref.Name().IsRemote() {
 			ret = append(ret, ref.Name().String())
 		}
 		return nil
 	})
+	if err != nil {
+		return nil, err
+	}
 	return ret, nil
 }
 
