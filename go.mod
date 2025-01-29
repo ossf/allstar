@@ -7,7 +7,7 @@ toolchain go1.22.5
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/bradleyfalzon/ghinstallation/v2 v2.13.0
-	github.com/evanphx/json-patch/v5 v5.9.0
+	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-cmp v0.6.0
 	github.com/google/go-github/v59 v59.0.0
