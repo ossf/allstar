@@ -120,7 +120,7 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 
 	fullName := fmt.Sprintf("%s/%s", owner, repo)
 	tr := c.Client().Transport
-	scc, err := scorecard.Get(ctx, fullName, tr)
+	scc, err := scorecard.Get(ctx, fullName, false, tr)
 	if err != nil {
 		return nil, err
 	}
