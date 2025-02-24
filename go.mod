@@ -6,7 +6,7 @@ toolchain go1.23.6
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
-	github.com/bradleyfalzon/ghinstallation/v2 v2.13.0
+	github.com/bradleyfalzon/ghinstallation/v2 v2.14.0
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-cmp v0.6.0
@@ -89,7 +89,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/go-containerregistry v0.20.2 // indirect
 	github.com/google/go-github/v53 v53.2.0 // indirect
-	github.com/google/go-github/v68 v68.0.0 // indirect
+	github.com/google/go-github/v69 v69.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/osv-scanner v1.9.2 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
