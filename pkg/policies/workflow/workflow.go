@@ -107,6 +107,7 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 	fullName := fmt.Sprintf("%s/%s", owner, repo)
 	tr := c.Client().Transport
 	scc, err := scorecard.Get(ctx, fullName, true, tr)
+	defer scorecard.Close(fullName)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +140,7 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 				Msg(msg)
 			return &policydef.Result{
 				Enabled:    enabled,
-				Pass:       true,
+				Pass:       false,
 				NotifyText: fmt.Sprintf("%s: %v", msg, err),
 				Details:    details{},
 			}, nil
@@ -154,7 +155,7 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 				Msg(msg)
 			return &policydef.Result{
 				Enabled:    enabled,
-				Pass:       true,
+				Pass:       false,
 				NotifyText: msg,
 				Details:    details{},
 			}, nil
@@ -171,7 +172,7 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 				Msg(msg)
 			return &policydef.Result{
 				Enabled:    enabled,
-				Pass:       true,
+				Pass:       false,
 				NotifyText: fmt.Sprintf("%s: %v", msg, res.Error),
 				Details:    details{},
 			}, nil
