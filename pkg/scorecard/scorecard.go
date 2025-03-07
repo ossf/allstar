@@ -201,6 +201,9 @@ func _createLocal(ctx context.Context, fullRepo string) (*ScClient, error) {
 		return nil, err
 	}
 	client, err := ghc.Get(0)
+	if err != nil {
+		return nil, err
+	}
 
 	log.Debug().
 		Str("owner", owner).
