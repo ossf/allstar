@@ -22,6 +22,7 @@ import (
 	time "time"
 
 	"github.com/ossf/scorecard/v5/clients"
+	"github.com/ossf/scorecard/v5/clients/localdir"
 )
 
 var initRepo func(clients.Repo, string, int) error
@@ -250,7 +251,28 @@ func TestRecreate(t *testing.T) {
 	Close("org/repo")
 }
 
+// as we cannot interact with the GitHub API, this is a simple version of createLocal
+// which just fetches a public repo for local testing
+func _testCreateLocal(ctx context.Context, fullRepo string) (*ScClient, error) {
+	localPath, gitRepo, err := checkoutRepo(fullRepo, "")
+	if err != nil {
+		return nil, err
+	}
+
+	scr, err := localdir.MakeLocalDirRepo(localPath)
+	if err != nil {
+		return nil, err
+	}
+	return &ScClient{
+		ScRepo:    scr,
+		localPath: localPath,
+		gitRepo:   gitRepo,
+	}, nil
+}
+
+
 func TestLocal(t *testing.T) {
+	createLocal = _testCreateLocal
 	repo := "go-git/go-git"
 	scc, err := Get(context.Background(), repo, true, nil)
 	if err != nil {

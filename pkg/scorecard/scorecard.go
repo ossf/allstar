@@ -24,10 +24,14 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
+	plumbinghttp "github.com/go-git/go-git/v5/plumbing/transport/http"
+	"github.com/google/go-github/v59/github"
+	"github.com/ossf/allstar/pkg/ghclients"
 	"github.com/ossf/scorecard/v5/clients"
 	"github.com/ossf/scorecard/v5/clients/githubrepo"
 	"github.com/ossf/scorecard/v5/clients/localdir"
@@ -51,10 +55,12 @@ const defaultGitRef = "HEAD"
 
 var githubrepoMakeGitHubRepo func(string) (clients.Repo, error)
 var githubrepoCreateGitHubRepoClientWithTransport func(context.Context, http.RoundTripper) clients.RepoClient
+var createLocal func(context.Context, string) (*ScClient, error)
 
 func init() {
 	githubrepoMakeGitHubRepo = githubrepo.MakeGithubRepo
 	githubrepoCreateGitHubRepoClientWithTransport = githubrepo.CreateGithubRepoClientWithTransport
+	createLocal = _createLocal
 }
 
 // Function Get will get the scorecard clients and create them if they don't
@@ -92,7 +98,7 @@ func Get(ctx context.Context, fullRepo string, local bool, tr http.RoundTripper)
 
 // Switch the local repo between branches
 func (scc ScClient) SwitchLocalBranch(branchName string) error {
-	log.Info().
+	log.Debug().
 		Str("branch", branchName).
 		Msg("Branch checkout")
 
@@ -129,8 +135,8 @@ func (scc ScClient) FetchBranches() ([]string, error) {
 
 // Checkout a repo into a local directory
 // returns the path to the local repo and a git repo reference
-func checkoutRepo(fullRepo string) (string, *git.Repository, error) {
-	log.Info().
+func checkoutRepo(fullRepo string, token string) (string, *git.Repository, error) {
+	log.Debug().
 		Str("repo", fullRepo).
 		Msg("Repo checkout")
 	// create a temp dir to store the repo
@@ -139,9 +145,19 @@ func checkoutRepo(fullRepo string) (string, *git.Repository, error) {
 		return "", nil, err
 	}
 
+	// can be empty for testing
+	var auth *plumbinghttp.BasicAuth
+	if token != "" {
+		auth = &plumbinghttp.BasicAuth{
+			Username: "x-access-token", // can be any value
+			Password: token,
+		}
+	}
+
 	// checkout to the temp dir
 	repo, err := git.PlainClone(dir, false, &git.CloneOptions{
-		URL: "https://github.com/" + fullRepo,
+		URL:  "https://github.com/" + fullRepo,
+		Auth: auth,
 	})
 	if err != nil {
 		return "", nil, err
@@ -169,16 +185,65 @@ func Close(fullRepo string) {
 	}
 }
 
-func createLocal(ctx context.Context, fullRepo string) (*ScClient, error) {
-	localPath, gitRepo, err := checkoutRepo(fullRepo)
+// As we are potentially running against a private GitHub repo, we need to use a two step process
+// to checkout a local copy of the full repo:
+// 1) Use our go-github API access to create a scoped installation access token
+// 2) Use the access token to clone the repo with go-git
+// ref: https://github.com/orgs/community/discussions/24575#discussioncomment-8076322
+func _createLocal(ctx context.Context, fullRepo string) (*ScClient, error) {
+	fullRepoSplit := strings.Split(fullRepo, "/")
+	owner := strings.ToLower(fullRepoSplit[0])
+	repo := strings.ToLower(fullRepoSplit[1])
+
+	// connect to the GitHub API
+	ghc, err := ghclients.NewGHClients(ctx, http.DefaultTransport)
+	if err != nil {
+		return nil, err
+	}
+	client, err := ghc.Get(0)
 	if err != nil {
 		return nil, err
 	}
 
+	log.Debug().
+		Str("owner", owner).
+		Str("repo", repo).
+		Str("fullRepo", fullRepo).
+		Msg("local checkout")
+
+	// use the GitHub API to issue an installation access token
+	installation, _, err := client.Apps.FindRepositoryInstallation(ctx, owner, repo)
+	if err != nil {
+		return nil, err
+	}
+	log.Debug().
+		Int64("ID", installation.GetID()).
+		Msg("local checkout -- found installation ID")
+	opts := &github.InstallationTokenOptions{
+		Repositories: []string{repo},
+		Permissions: &github.InstallationPermissions{
+			Contents: github.String("read"),
+		},
+	}
+	token, _, err := client.Apps.CreateInstallationToken(ctx, installation.GetID(), opts)
+	if err != nil {
+		return nil, err
+	}
+	log.Debug().
+		Msg("local checkout -- installation access token retrieved")
+
+	// use the installation access token
+	localPath, gitRepo, err := checkoutRepo(fullRepo, token.GetToken())
+	if err != nil {
+		return nil, err
+	}
 	scr, err := localdir.MakeLocalDirRepo(localPath)
 	if err != nil {
 		return nil, err
 	}
+	log.Debug().
+		Msg("local checkout -- checkout success")
+
 	return &ScClient{
 		ScRepo:    scr,
 		localPath: localPath,
