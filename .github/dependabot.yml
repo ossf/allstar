@@ -4,8 +4,27 @@ updates:
   directory: "/"
   schedule:
     interval: "weekly"
-  open-pull-requests-limit: 10
+  groups:
+    gomod:
+      patterns:
+        - "*"
+      exclude-patterns:
+        - "golang.org/x/*"
+    golang-x:
+      patterns:
+        - "golang.org/x/*"
 - package-ecosystem: "github-actions"
   directory: "/"
   schedule:
     interval: "weekly"
+  groups:
+    github-actions:
+      patterns:
+        - "*"
+      exclude-patterns:
+        - "actions/*"
+        - "github/*"
+    github-owned:
+      patterns:
+        - "actions/*"
+        - "github/*"
