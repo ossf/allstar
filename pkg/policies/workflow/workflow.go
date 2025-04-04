@@ -19,6 +19,7 @@ package workflow
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/go-github/v59/github"
 	"github.com/ossf/scorecard/v5/checker"
@@ -42,6 +43,11 @@ type OrgConfig struct {
 
 	// Action defines which action to take, default log, other: issue...
 	Action string `json:"action"`
+
+	// Comma-seperated branch list to scan for Dangerous Workflows.
+	// Blank/default to scan all branches.
+	// Must use format "refs/remotes/origin/branch_name".
+	DangerousWorkflowBranchList string `json:"dangerousWorkflowBranchList"`
 }
 
 // RepoConfig is the repo-level config for this policy.
@@ -51,6 +57,11 @@ type RepoConfig struct {
 
 	// Action overrides the same setting in org-level, only if present.
 	Action *string `json:"action"`
+
+	// Comma-seperated branch list to scan for Dangerous Workflows.
+	// Blank/default to scan all branches.
+	// Must use format "refs/remotes/origin/branch_name".
+	DangerousWorkflowBranchList string `json:"dangerousWorkflowBranchList"`
 }
 
 type mergedConfig struct {
@@ -110,12 +121,28 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 	if err != nil {
 		return nil, err
 	}
-	// Fetch branches and run sc.Run against every branch.
-	branches, err := scc.FetchBranches()
+
+	// Use configured branches if they are set.
+	var branches []string
+	configBranches := configParseBranches(oc.DangerousWorkflowBranchList, orc.DangerousWorkflowBranchList, rc.DangerousWorkflowBranchList)
 	if err != nil {
 		return nil, err
 	}
 
+	// Fetch branches from the repo if we did not configure any branches
+	if len(configBranches) > 0 {
+		branches = configBranches
+	} else {
+		branches, err = scc.FetchBranches()
+		if err != nil {
+			return nil, err
+		}
+	}
+	log.Debug().
+		Str("branches", strings.Join(branches, ",")).
+		Msg("Running against branch list")
+
+	// run sc.Run against every branch
 	var notify string
 	var logs []string
 	pass := true
@@ -308,4 +335,18 @@ func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedCon
 		mc.Action = *rc.Action
 	}
 	return mc
+}
+
+func configParseBranches(oc string, orc string, rc string) []string {
+	var ret []string
+	if oc != "" {
+		ret = append(ret, strings.Split(oc, ",")...)
+	}
+	if orc != "" {
+		ret = append(ret, strings.Split(orc, ",")...)
+	}
+	if rc !="" {
+		ret = append(ret, strings.Split(rc, ",")...)
+	}
+	return ret
 }
