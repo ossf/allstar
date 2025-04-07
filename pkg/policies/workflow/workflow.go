@@ -44,7 +44,7 @@ type OrgConfig struct {
 	// Action defines which action to take, default log, other: issue...
 	Action string `json:"action"`
 
-	// Comma-seperated branch list to scan for Dangerous Workflows.
+	// Comma-separated branch list to scan for Dangerous Workflows.
 	// Blank/default to scan all branches.
 	// Must use format "refs/remotes/origin/branch_name".
 	DangerousWorkflowBranchList string `json:"dangerousWorkflowBranchList"`
@@ -58,7 +58,7 @@ type RepoConfig struct {
 	// Action overrides the same setting in org-level, only if present.
 	Action *string `json:"action"`
 
-	// Comma-seperated branch list to scan for Dangerous Workflows.
+	// Comma-separated branch list to scan for Dangerous Workflows.
 	// Blank/default to scan all branches.
 	// Must use format "refs/remotes/origin/branch_name".
 	DangerousWorkflowBranchList string `json:"dangerousWorkflowBranchList"`
