@@ -45,9 +45,9 @@ type OrgConfig struct {
 	Action string `json:"action"`
 
 	// Comma-separated branch list to scan for Dangerous Workflows.
-	// Blank/default to scan all branches.
+	// Blank to scan all branches. The string "default" will be replaced with the git default branch.
 	// Must use format "refs/remotes/origin/branch_name".
-	DangerousWorkflowBranchList string `json:"dangerousWorkflowBranchList"`
+	BranchList string `json:"branchList"`
 }
 
 // RepoConfig is the repo-level config for this policy.
@@ -59,9 +59,9 @@ type RepoConfig struct {
 	Action *string `json:"action"`
 
 	// Comma-separated branch list to scan for Dangerous Workflows.
-	// Blank/default to scan all branches.
+	// Blank to scan all branches. The string "default" will be replaced with the git default branch.
 	// Must use format "refs/remotes/origin/branch_name".
-	DangerousWorkflowBranchList string `json:"dangerousWorkflowBranchList"`
+	BranchList string `json:"branchList"`
 }
 
 type mergedConfig struct {
@@ -124,7 +124,7 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 
 	// Use configured branches if they are set.
 	var branches []string
-	configBranches := configParseBranches(oc.DangerousWorkflowBranchList, orc.DangerousWorkflowBranchList, rc.DangerousWorkflowBranchList)
+	configBranches := configParseBranches(oc.BranchList, orc.BranchList, rc.BranchList)
 	if err != nil {
 		return nil, err
 	}
@@ -132,6 +132,17 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 	// Fetch branches from the repo if we did not configure any branches
 	if len(configBranches) > 0 {
 		branches = configBranches
+
+		// replace any instance of "default" with the actual default branch name
+		defaultBranchName, err := scc.GetDefaultBranchName()
+		if err != nil {
+			return nil, err
+		}
+		for i, branch := range branches {
+			if strings.ToLower(branch) == "default" {
+				branches[i] = defaultBranchName
+			}
+		}
 	} else {
 		branches, err = scc.FetchBranches()
 		if err != nil {

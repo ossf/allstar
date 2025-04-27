@@ -133,6 +133,26 @@ func (scc ScClient) FetchBranches() ([]string, error) {
 	return ret, nil
 }
 
+// Fetch default branch name from repo
+func (scc ScClient) GetDefaultBranchName() (string, error) {
+	refs, err := scc.gitRepo.References()
+	if err != nil {
+		return "", err
+	}
+
+	var ret string
+	err = refs.ForEach(func(ref *plumbing.Reference) error {
+		if ref.Name() == "HEAD" && ref.Type() == plumbing.SymbolicReference {
+			ret = ref.Target().String()
+		}
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	return ret, nil
+}
+
 // Checkout a repo into a local directory
 // returns the path to the local repo and a git repo reference
 func checkoutRepo(fullRepo string, token string) (string, *git.Repository, error) {
