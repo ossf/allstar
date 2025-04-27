@@ -65,11 +65,6 @@ type OrgConfig struct {
 
 	// Schedule specifies whether to perform certain actions on specific days.
 	Schedule *ScheduleConfig `json:"schedule"`
-
-	// Comma-separated branch list to scan for Dangerous Workflows.
-	// Blank/default to scan all branches.
-	// Must use format "refs/remotes/origin/branch_name".
-	DangerousWorkflowBranchList string `json:"dangerousWorkflowBranchList"`
 }
 
 // OrgOptConfig is used in Allstar and policy-specific org-level config to
@@ -113,11 +108,6 @@ type RepoConfig struct {
 
 	// Schedule specifies days during which to not send notifications,
 	Schedule *ScheduleConfig `json:"schedule"`
-
-	// Comma-separated branch list to scan for Dangerous Workflows.
-	// Blank/default to scan all branches.
-	// Must use format "refs/remotes/origin/branch_name".
-	DangerousWorkflowBranchList string `json:"dangerousWorkflowBranchList"`
 }
 
 // RepoOptConfig is used in Allstar and policy-specific repo-level config to
