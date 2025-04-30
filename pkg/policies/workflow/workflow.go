@@ -44,9 +44,9 @@ type OrgConfig struct {
 	// Action defines which action to take, default log, other: issue...
 	Action string `json:"action"`
 
-	// Comma-separated branch list to scan for Dangerous Workflows.
-	// Blank to scan all branches. The string "default" will be replaced with the git default branch.
-	// Must use format "refs/remotes/origin/branch_name".
+	// Comma-separated branch list to scan for Dangerous Workflows.  Blank to
+	// scan all branches. The string "default" will be replaced with the git
+	// default branch.  Must use format "refs/remotes/origin/branch_name".
 	BranchList string `json:"branchList"`
 }
 
@@ -58,9 +58,11 @@ type RepoConfig struct {
 	// Action overrides the same setting in org-level, only if present.
 	Action *string `json:"action"`
 
-	// Comma-separated branch list to scan for Dangerous Workflows.
-	// Blank to scan all branches. The string "default" will be replaced with the git default branch.
-	// Must use format "refs/remotes/origin/branch_name".
+	// Comma-separated branch list to scan for Dangerous Workflows.  Blank to
+	// scan all branches. The string "default" will be replaced with the git
+	// default branch.  Must use format
+	// "refs/remotes/origin/branch_name". Repo-level list is additive to
+	// org-level list, it does not replace org-level list.
 	BranchList string `json:"branchList"`
 }
 
@@ -356,7 +358,7 @@ func configParseBranches(oc string, orc string, rc string) []string {
 	if orc != "" {
 		ret = append(ret, strings.Split(orc, ",")...)
 	}
-	if rc !="" {
+	if rc != "" {
 		ret = append(ret, strings.Split(rc, ",")...)
 	}
 	return ret
