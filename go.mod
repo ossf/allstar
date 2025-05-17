@@ -2,8 +2,6 @@ module github.com/ossf/allstar
 
 go 1.24
 
-toolchain go1.24.1
-
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/bradleyfalzon/ghinstallation/v2 v2.15.0
