@@ -139,9 +139,17 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 	if !strings.Contains(issue.GetBody(), hash) && hasIssueSection(issue.GetBody(), updateSectionName) {
 		// Comment update and update issue body
 		commentBody := fmt.Sprintf("The policy result has been updated.\n\n---\n\n%s", text)
-		comment, _, err := issues.CreateComment(ctx, owner, issueRepo, issue.GetNumber(), &github.IssueComment{
+		comment, rsp, err := issues.CreateComment(ctx, owner, issueRepo, issue.GetNumber(), &github.IssueComment{
 			Body: &commentBody,
 		})
+		if err != nil && rsp != nil && (rsp.StatusCode == http.StatusGone || rsp.StatusCode == http.StatusForbidden) {
+			log.Warn().
+				Str("org", owner).
+				Str("repo", repo).
+				Str("area", policy).
+				Msg("Cannot create new comment on issue")
+			return nil
+		}
 		if err != nil {
 			return fmt.Errorf("while updating issue: creating comment: %w", err)
 		}
