@@ -24,7 +24,11 @@ updates:
       exclude-patterns:
         - "actions/*"
         - "github/*"
+        - "golangci/*"
     github-owned:
       patterns:
         - "actions/*"
         - "github/*"
+    golangci:
+      patterns:
+        - "golangci/*"
