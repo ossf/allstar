@@ -125,12 +125,12 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 			footer = fmt.Sprintf("%v\n\n%v", oc.IssueFooter, operator.GitHubIssueFooter)
 		}
 		body := createIssueBody(owner, repo, text, hash, footer, issueRepo == repo)
-		new := &github.IssueRequest{
+		newIssueReq := &github.IssueRequest{
 			Title:  &title,
 			Body:   &body,
 			Labels: &[]string{label},
 		}
-		_, rsp, err := issues.Create(ctx, owner, issueRepo, new)
+		_, rsp, err := issues.Create(ctx, owner, issueRepo, newIssueReq)
 		if err != nil && rsp != nil && (rsp.StatusCode == http.StatusGone || rsp.StatusCode == http.StatusForbidden) {
 			log.Warn().
 				Str("org", owner).

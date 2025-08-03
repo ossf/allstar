@@ -26,8 +26,8 @@ import (
 )
 
 var (
-	initRepo func(clients.Repo, string, int) error
-	close    func() error
+	initRepo  func(clients.Repo, string, int) error
+	closeRepo func() error
 )
 
 type mockRC struct{}
@@ -129,7 +129,7 @@ func (m mockRC) SearchCommits(request clients.SearchCommitsOptions) ([]clients.C
 }
 
 func (m mockRC) Close() error {
-	return close()
+	return closeRepo()
 }
 
 func (m mockRC) GetFileReader(filename string) (io.ReadCloser, error) {
@@ -150,7 +150,7 @@ func TestGetNew(t *testing.T) {
 		initCalled = true
 		return nil
 	}
-	close = func() error {
+	closeRepo = func() error {
 		return nil
 	}
 	_, _ = Get(context.Background(), "org/repo", false, nil)
@@ -180,7 +180,7 @@ func TestGetExisting(t *testing.T) {
 		initCalled = true
 		return nil
 	}
-	close = func() error {
+	closeRepo = func() error {
 		return nil
 	}
 	_, _ = Get(context.Background(), "org/repo", false, nil)
@@ -209,7 +209,7 @@ func TestClose(t *testing.T) {
 	initRepo = func(r clients.Repo, s string, i int) error {
 		return nil
 	}
-	close = func() error {
+	closeRepo = func() error {
 		closeCalled = true
 		return nil
 	}
@@ -234,7 +234,7 @@ func TestRecreate(t *testing.T) {
 		initCalled = true
 		return nil
 	}
-	close = func() error {
+	closeRepo = func() error {
 		return nil
 	}
 	_, _ = Get(context.Background(), "org/repo", false, nil)
