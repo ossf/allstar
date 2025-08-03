@@ -373,7 +373,7 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 	var headSHA string
 
 	for _, r := range applicableRules {
-		if r.Method == "require" {
+		if r.Method == "require" { //nolint:goconst // TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
 			if r.MustPass && wfr == nil {
 				var err error
 				hash, err := getLatestCommitHash(ctx, c, owner, repo)
