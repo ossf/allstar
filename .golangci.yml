@@ -21,10 +21,6 @@ issues:
         - gocyclo
         - lll
         - wrapcheck
-  # probes must register via init
-    - path: 'probes/.+/impl.go'
-      linters:
-        - gochecknoinits
 linters:
   enable:
     - asciicheck
@@ -108,7 +104,7 @@ linters-settings:
     sections:
       - standard
       - default
-      - prefix(github.com/ossf/scorecard)
+      - prefix(github.com/ossf/allstar)
   gocritic:
     disable-all: true
     enabled-checks:
@@ -181,6 +177,3 @@ linters-settings:
     # `//nolint` should mention specific linter such as `//nolint:my-linter`
     # Overly broad directives can hide unrelated issues
     require-specific: true
-  wrapcheck:
-    ignorePackageGlobs:
-      - github.com/ossf/scorecard/v5/checks/fileparser
