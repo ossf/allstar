@@ -31,12 +31,13 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	plumbinghttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/google/go-github/v59/github"
-	"github.com/ossf/scorecard/v5/clients"
-	"github.com/ossf/scorecard/v5/clients/githubrepo"
-	"github.com/ossf/scorecard/v5/clients/localdir"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ossf/allstar/pkg/ghclients"
+
+	"github.com/ossf/scorecard/v5/clients"
+	"github.com/ossf/scorecard/v5/clients/githubrepo"
+	"github.com/ossf/scorecard/v5/clients/localdir"
 )
 
 // Type ScClient is returned from Get. It contains the clients needed to call

@@ -199,6 +199,7 @@ formatters:
         - standard
         - default
         - prefix(github.com/ossf/allstar)
+        - prefix(github.com/ossf/scorecard)
   exclusions:
     paths:
       - third_party$

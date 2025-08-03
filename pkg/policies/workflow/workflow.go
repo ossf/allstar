@@ -22,14 +22,15 @@ import (
 	"strings"
 
 	"github.com/google/go-github/v59/github"
-	"github.com/ossf/scorecard/v5/checker"
-	"github.com/ossf/scorecard/v5/checks"
-	sc "github.com/ossf/scorecard/v5/pkg/scorecard"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
 	"github.com/ossf/allstar/pkg/scorecard"
+
+	"github.com/ossf/scorecard/v5/checker"
+	"github.com/ossf/scorecard/v5/checks"
+	sc "github.com/ossf/scorecard/v5/pkg/scorecard"
 )
 
 const (
