@@ -35,7 +35,7 @@ func walkGetContents(ctx context.Context, r repositories, owner, repo, p string,
 			return nil, nil, rsp, err
 		}
 		if !fileExists(file, rcs) {
-			return nil, nil, &github.Response{Response: &http.Response{StatusCode: http.StatusNotFound}}, errors.New("Not found")
+			return nil, nil, &github.Response{Response: &http.Response{StatusCode: http.StatusNotFound}}, errors.New("not found")
 		}
 	}
 	// File should exist

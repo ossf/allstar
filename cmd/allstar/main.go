@@ -70,7 +70,7 @@ func main() {
 				Str("Policy filtering", *specificPolicyArg).
 				Msg(fmt.Sprintf("Allstar will only run on policy %s", v))
 		} else {
-			log.Fatal().Err(fmt.Errorf("Unsupported policy flag %s", *specificPolicyArg)).Msg(fmt.Sprintf("Supported policies: %s", supportedPoliciesMsg))
+			log.Fatal().Err(fmt.Errorf("unsupported policy flag %s", *specificPolicyArg)).Msg(fmt.Sprintf("Supported policies: %s", supportedPoliciesMsg))
 		}
 	}
 
