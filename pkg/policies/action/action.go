@@ -550,7 +550,7 @@ func (as *ActionSelector) match(ctx context.Context, c *github.Client, m *action
 		if err != nil {
 			// on error, assume this is a ref
 			// (we know it doesn't match because not equal above)
-			return false, true, false, nil
+			return false, true, false, nil //nolint:nilerr // TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
 		}
 		version, err := resolveVersion(ctx, c, m, gc, sc)
 		if err != nil {

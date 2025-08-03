@@ -173,7 +173,7 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 			Str("area", polName).
 			Err(res.Error).
 			Msg(msg)
-		return &policydef.Result{
+		return &policydef.Result{ //nolint:nilerr // TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
 			Enabled:    enabled,
 			Pass:       true,
 			NotifyText: fmt.Sprintf("%s: %v", msg, res.Error),
