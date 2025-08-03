@@ -648,7 +648,6 @@ func TestAllowedRepositories(t *testing.T) {
 			listInstallations = func(ctx context.Context, ac *github.Client) ([]*github.Installation, error) {
 				repos := []*github.Installation{}
 				for _, r := range tt.orgs {
-
 					i := injective(r)
 					repos = append(repos, &github.Installation{Account: &github.User{Login: &r}, ID: &i})
 				}
