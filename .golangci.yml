@@ -27,6 +27,8 @@ linters:
     - godot
     - godox
     - goheader
+    # manage use of replace, retract and exclude directives (see https://github.com/ossf/scorecard/pull/3440#issuecomment-1708904830)
+    # https://golangci-lint.run/usage/linters/#gomoddirectives
     - gomoddirectives
     - gomodguard
     - goprintffuncname
@@ -64,13 +66,14 @@ linters:
     - wrapcheck
     - zerologlint
   disable:
-    - exhaustruct
-    - testpackage
+    - exhaustruct # initializing every struct makes tests longer without much benefit
+    - testpackage # tests don't need their own package
   settings:
     errcheck:
       check-type-assertions: true
       check-blank: true
     exhaustive:
+      # https://golangci-lint.run/usage/linters/#exhaustive
       default-signifies-exhaustive: true
     forbidigo:
       forbid:
@@ -144,13 +147,20 @@ linters:
         - HACK
     gosec:
       excludes:
-        - G115
+        # TODO: investigate and fix separately
+        - G115 # integer overflow conversion
     govet:
       enable:
         - fieldalignment
     nolintlint:
+      # `//nolint` should mention specific linter such as `//nolint:my-linter`
+      # Overly broad directives can hide unrelated issues
       require-specific: true
   exclusions:
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
     generated: lax
     presets:
       - comments
@@ -158,20 +168,22 @@ linters:
       - legacy
       - std-error-handling
     rules:
-      - linters:
+      - path: (.+)_test\.go
+        linters:
           - err113
           - funlen
           - goconst
           - gocyclo
           - lll
           - wrapcheck
-        path: (.+)_test\.go
-    paths:
-      - third_party$
-      - builtin$
-      - examples$
 issues:
+  # Maximum issues count per one linter.
+  # Set to 0 to disable.
+  # Default: 50
   max-issues-per-linter: 0
+  # Maximum count of issues with the same text.
+  # Set to 0 to disable.
+  # Default: 3
   max-same-issues: 0
   new-from-rev: ""
 formatters:
@@ -187,8 +199,8 @@ formatters:
         - default
         - prefix(github.com/ossf/allstar)
   exclusions:
-    generated: lax
     paths:
       - third_party$
       - builtin$
       - examples$
+    generated: lax
