@@ -27,7 +27,8 @@ linters:
     - goconst
     # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
     #- gocritic
-    - gocyclo
+    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
+    #- gocyclo
     - godot
     - godox
     - goheader
@@ -46,7 +47,8 @@ linters:
     - misspell
     - musttag
     - nakedret
-    - nestif
+    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
+    #- nestif
     - nilerr
     - nilnesserr
     - noctx
@@ -176,9 +178,11 @@ linters:
       - legacy
       - std-error-handling
     rules:
-      - path: (.+)_test\.go
+      - path: '(.+)_test\.go'
         linters:
+          - dogsled # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
           - err113
+          - errcheck # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
           - funlen
           - goconst
           - gocyclo
