@@ -130,6 +130,7 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificP
 				}
 			}
 
+			//nolint:godox // TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
 			// FIXME, not getting a rsp for this one, instead I think it is a special
 			// error that I need to introspect. just continue on all errors here
 			// temporarily to fix prod.
