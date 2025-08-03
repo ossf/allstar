@@ -149,9 +149,10 @@ linters:
       excludes:
         # TODO: investigate and fix separately
         - G115 # integer overflow conversion
-    govet:
-      enable:
-        - fieldalignment
+    # TODO: Reenable once generated fixes are in place.
+    #govet:
+    #  enable:
+    #    - fieldalignment
     nolintlint:
       # `//nolint` should mention specific linter such as `//nolint:my-linter`
       # Overly broad directives can hide unrelated issues
