@@ -301,7 +301,7 @@ func getUsers(ctx context.Context, r repositories, owner, repo, perm,
 
 func isExempt(repo, user, access string, ee []*OutsideExemption, gc globCache) bool {
 	for _, e := range ee {
-		if !(((e.Push || e.Admin) && access == "push") || (e.Admin && access == "admin")) {
+		if (!e.Push && !e.Admin || access != "push") && (!e.Admin || access != "admin") {
 			continue
 		}
 		g, err := gc.compileGlob(e.Repo)
