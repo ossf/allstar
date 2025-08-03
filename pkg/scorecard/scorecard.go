@@ -31,11 +31,12 @@ import (
 	"github.com/go-git/go-git/v5/plumbing"
 	plumbinghttp "github.com/go-git/go-git/v5/plumbing/transport/http"
 	"github.com/google/go-github/v59/github"
-	"github.com/ossf/allstar/pkg/ghclients"
 	"github.com/ossf/scorecard/v5/clients"
 	"github.com/ossf/scorecard/v5/clients/githubrepo"
 	"github.com/ossf/scorecard/v5/clients/localdir"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ossf/allstar/pkg/ghclients"
 )
 
 // Type ScClient is returned from Get. It contains the clients needed to call
@@ -47,15 +48,19 @@ type ScClient struct {
 	gitRepo      *git.Repository
 }
 
-var scClientsRemote map[string]*ScClient = make(map[string]*ScClient)
-var scClientsLocal map[string]*ScClient = make(map[string]*ScClient)
-var mMutex sync.RWMutex
+var (
+	scClientsRemote map[string]*ScClient = make(map[string]*ScClient)
+	scClientsLocal  map[string]*ScClient = make(map[string]*ScClient)
+	mMutex          sync.RWMutex
+)
 
 const defaultGitRef = "HEAD"
 
-var githubrepoMakeGitHubRepo func(string) (clients.Repo, error)
-var githubrepoCreateGitHubRepoClientWithTransport func(context.Context, http.RoundTripper) clients.RepoClient
-var createLocal func(context.Context, string) (*ScClient, error)
+var (
+	githubrepoMakeGitHubRepo                      func(string) (clients.Repo, error)
+	githubrepoCreateGitHubRepoClientWithTransport func(context.Context, http.RoundTripper) clients.RepoClient
+	createLocal                                   func(context.Context, string) (*ScClient, error)
+)
 
 func init() {
 	githubrepoMakeGitHubRepo = githubrepo.MakeGithubRepo
@@ -81,7 +86,6 @@ func Get(ctx context.Context, fullRepo string, local bool, tr http.RoundTripper)
 		}
 		scClientsLocal[fullRepo] = scc
 		return scc, nil
-
 	} else {
 		// remote
 		if scc, ok := scClientsRemote[fullRepo]; ok {
@@ -96,7 +100,7 @@ func Get(ctx context.Context, fullRepo string, local bool, tr http.RoundTripper)
 	}
 }
 
-// Switch the local repo between branches
+// Switch the local repo between branches.
 func (scc ScClient) SwitchLocalBranch(branchName string) error {
 	log.Debug().
 		Str("branch", branchName).
@@ -113,7 +117,7 @@ func (scc ScClient) SwitchLocalBranch(branchName string) error {
 	return nil
 }
 
-// Fetch branches from the local repo (used for workflow rule checking)
+// Fetch branches from the local repo (used for workflow rule checking).
 func (scc ScClient) FetchBranches() ([]string, error) {
 	refs, err := scc.gitRepo.References()
 	if err != nil {
@@ -133,7 +137,7 @@ func (scc ScClient) FetchBranches() ([]string, error) {
 	return ret, nil
 }
 
-// Fetch default branch name from repo
+// Fetch default branch name from repo.
 func (scc ScClient) GetDefaultBranchName() (string, error) {
 	refs, err := scc.gitRepo.References()
 	if err != nil {
@@ -154,7 +158,7 @@ func (scc ScClient) GetDefaultBranchName() (string, error) {
 }
 
 // Checkout a repo into a local directory
-// returns the path to the local repo and a git repo reference
+// returns the path to the local repo and a git repo reference.
 func checkoutRepo(fullRepo string, token string) (string, *git.Repository, error) {
 	log.Debug().
 		Str("repo", fullRepo).

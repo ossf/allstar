@@ -28,9 +28,10 @@ var requireWorkflowOnForRequire = []string{"pull_request", "push"}
 // not success.
 var runInProgressStatuses = []string{"in_progress", "queued", "waiting", "requested"}
 
-// evaluateActionDenied evaluates an Action against a set of Rules
+// evaluateActionDenied evaluates an Action against a set of Rules.
 func evaluateActionDenied(ctx context.Context, c *github.Client, rules []*internalRule, action *actionMetadata,
-	gc globCache, sc semverCache) (*denyRuleEvaluationResult, []error) {
+	gc globCache, sc semverCache,
+) (*denyRuleEvaluationResult, []error) {
 	result := &denyRuleEvaluationResult{
 		denied:         false,
 		actionMetadata: action,
@@ -119,9 +120,10 @@ func evaluateActionDenied(ctx context.Context, c *github.Client, rules []*intern
 	return result, errs
 }
 
-// evaluateRequireRule evaluates a require rule against a set of Actions
+// evaluateRequireRule evaluates a require rule against a set of Actions.
 func evaluateRequireRule(ctx context.Context, c *github.Client, owner, repo string, rule *internalRule,
-	actions []*actionMetadata, headSHA string, gc globCache, sc semverCache) (*requireRuleEvaluationResult, error) {
+	actions []*actionMetadata, headSHA string, gc globCache, sc semverCache,
+) (*requireRuleEvaluationResult, error) {
 	if rule.Method != "require" {
 		return nil, fmt.Errorf("rule is not a require rule")
 	}
@@ -148,7 +150,6 @@ func evaluateRequireRule(ctx context.Context, c *github.Client, owner, repo stri
 		// Find Action matching selector ra
 		for _, a := range actions {
 			match, fixMethod, err := requireActionDetermineFix(ctx, c, owner, repo, ra, a, rule.MustPass, headSHA, gc, sc)
-
 			if err != nil {
 				return nil, err
 			}
@@ -202,7 +203,8 @@ func evaluateRequireRule(ctx context.Context, c *github.Client, owner, repo stri
 //   - on error, the match bool is false AND fix method will not be usable.
 //   - on match true, the fix method is not to be used.
 func requireActionDetermineFix(ctx context.Context, c *github.Client, owner, repo string, ra *ActionSelector, a *actionMetadata,
-	mustPass bool, headSHA string, gc globCache, sc semverCache) (match bool, fix requireRuleEvaluationFixMethod, err error) {
+	mustPass bool, headSHA string, gc globCache, sc semverCache,
+) (match bool, fix requireRuleEvaluationFixMethod, err error) {
 	match, matchName, _, err := ra.match(ctx, c, a, gc, sc)
 	if err != nil {
 		return false, 0, err

@@ -25,8 +25,10 @@ import (
 	"github.com/ossf/scorecard/v5/clients/localdir"
 )
 
-var initRepo func(clients.Repo, string, int) error
-var close func() error
+var (
+	initRepo func(clients.Repo, string, int) error
+	close    func() error
+)
 
 type mockRC struct{}
 
@@ -252,7 +254,7 @@ func TestRecreate(t *testing.T) {
 }
 
 // as we cannot interact with the GitHub API, this is a simple version of createLocal
-// which just fetches a public repo for local testing
+// which just fetches a public repo for local testing.
 func _testCreateLocal(ctx context.Context, fullRepo string) (*ScClient, error) {
 	localPath, gitRepo, err := checkoutRepo(fullRepo, "")
 	if err != nil {
@@ -269,7 +271,6 @@ func _testCreateLocal(ctx context.Context, fullRepo string) (*ScClient, error) {
 		gitRepo:   gitRepo,
 	}, nil
 }
-
 
 func TestLocal(t *testing.T) {
 	createLocal = _testCreateLocal

@@ -23,18 +23,21 @@ import (
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-cmp/cmp"
+
 	"github.com/ossf/allstar/pkg/config/operator"
 )
 
 func TestGet(t *testing.T) {
 	called := 0
 	ghinstallationNewAppsTransport = func(http.RoundTripper, int64,
-		[]byte) (*ghinstallation.AppsTransport, error) {
+		[]byte,
+	) (*ghinstallation.AppsTransport, error) {
 		called = called + 1
 		return &ghinstallation.AppsTransport{BaseURL: fmt.Sprint(0)}, nil
 	}
 	ghinstallationNew = func(r http.RoundTripper, a int64, i int64,
-		f []byte) (*ghinstallation.Transport, error) {
+		f []byte,
+	) (*ghinstallation.Transport, error) {
 		called = called + 1
 		return &ghinstallation.Transport{BaseURL: fmt.Sprint(i)}, nil
 	}
@@ -80,11 +83,13 @@ func TestGet(t *testing.T) {
 
 func TestGetKey(t *testing.T) {
 	ghinstallationNewAppsTransport = func(http.RoundTripper, int64,
-		[]byte) (*ghinstallation.AppsTransport, error) {
+		[]byte,
+	) (*ghinstallation.AppsTransport, error) {
 		return &ghinstallation.AppsTransport{BaseURL: fmt.Sprint(0)}, nil
 	}
 	ghinstallationNew = func(r http.RoundTripper, a int64, i int64,
-		f []byte) (*ghinstallation.Transport, error) {
+		f []byte,
+	) (*ghinstallation.Transport, error) {
 		return &ghinstallation.Transport{BaseURL: fmt.Sprint(i)}, nil
 	}
 
@@ -123,7 +128,6 @@ func TestGetKey(t *testing.T) {
 			}
 
 			ghc, err := NewGHClients(context.Background(), http.DefaultTransport)
-
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}

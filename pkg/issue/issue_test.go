@@ -21,40 +21,47 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-github/v59/github"
+
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/config/operator"
-
-	"github.com/google/go-github/v59/github"
 )
 
 var listByRepo func(context.Context, string, string,
 	*github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error)
+
 var create func(context.Context, string, string, *github.IssueRequest) (
 	*github.Issue, *github.Response, error)
+
 var edit func(context.Context, string, string, int, *github.IssueRequest) (
 	*github.Issue, *github.Response, error)
+
 var createComment func(context.Context, string, string, int,
 	*github.IssueComment) (*github.IssueComment, *github.Response, error)
 
 type mockIssues struct{}
 
 func (m mockIssues) ListByRepo(ctx context.Context, owner string, repo string,
-	opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+	opts *github.IssueListByRepoOptions,
+) ([]*github.Issue, *github.Response, error) {
 	return listByRepo(ctx, owner, repo, opts)
 }
 
 func (m mockIssues) Create(ctx context.Context, owner string, repo string,
-	issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+	issue *github.IssueRequest,
+) (*github.Issue, *github.Response, error) {
 	return create(ctx, owner, repo, issue)
 }
 
 func (m mockIssues) Edit(ctx context.Context, owner string, repo string,
-	number int, issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+	number int, issue *github.IssueRequest,
+) (*github.Issue, *github.Response, error) {
 	return edit(ctx, owner, repo, number, issue)
 }
 
 func (m mockIssues) CreateComment(ctx context.Context, owner string, repo string,
-	number int, comment *github.IssueComment) (*github.IssueComment, *github.Response, error) {
+	number int, comment *github.IssueComment,
+) (*github.IssueComment, *github.Response, error) {
 	return createComment(ctx, owner, repo, number, comment)
 }
 
@@ -65,7 +72,7 @@ func setShouldPerform(b bool) {
 }
 
 func TestEnsure(t *testing.T) {
-	//issueTitle := fmt.Sprintf(sameRepoTitle, "thispolicy")
+	// issueTitle := fmt.Sprintf(sameRepoTitle, "thispolicy")
 	issueTitle := "Security Policy violation thispolicy"
 	issueTitleOtherRepo := "Security Policy violation for repository \"\" thispolicy"
 	closed := "closed"
@@ -77,12 +84,14 @@ func TestEnsure(t *testing.T) {
 	}
 	t.Run("NoIssue", func(t *testing.T) {
 		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			opts *github.IssueListByRepoOptions,
+		) ([]*github.Issue, *github.Response, error) {
 			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
 		}
 		createCalled := false
 		create = func(ctx context.Context, owner string, repo string,
-			issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+			issue *github.IssueRequest,
+		) (*github.Issue, *github.Response, error) {
 			if *issue.Title != issueTitle {
 				t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
 			}
@@ -110,12 +119,14 @@ func TestEnsure(t *testing.T) {
 			return &config.OrgConfig{IssueRepo: "issuerepo"}, &config.RepoConfig{}, &config.RepoConfig{}
 		}
 		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			opts *github.IssueListByRepoOptions,
+		) ([]*github.Issue, *github.Response, error) {
 			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
 		}
 		createCalled := false
 		create = func(ctx context.Context, owner string, repo string,
-			issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+			issue *github.IssueRequest,
+		) (*github.Issue, *github.Response, error) {
 			if *issue.Title != issueTitleOtherRepo {
 				t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitleOtherRepo)
 			}
@@ -144,12 +155,14 @@ func TestEnsure(t *testing.T) {
 		}
 		bodyWithFooter := "_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)._\n\n**Security Policy Violation**\nStatus text\n\n---\n\n<!-- Edit section #updates --><!-- Current result text hash: 1ab61918ea1b7d10e20db2b40287c1a265a1617b998d87b28579a4462b2efac2 --><!-- Edit section #updates -->\nCustomFooter\n\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
 		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			opts *github.IssueListByRepoOptions,
+		) ([]*github.Issue, *github.Response, error) {
 			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
 		}
 		createCalled := false
 		create = func(ctx context.Context, owner string, repo string,
-			issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+			issue *github.IssueRequest,
+		) (*github.Issue, *github.Response, error) {
 			if *issue.Title != issueTitle {
 				t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
 			}
@@ -174,9 +187,10 @@ func TestEnsure(t *testing.T) {
 	})
 	t.Run("ClosedIssue", func(t *testing.T) {
 		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			opts *github.IssueListByRepoOptions,
+		) ([]*github.Issue, *github.Response, error) {
 			return []*github.Issue{
-				&github.Issue{
+				{
 					Title: &issueTitle,
 					State: &closed,
 				},
@@ -185,7 +199,8 @@ func TestEnsure(t *testing.T) {
 		create = nil
 		editCalled := false
 		edit = func(ctx context.Context, owner string, repo string, number int,
-			issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+			issue *github.IssueRequest,
+		) (*github.Issue, *github.Response, error) {
 			if issue.GetState() != "open" {
 				t.Errorf("Unexpected state: %v", issue.GetState())
 			}
@@ -194,7 +209,8 @@ func TestEnsure(t *testing.T) {
 		}
 		commentCalled := false
 		createComment = func(ctx context.Context, owner string, repo string,
-			number int, comment *github.IssueComment) (*github.IssueComment, *github.Response, error) {
+			number int, comment *github.IssueComment,
+		) (*github.IssueComment, *github.Response, error) {
 			if !strings.HasPrefix(comment.GetBody(), "Reopening issue") {
 				t.Errorf("Unexpected comment: %v", comment.GetBody())
 			}
@@ -214,9 +230,10 @@ func TestEnsure(t *testing.T) {
 	})
 	t.Run("ClosedIssueUpdatedText", func(t *testing.T) {
 		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			opts *github.IssueListByRepoOptions,
+		) ([]*github.Issue, *github.Response, error) {
 			return []*github.Issue{
-				&github.Issue{
+				{
 					Title: &issueTitle,
 					State: &closed,
 					Body:  &body,
@@ -226,7 +243,8 @@ func TestEnsure(t *testing.T) {
 		create = nil
 		editCalled := false
 		edit = func(ctx context.Context, owner string, repo string, number int,
-			issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+			issue *github.IssueRequest,
+		) (*github.Issue, *github.Response, error) {
 			if issue.GetState() != "open" {
 				t.Errorf("Unexpected state: %v", issue.GetState())
 			}
@@ -241,7 +259,8 @@ func TestEnsure(t *testing.T) {
 		}
 		commentCalled := false
 		createComment = func(ctx context.Context, owner string, repo string,
-			number int, comment *github.IssueComment) (*github.IssueComment, *github.Response, error) {
+			number int, comment *github.IssueComment,
+		) (*github.IssueComment, *github.Response, error) {
 			if !strings.HasPrefix(comment.GetBody(), "The policy result has been updated") {
 				t.Errorf("Unexpected comment: %v", comment.GetBody())
 			}
@@ -263,9 +282,10 @@ func TestEnsure(t *testing.T) {
 		now := github.Timestamp{Time: time.Now()}
 
 		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			opts *github.IssueListByRepoOptions,
+		) ([]*github.Issue, *github.Response, error) {
 			return []*github.Issue{
-				&github.Issue{
+				{
 					Title:     &issueTitle,
 					State:     &open,
 					UpdatedAt: &now,
@@ -284,9 +304,10 @@ func TestEnsure(t *testing.T) {
 	t.Run("OpenStaleIssue", func(t *testing.T) {
 		stale := github.Timestamp{Time: time.Now().Add(-10 * operator.NoticePingDuration)}
 		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			opts *github.IssueListByRepoOptions,
+		) ([]*github.Issue, *github.Response, error) {
 			return []*github.Issue{
-				&github.Issue{
+				{
 					Title:     &issueTitle,
 					State:     &open,
 					UpdatedAt: &stale,
@@ -295,7 +316,8 @@ func TestEnsure(t *testing.T) {
 		}
 		commentCalled := false
 		createComment = func(ctx context.Context, owner string, repo string,
-			number int, comment *github.IssueComment) (*github.IssueComment, *github.Response, error) {
+			number int, comment *github.IssueComment,
+		) (*github.IssueComment, *github.Response, error) {
 			if !strings.HasPrefix(comment.GetBody(), "Updating issue") {
 				t.Errorf("Unexpected comment: %v", comment.GetBody())
 			}
@@ -316,12 +338,14 @@ func TestEnsure(t *testing.T) {
 	t.Run("NoIssueScheduleBlocksCreate", func(t *testing.T) {
 		setShouldPerform(false)
 		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			opts *github.IssueListByRepoOptions,
+		) ([]*github.Issue, *github.Response, error) {
 			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
 		}
 		createCalled := false
 		create = func(ctx context.Context, owner string, repo string,
-			issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+			issue *github.IssueRequest,
+		) (*github.Issue, *github.Response, error) {
 			if *issue.Title != issueTitle {
 				t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
 			}
@@ -350,12 +374,14 @@ func TestEnsure(t *testing.T) {
 		}
 		setShouldPerform(true)
 		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			opts *github.IssueListByRepoOptions,
+		) ([]*github.Issue, *github.Response, error) {
 			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
 		}
 		createCalled := false
 		create = func(ctx context.Context, owner string, repo string,
-			issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+			issue *github.IssueRequest,
+		) (*github.Issue, *github.Response, error) {
 			if *issue.Title != issueTitle {
 				t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
 			}
@@ -382,9 +408,10 @@ func TestEnsure(t *testing.T) {
 		setShouldPerform(true)
 		stale := github.Timestamp{Time: time.Now().Add(-10 * operator.NoticePingDuration)}
 		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			opts *github.IssueListByRepoOptions,
+		) ([]*github.Issue, *github.Response, error) {
 			return []*github.Issue{
-				&github.Issue{
+				{
 					Title:     &issueTitle,
 					State:     &open,
 					UpdatedAt: &stale,
@@ -393,7 +420,8 @@ func TestEnsure(t *testing.T) {
 		}
 		commentCalled := false
 		createComment = func(ctx context.Context, owner string, repo string,
-			number int, comment *github.IssueComment) (*github.IssueComment, *github.Response, error) {
+			number int, comment *github.IssueComment,
+		) (*github.IssueComment, *github.Response, error) {
 			if !strings.HasPrefix(comment.GetBody(), "Updating issue") {
 				t.Errorf("Unexpected comment: %v", comment.GetBody())
 			}
@@ -415,9 +443,10 @@ func TestEnsure(t *testing.T) {
 		setShouldPerform(false)
 		stale := github.Timestamp{Time: time.Now().Add(-10 * operator.NoticePingDuration)}
 		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			opts *github.IssueListByRepoOptions,
+		) ([]*github.Issue, *github.Response, error) {
 			return []*github.Issue{
-				&github.Issue{
+				{
 					Title:     &issueTitle,
 					State:     &open,
 					UpdatedAt: &stale,
@@ -426,7 +455,8 @@ func TestEnsure(t *testing.T) {
 		}
 		commentCalled := false
 		createComment = func(ctx context.Context, owner string, repo string,
-			number int, comment *github.IssueComment) (*github.IssueComment, *github.Response, error) {
+			number int, comment *github.IssueComment,
+		) (*github.IssueComment, *github.Response, error) {
 			if !strings.HasPrefix(comment.GetBody(), "Updating issue") {
 				t.Errorf("Unexpected comment: %v", comment.GetBody())
 			}
@@ -453,7 +483,8 @@ func TestClose(t *testing.T) {
 	}
 	t.Run("NoIssue", func(t *testing.T) {
 		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			opts *github.IssueListByRepoOptions,
+		) ([]*github.Issue, *github.Response, error) {
 			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
 		}
 		// Expect to not call nil functions
@@ -466,9 +497,10 @@ func TestClose(t *testing.T) {
 	})
 	t.Run("ClosedIssue", func(t *testing.T) {
 		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			opts *github.IssueListByRepoOptions,
+		) ([]*github.Issue, *github.Response, error) {
 			return []*github.Issue{
-				&github.Issue{
+				{
 					Title: &issueTitle,
 				},
 			}, &github.Response{NextPage: 0}, nil
@@ -483,10 +515,11 @@ func TestClose(t *testing.T) {
 	})
 	t.Run("OpenIssue", func(t *testing.T) {
 		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions) ([]*github.Issue, *github.Response, error) {
+			opts *github.IssueListByRepoOptions,
+		) ([]*github.Issue, *github.Response, error) {
 			open := "open"
 			return []*github.Issue{
-				&github.Issue{
+				{
 					Title: &issueTitle,
 					State: &open,
 				},
@@ -494,7 +527,8 @@ func TestClose(t *testing.T) {
 		}
 		commentCalled := false
 		createComment = func(ctx context.Context, owner string, repo string,
-			number int, comment *github.IssueComment) (*github.IssueComment, *github.Response, error) {
+			number int, comment *github.IssueComment,
+		) (*github.IssueComment, *github.Response, error) {
 			if comment.GetBody() != "Policy is now in compliance. Closing issue." {
 				t.Errorf("Unexpected comment: %v", comment.GetBody())
 			}
@@ -503,7 +537,8 @@ func TestClose(t *testing.T) {
 		}
 		editCalled := false
 		edit = func(ctx context.Context, owner string, repo string, number int,
-			issue *github.IssueRequest) (*github.Issue, *github.Response, error) {
+			issue *github.IssueRequest,
+		) (*github.Issue, *github.Response, error) {
 			if issue.GetState() != "closed" {
 				t.Errorf("Unexpected state: %v", issue.GetState())
 			}

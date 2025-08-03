@@ -22,16 +22,16 @@ import (
 	"path"
 	"strings"
 
-	"github.com/gobwas/glob"
-	"github.com/ossf/allstar/pkg/config/operator"
-
 	jsonpatch "github.com/evanphx/json-patch/v5"
+	"github.com/gobwas/glob"
 	"github.com/google/go-github/v59/github"
 	"github.com/rs/zerolog/log"
 	"sigs.k8s.io/yaml"
+
+	"github.com/ossf/allstar/pkg/config/operator"
 )
 
-// OrgConfig is the org-level config definition for Allstar
+// OrgConfig is the org-level config definition for Allstar.
 type OrgConfig struct {
 	// OptConfig contains the opt in/out configuration.
 	OptConfig OrgOptConfig `json:"optConfig"`
@@ -96,7 +96,7 @@ type OrgOptConfig struct {
 	DisableRepoOverride bool `json:"disableRepoOverride"`
 }
 
-// RepoConfig is the repo-level config definition for Allstar
+// RepoConfig is the repo-level config definition for Allstar.
 type RepoConfig struct {
 	// OptConfig contains the opt in/out configuration.
 	OptConfig RepoOptConfig `json:"optConfig"`
@@ -421,7 +421,6 @@ func matches(s []string, e string, gc globCache) bool {
 		} else if g.Match(e) {
 			return true
 		}
-
 	}
 	return false
 }

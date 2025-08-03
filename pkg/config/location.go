@@ -28,8 +28,10 @@ type instLoc struct {
 	Path   string
 }
 
-var instLocs map[string]*instLoc
-var mMutex sync.RWMutex
+var (
+	instLocs map[string]*instLoc
+	mMutex   sync.RWMutex
+)
 
 // Function getInstLoc gets the location of org-level configuration for this
 // org/installation. The purpose is to only hit possible 404s once per run.
@@ -59,7 +61,7 @@ func getInstLoc(ctx context.Context, r repositories, owner string) (*instLoc, er
 	return il, nil
 }
 
-// Function ClearInstLoc clears any saved config locations for an org/installation
+// Function ClearInstLoc clears any saved config locations for an org/installation.
 func ClearInstLoc(owner string) {
 	mMutex.RLock()
 	if instLocs == nil {

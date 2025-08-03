@@ -25,7 +25,8 @@ import (
 
 func walkGetContents(ctx context.Context, r repositories, owner, repo, p string,
 	opt *github.RepositoryContentGetOptions) (*github.RepositoryContent,
-	[]*github.RepositoryContent, *github.Response, error) {
+	[]*github.RepositoryContent, *github.Response, error,
+) {
 	paths := makePaths(p)
 	for _, v := range paths {
 		dir, file := path.Split(v)

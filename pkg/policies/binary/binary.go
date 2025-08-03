@@ -32,8 +32,10 @@ import (
 	"github.com/ossf/allstar/pkg/scorecard"
 )
 
-const configFile = "binary_artifacts.yaml"
-const polName = "Binary Artifacts"
+const (
+	configFile = "binary_artifacts.yaml"
+	polName    = "Binary Artifacts"
+)
 
 // OrgConfig is the org-level config definition for this policy.
 type OrgConfig struct {
@@ -90,21 +92,22 @@ func NewBinary() policydef.Policy {
 	return b
 }
 
-// Name returns the name of this policy, implementing policydef.Policy.Name()
+// Name returns the name of this policy, implementing policydef.Policy.Name().
 func (b Binary) Name() string {
 	return polName
 }
 
-// Check whether this policy is enabled or not
+// Check whether this policy is enabled or not.
 func (b Binary) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	return config.IsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 }
 
 // Check performs the policy check for this policy based on the
-// configuration stored in the org/repo, implementing policydef.Policy.Check()
+// configuration stored in the org/repo, implementing policydef.Policy.Check().
 func (b Binary) Check(ctx context.Context, c *github.Client, owner,
-	repo string) (*policydef.Result, error) {
+	repo string,
+) (*policydef.Result, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	mc := mergeConfig(oc, orc, rc, repo)
 	enabled, err := config.IsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
@@ -250,7 +253,7 @@ func (b Binary) Fix(ctx context.Context, c *github.Client, owner, repo string) e
 
 // GetAction returns the configured action from this policy's configuration
 // stored in the org-level repo, default log. Implementing
-// policydef.Policy.GetAction()
+// policydef.Policy.GetAction().
 func (b Binary) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	mc := mergeConfig(oc, orc, rc, repo)

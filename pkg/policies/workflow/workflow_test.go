@@ -20,6 +20,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v59/github"
+
 	"github.com/ossf/allstar/pkg/config"
 )
 
@@ -98,7 +99,8 @@ func TestConfigPrecedence(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			configFetchConfig = func(ctx context.Context, c *github.Client,
-				owner, repo, path string, ol config.ConfigLevel, out interface{}) error {
+				owner, repo, path string, ol config.ConfigLevel, out interface{},
+			) error {
 				switch ol {
 				case config.RepoLevel:
 					rc := out.(*RepoConfig)

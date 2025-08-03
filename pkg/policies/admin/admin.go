@@ -19,15 +19,17 @@ import (
 	"context"
 
 	"github.com/gobwas/glob"
-	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/policydef"
-
 	"github.com/google/go-github/v59/github"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ossf/allstar/pkg/config"
+	"github.com/ossf/allstar/pkg/policydef"
 )
 
-const configFile = "admin.yaml"
-const polName = "Repository Administrators"
+const (
+	configFile = "admin.yaml"
+	polName    = "Repository Administrators"
+)
 
 const ownerlessText = `Did not find any owners of this repository
 This policy requires all repositories to have a user or team assigned as an administrator.  A responsible party is required by organization policy to respond to security events and organization requests.
@@ -131,7 +133,6 @@ type globCache map[string]glob.Glob
 
 // AdministratorExemption is an exemption entry for the Repository Administrators policy.
 type AdministratorExemption struct {
-
 	// Repo is a GitHub repo name. Globs are allowed.
 	Repo string `json:"repo"`
 
@@ -183,7 +184,7 @@ func NewAdmin() policydef.Policy {
 	return a
 }
 
-// Name returns the name of this policy, implementing policydef.Policy.Name()
+// Name returns the name of this policy, implementing policydef.Policy.Name().
 func (a Admin) Name() string {
 	return polName
 }
@@ -196,20 +197,22 @@ type repositories interface {
 }
 
 // Check performs the policy check for Repository Administrators based on the
-// configuration stored in the org/repo, implementing policydef.Policy.Check()
+// configuration stored in the org/repo, implementing policydef.Policy.Check().
 func (a Admin) Check(ctx context.Context, c *github.Client, owner,
-	repo string) (*policydef.Result, error) {
+	repo string,
+) (*policydef.Result, error) {
 	return check(ctx, c.Repositories, c, owner, repo)
 }
 
-// Check whether this policy is enabled or not
+// Check whether this policy is enabled or not.
 func (a Admin) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	return configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 }
 
 func check(ctx context.Context, rep repositories, c *github.Client, owner,
-	repo string) (*policydef.Result, error) {
+	repo string,
+) (*policydef.Result, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	enabled, err := configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 	if err != nil {
@@ -257,13 +260,13 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	}
 
 	// Test OwnerlessAllowed
-	if (len(d.Admins)+len(d.TeamAdmins)) < 1 && !(mc.OwnerlessAllowed || isOwnerlessExempt(repo, mc.Exemptions, gc)) {
+	if (len(d.Admins)+len(d.TeamAdmins)) < 1 && (!mc.OwnerlessAllowed && !isOwnerlessExempt(repo, mc.Exemptions, gc)) {
 		rv.Pass = false
 		rv.NotifyText = rv.NotifyText + ownerlessText
 	}
 
 	// Test UserAdminsAllowed
-	if len(d.Admins) > 0 && !(mc.UserAdminsAllowed || isUserAdminsExempt(repo, d.Admins, mc.Exemptions, gc)) {
+	if len(d.Admins) > 0 && (!mc.UserAdminsAllowed && !isUserAdminsExempt(repo, d.Admins, mc.Exemptions, gc)) {
 		rv.Pass = false
 		rv.NotifyText = rv.NotifyText + userAdminsText
 	}
@@ -281,7 +284,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	}
 
 	// Test TeamAdminsAllowed
-	if len(d.TeamAdmins) > 0 && !(mc.TeamAdminsAllowed || isTeamAdminsExempt(repo, d.TeamAdmins, mc.Exemptions, gc)) {
+	if len(d.TeamAdmins) > 0 && (!mc.TeamAdminsAllowed && !isTeamAdminsExempt(repo, d.TeamAdmins, mc.Exemptions, gc)) {
 		rv.Pass = false
 		rv.NotifyText = rv.NotifyText + teamAdminsText
 	}
@@ -302,7 +305,8 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 }
 
 func getAdminUsers(ctx context.Context, r repositories, owner, repo string,
-	exemptions []*AdministratorExemption, gc globCache) ([]string, error) {
+	exemptions []*AdministratorExemption, gc globCache,
+) ([]string, error) {
 	opt := &github.ListCollaboratorsOptions{
 		ListOptions: github.ListOptions{
 			PerPage: 100,
@@ -381,7 +385,7 @@ func isTeamAdminsExempt(repo string, teamAdmins []string, ee []*AdministratorExe
 
 func in(admins []string, list []string) bool {
 	for _, admin := range admins {
-		var found bool = false
+		found := false
 		for _, l := range list {
 			if l == admin {
 				found = true
@@ -440,7 +444,7 @@ func (a Admin) Fix(ctx context.Context, c *github.Client, owner, repo string) er
 
 // GetAction returns the configured action from this policy's
 // configuration stored in the org-level repo, default log. Implementing
-// policydef.Policy.GetAction()
+// policydef.Policy.GetAction().
 func (a Admin) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	mc := mergeConfig(oc, orc, rc, repo)

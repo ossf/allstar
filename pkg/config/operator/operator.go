@@ -42,7 +42,7 @@ const setKeySecret = "gcpsecretmanager://projects/allstar-ossf/secrets/allstar-p
 
 var KeySecret string
 
-// GitHubEnterpriseUrl allows to configure the usage a GitHub enterprise instance
+// GitHubEnterpriseUrl allows to configure the usage a GitHub enterprise instance.
 var GitHubEnterpriseUrl string
 
 // OrgConfigRepo is the name of the expected org-level repo to contain config.
@@ -89,7 +89,7 @@ Issue created by Allstar. See https://github.com/ossf/allstar/ for more informat
 
 // AllowedOrganizations is the set of GitHub repositories on which this Allstar instance
 // is allowed to be installed. This allows a public GitHub app to be shared between GitHub
-// organizations and repos while restricting installation of the app
+// organizations and repos while restricting installation of the app.
 var AllowedOrganizations []string
 
 // NoticePingDuration is the duration (in hours) to wait between pinging notice actions,
@@ -98,7 +98,7 @@ const setNoticePingDurationHrs = (24 * time.Hour)
 
 var NoticePingDuration time.Duration
 
-// NumWorkers is the number of concurrent orginazations/installations the
+// NumWorkers is the number of concurrent organizations/installations the
 // Allstar binary will scan concurrently.
 const setNumWorkers = 5
 

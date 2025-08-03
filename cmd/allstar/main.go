@@ -25,12 +25,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
+
 	"github.com/ossf/allstar/pkg/enforce"
 	"github.com/ossf/allstar/pkg/ghclients"
 	"github.com/ossf/allstar/pkg/policies"
-
-	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 )
 
 func main() {
@@ -43,12 +43,12 @@ func main() {
 			Err(err).
 			Msg("Could not load app secret, shutting down")
 	}
-	var supportedPolicies = policies.GetPolicies()
+	supportedPolicies := policies.GetPolicies()
 	supportedPoliciesMap := map[string]string{}
-	var supportedPoliciesMsg = ""
+	supportedPoliciesMsg := ""
 
 	for i, p := range supportedPolicies {
-		var policyName = p.Name()
+		policyName := p.Name()
 		supportedPoliciesMap[policyName] = policyName
 		if i < len(supportedPolicies)-1 {
 			supportedPoliciesMsg += policyName + ", "

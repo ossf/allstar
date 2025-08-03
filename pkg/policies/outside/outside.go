@@ -20,15 +20,17 @@ import (
 	"fmt"
 
 	"github.com/gobwas/glob"
-	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/policydef"
-
 	"github.com/google/go-github/v59/github"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ossf/allstar/pkg/config"
+	"github.com/ossf/allstar/pkg/policydef"
 )
 
-const configFile = "outside.yaml"
-const polName = "Outside Collaborators"
+const (
+	configFile = "outside.yaml"
+	polName    = "Outside Collaborators"
+)
 
 const accessText = "Found %v outside collaborators with %v access.\n"
 
@@ -140,7 +142,7 @@ func NewOutside() policydef.Policy {
 	return o
 }
 
-// Name returns the name of this policy, implementing policydef.Policy.Name()
+// Name returns the name of this policy, implementing policydef.Policy.Name().
 func (o Outside) Name() string {
 	return polName
 }
@@ -153,20 +155,22 @@ type repositories interface {
 }
 
 // Check performs the policy check for Outside Collaborators based on the
-// configuration stored in the org/repo, implementing policydef.Policy.Check()
+// configuration stored in the org/repo, implementing policydef.Policy.Check().
 func (o Outside) Check(ctx context.Context, c *github.Client, owner,
-	repo string) (*policydef.Result, error) {
+	repo string,
+) (*policydef.Result, error) {
 	return check(ctx, c.Repositories, c, owner, repo)
 }
 
-// Check whether this policy is enabled or not
+// Check whether this policy is enabled or not.
 func (o Outside) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	return configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 }
 
 func check(ctx context.Context, rep repositories, c *github.Client, owner,
-	repo string) (*policydef.Result, error) {
+	repo string,
+) (*policydef.Result, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	enabled, err := configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 	if err != nil {
@@ -263,7 +267,8 @@ func in(name string, list []string) bool {
 }
 
 func getUsers(ctx context.Context, r repositories, owner, repo, perm,
-	aff string, exemptions []*OutsideExemption, gc globCache) ([]string, error) {
+	aff string, exemptions []*OutsideExemption, gc globCache,
+) ([]string, error) {
 	opt := &github.ListCollaboratorsOptions{
 		ListOptions: github.ListOptions{
 			PerPage: 100,
@@ -326,7 +331,7 @@ func (o Outside) Fix(ctx context.Context, c *github.Client, owner, repo string) 
 
 // GetAction returns the configured action from this policy's
 // configuration stored in the org-level repo, default log. Implementing
-// policydef.Policy.GetAction()
+// policydef.Policy.GetAction().
 func (o Outside) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	mc := mergeConfig(oc, orc, rc, repo)

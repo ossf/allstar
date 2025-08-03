@@ -20,19 +20,22 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v59/github"
+
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
 )
 
 var listCollaborators func(context.Context, string, string,
 	*github.ListCollaboratorsOptions) ([]*github.User, *github.Response, error)
+
 var listTeams func(context.Context, string, string, *github.ListOptions) (
 	[]*github.Team, *github.Response, error)
 
 type mockRepos struct{}
 
 func (m mockRepos) ListCollaborators(ctx context.Context, o, r string,
-	op *github.ListCollaboratorsOptions) ([]*github.User, *github.Response, error) {
+	op *github.ListCollaboratorsOptions,
+) ([]*github.User, *github.Response, error) {
 	return listCollaborators(ctx, o, r, op)
 }
 
@@ -167,7 +170,8 @@ func TestConfigPrecedence(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			configFetchConfig = func(ctx context.Context, c *github.Client,
-				owner, repo, path string, ol config.ConfigLevel, out interface{}) error {
+				owner, repo, path string, ol config.ConfigLevel, out interface{},
+			) error {
 				switch ol {
 				case config.RepoLevel:
 					rc := out.(*RepoConfig)
@@ -241,13 +245,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push": true,
@@ -276,13 +280,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -312,13 +316,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push": true,
@@ -347,13 +351,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -383,13 +387,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push": true,
@@ -418,13 +422,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -454,13 +458,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push": true,
@@ -489,13 +493,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -525,13 +529,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -540,13 +544,13 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push": true,
@@ -576,13 +580,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push": true,
@@ -590,13 +594,13 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -633,13 +637,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push": true,
@@ -674,13 +678,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push": true,
@@ -709,13 +713,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -745,13 +749,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push": true,
@@ -780,13 +784,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push": true,
@@ -794,13 +798,13 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -831,13 +835,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -867,13 +871,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push": true,
@@ -909,13 +913,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -952,13 +956,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -996,13 +1000,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -1039,13 +1043,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -1076,14 +1080,14 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push":  true,
 						"admin": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -1114,14 +1118,14 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push":  true,
 						"admin": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -1152,13 +1156,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push": true,
@@ -1197,14 +1201,14 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push":  true,
 						"admin": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -1244,21 +1248,21 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push":  true,
 						"admin": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
 						"admin": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &dave,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -1288,13 +1292,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -1324,13 +1328,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push": true,
@@ -1359,13 +1363,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Users: []*github.User{
-				&github.User{
+				{
 					Login: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.User{
+				{
 					Login: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -1374,13 +1378,13 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push": true,
@@ -1410,13 +1414,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -1446,13 +1450,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push": true,
@@ -1488,13 +1492,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -1531,13 +1535,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -1574,13 +1578,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -1617,13 +1621,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -1654,14 +1658,14 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push":  true,
 						"admin": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -1692,14 +1696,14 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push":  true,
 						"admin": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -1730,13 +1734,13 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push": true,
@@ -1775,14 +1779,14 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push":  true,
 						"admin": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -1822,21 +1826,21 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Teams: []*github.Team{
-				&github.Team{
+				{
 					Slug: &alice,
 					Permissions: map[string]bool{
 						"push":  true,
 						"admin": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &bob,
 					Permissions: map[string]bool{
 						"push":  true,
 						"admin": true,
 					},
 				},
-				&github.Team{
+				{
 					Slug: &dave,
 					Permissions: map[string]bool{
 						"push":  true,
@@ -1859,7 +1863,8 @@ func TestCheck(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			configFetchConfig = func(ctx context.Context, c *github.Client,
-				owner, repo, path string, ol config.ConfigLevel, out interface{}) error {
+				owner, repo, path string, ol config.ConfigLevel, out interface{},
+			) error {
 				if repo == "thisrepo" && ol == config.RepoLevel {
 					rc := out.(*RepoConfig)
 					*rc = test.Repo
@@ -1870,11 +1875,13 @@ func TestCheck(t *testing.T) {
 				return nil
 			}
 			listCollaborators = func(c context.Context, o, r string,
-				op *github.ListCollaboratorsOptions) ([]*github.User, *github.Response, error) {
+				op *github.ListCollaboratorsOptions,
+			) ([]*github.User, *github.Response, error) {
 				return test.Users, &github.Response{NextPage: 0}, nil
 			}
 			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig,
-				c *github.Client, owner, repo string) (bool, error) {
+				c *github.Client, owner, repo string,
+			) (bool, error) {
 				return test.cofigEnabled, nil
 			}
 			listTeams = func(ctx context.Context, owner string, repo string, opts *github.ListOptions) ([]*github.Team, *github.Response, error) {

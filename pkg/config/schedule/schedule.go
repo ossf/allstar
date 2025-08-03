@@ -20,8 +20,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ossf/allstar/pkg/config"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ossf/allstar/pkg/config"
 )
 
 var weekdayStrings = map[string]time.Weekday{
@@ -72,7 +73,7 @@ func ShouldPerform(sch *config.ScheduleConfig) bool {
 	return true
 }
 
-// MergeSchedules gets the preferred ScheduleConfig from the ScheduleConfigs provided
+// MergeSchedules gets the preferred ScheduleConfig from the ScheduleConfigs provided.
 func MergeSchedules(oc *config.ScheduleConfig, orc, rc *config.ScheduleConfig) *config.ScheduleConfig {
 	var mc *config.ScheduleConfig
 

@@ -19,17 +19,19 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/config/operator"
-	"github.com/ossf/allstar/pkg/policydef"
-
 	"github.com/google/go-github/v59/github"
 	"github.com/rs/zerolog/log"
 	"github.com/shurcooL/githubv4"
+
+	"github.com/ossf/allstar/pkg/config"
+	"github.com/ossf/allstar/pkg/config/operator"
+	"github.com/ossf/allstar/pkg/policydef"
 )
 
-const configFile = "security.yaml"
-const polName = "SECURITY.md"
+const (
+	configFile = "security.yaml"
+	polName    = "SECURITY.md"
+)
 
 const notifyText = `A SECURITY.md file can give users information about what constitutes a vulnerability and how to report one securely so that information about a bug is not publicly visible. Examples of secure reporting methods include using an issue tracker with private issue support, or encrypted email with a published key.
 
@@ -46,10 +48,10 @@ type OrgConfig struct {
 	// Action defines which action to take, default log, other: issue...
 	Action string `json:"action"`
 
-	//TODO add default contents for "fix" action
+	// TODO add default contents for "fix" action
 }
 
-// RepoConfig is the repo-level config for Branch Protection
+// RepoConfig is the repo-level config for Branch Protection.
 type RepoConfig struct {
 	// OptConfig is the standard repo-level opt in/out config.
 	OptConfig config.RepoOptConfig `json:"optConfig"`
@@ -89,16 +91,16 @@ func NewSecurity() policydef.Policy {
 	return s
 }
 
-// Name returns the name of this policy, implementing policydef.Policy.Name()
+// Name returns the name of this policy, implementing policydef.Policy.Name().
 func (s Security) Name() string {
 	return polName
 }
 
 // Check performs the policy check for SECURITY.md policy based on the
-// configuration stored in the org/repo, implementing policydef.Policy.Check()
+// configuration stored in the org/repo, implementing policydef.Policy.Check().
 func (s Security) Check(ctx context.Context, c *github.Client, owner,
-	repo string) (*policydef.Result, error) {
-
+	repo string,
+) (*policydef.Result, error) {
 	var v4c v4client
 	if operator.GitHubEnterpriseUrl == "" {
 		v4c = githubv4.NewClient(c.Client())
@@ -108,14 +110,15 @@ func (s Security) Check(ctx context.Context, c *github.Client, owner,
 	return check(ctx, c, v4c, owner, repo)
 }
 
-// Check whether this policy is enabled or not
+// Check whether this policy is enabled or not.
 func (s Security) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	return configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 }
 
 func check(ctx context.Context, c *github.Client, v4c v4client, owner,
-	repo string) (*policydef.Result, error) {
+	repo string,
+) (*policydef.Result, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	enabled, err := configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 	if err != nil {
@@ -176,7 +179,7 @@ func (s Security) Fix(ctx context.Context, c *github.Client, owner, repo string)
 
 // GetAction returns the configured action from SECURITY.md policy's
 // configuration stored in the org-level repo, default log. Implementing
-// policydef.Policy.GetAction()
+// policydef.Policy.GetAction().
 func (s Security) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	mc := mergeConfig(oc, orc, rc, repo)

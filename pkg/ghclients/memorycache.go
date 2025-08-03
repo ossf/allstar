@@ -29,14 +29,14 @@ import (
 
 // memoryCache is an implementation of httpcache.Cache that stores responses in
 // an in-memory map.  It is a copy of httpcache.MemoryCache but adds
-// LogCacheSize()
+// LogCacheSize().
 type memoryCache struct {
 	mu    sync.RWMutex
 	items map[string][]byte
 }
 
 // Get returns the []byte representation of the response and true if present,
-// false if not
+// false if not.
 func (c *memoryCache) Get(key string) (resp []byte, ok bool) {
 	c.mu.RLock()
 	resp, ok = c.items[key]
@@ -51,7 +51,7 @@ func (c *memoryCache) Get(key string) (resp []byte, ok bool) {
 	return resp, ok
 }
 
-// Set saves response resp to the cache with key
+// Set saves response resp to the cache with key.
 func (c *memoryCache) Set(key string, resp []byte) {
 	if strings.Contains(key, ".tar.gz") || strings.Contains(key, "tarball/") {
 		// Don't cache tarballs.  Currently GitHub redirects tarball downloads to a
@@ -73,7 +73,7 @@ func (c *memoryCache) Set(key string, resp []byte) {
 		Msg("Cache SET request")
 }
 
-// Delete removes key from the cache
+// Delete removes key from the cache.
 func (c *memoryCache) Delete(key string) {
 	c.mu.Lock()
 	delete(c.items, key)
@@ -98,7 +98,7 @@ func (c *memoryCache) LogCacheSize() {
 }
 
 // newMemoryCache returns a new memoryCache that will store items in an
-// in-memory map
+// in-memory map.
 func newMemoryCache() *memoryCache {
 	c := &memoryCache{items: map[string][]byte{}}
 	return c

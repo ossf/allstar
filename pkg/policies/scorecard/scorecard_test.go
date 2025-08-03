@@ -21,11 +21,12 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v59/github"
-	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/scorecard"
 	"github.com/ossf/scorecard/v5/checker"
 	"github.com/ossf/scorecard/v5/clients"
 	sc "github.com/ossf/scorecard/v5/pkg/scorecard"
+
+	"github.com/ossf/allstar/pkg/config"
+	"github.com/ossf/allstar/pkg/scorecard"
 )
 
 func TestConfigPrecedence(t *testing.T) {
@@ -103,7 +104,8 @@ func TestConfigPrecedence(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			configFetchConfig = func(ctx context.Context, c *github.Client,
-				owner, repo, path string, ol config.ConfigLevel, out interface{}) error {
+				owner, repo, path string, ol config.ConfigLevel, out interface{},
+			) error {
 				switch ol {
 				case config.RepoLevel:
 					rc := out.(*RepoConfig)
@@ -174,7 +176,8 @@ func TestCheck(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			configFetchConfig = func(ctx context.Context, c *github.Client, owner,
-				repo, path string, ol config.ConfigLevel, out interface{}) error {
+				repo, path string, ol config.ConfigLevel, out interface{},
+			) error {
 				switch ol {
 				case config.RepoLevel:
 					rc := out.(*RepoConfig)
@@ -190,11 +193,13 @@ func TestCheck(t *testing.T) {
 			}
 			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, orc,
 				r config.RepoOptConfig, c *github.Client, owner, repo string) (bool,
-				error) {
+				error,
+			) {
 				return true, nil
 			}
 			scorecardGet = func(ctx context.Context, fullRepo string, local bool,
-				tr http.RoundTripper) (*scorecard.ScClient, error) {
+				tr http.RoundTripper,
+			) (*scorecard.ScClient, error) {
 				return &scorecard.ScClient{}, nil
 			}
 			checksAllChecks = checker.CheckNameToFnMap{}
