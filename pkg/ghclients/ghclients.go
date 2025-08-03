@@ -24,22 +24,29 @@ import (
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v59/github"
 	"github.com/gregjones/httpcache"
-	"github.com/ossf/allstar/pkg/config/operator"
 	"gocloud.dev/runtimevar"
 	_ "gocloud.dev/runtimevar/awssecretsmanager"
 	_ "gocloud.dev/runtimevar/filevar"
 	_ "gocloud.dev/runtimevar/gcpsecretmanager"
+
+	"github.com/ossf/allstar/pkg/config/operator"
 )
 
 var ghinstallationNewAppsTransport func(http.RoundTripper, int64,
 	[]byte) (*ghinstallation.AppsTransport, error)
+
 var ghinstallationNew func(http.RoundTripper, int64, int64, []byte) (
 	*ghinstallation.Transport, error)
-var getKey func(context.Context) ([]byte, error)
-var getKeyFromSecret func(context.Context, string) ([]byte, error)
 
-var privateKey = operator.PrivateKey
-var keySecret = operator.KeySecret
+var (
+	getKey           func(context.Context) ([]byte, error)
+	getKeyFromSecret func(context.Context, string) ([]byte, error)
+)
+
+var (
+	privateKey = operator.PrivateKey
+	keySecret  = operator.KeySecret
+)
 
 func init() {
 	ghinstallationNewAppsTransport = ghinstallation.NewAppsTransport
@@ -112,7 +119,6 @@ func (g *GHClients) Get(i int64) (*github.Client, error) {
 			ghiTransport.BaseURL = fullEnterpriseApiUrl(operator.GitHubEnterpriseUrl)
 		}
 		tr = ghiTransport
-
 	}
 
 	c := github.NewClient(&http.Client{Transport: tr})
@@ -128,7 +134,7 @@ func (g *GHClients) Get(i int64) (*github.Client, error) {
 	return g.clients[i], nil
 }
 
-// fullEnterpriseApiUrl ensures the base url is in the correct format for GitHub Enterprise usage
+// fullEnterpriseApiUrl ensures the base url is in the correct format for GitHub Enterprise usage.
 func fullEnterpriseApiUrl(baseUrl string) string {
 	if !strings.HasSuffix(baseUrl, "/") {
 		baseUrl += "/"

@@ -18,25 +18,30 @@ package action
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/google/go-github/v59/github"
+	"github.com/rhysd/actionlint"
+	"github.com/rs/zerolog/log"
+
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
-	"github.com/rhysd/actionlint"
-
-	"github.com/google/go-github/v59/github"
-	"github.com/rs/zerolog/log"
 )
 
-const configFile = "actions.yaml"
-const polName = "GitHub Actions"
+const (
+	configFile = "actions.yaml"
+	polName    = "GitHub Actions"
+)
 
 const failText = "This policy, specified at the organization level, sets requirements for Action use by repos within the organization. This repo is failing to fully comply with organization policies, as explained below.\n\n```\n%s```\n\nSee the org-level %s policy configuration for details."
 
-const maxWorkflows = 50
-const repoSelectorExcludeDepthLimit = 3
+const (
+	maxWorkflows                  = 50
+	repoSelectorExcludeDepthLimit = 3
+)
 
 var priorities = map[string]int{
 	"critical": 0,
@@ -45,7 +50,7 @@ var priorities = map[string]int{
 	"low":      3,
 }
 
-// OrgConfig is the org-level config definition for Action Use
+// OrgConfig is the org-level config definition for Action Use.
 type OrgConfig struct {
 	// Action defines which action to take, default log, other: issue...
 	Action string `json:"action"`
@@ -71,7 +76,7 @@ type RuleGroup struct {
 	Rules []*Rule `json:"rules"`
 }
 
-// Rule is an Action Use rule
+// Rule is an Action Use rule.
 type Rule struct {
 	// Name is the name used to identify the rule
 	Name string `json:"name"`
@@ -98,7 +103,7 @@ type Rule struct {
 	RequireAll bool `json:"requireAll"`
 }
 
-// RepoSelector specifies a selection of repos
+// RepoSelector specifies a selection of repos.
 type RepoSelector struct {
 	// Name is the repo name in glob format
 	Name string `json:"name"`
@@ -112,7 +117,7 @@ type RepoSelector struct {
 	Exclude []*RepoSelector `json:"exclude"`
 }
 
-// ActionSelector specifies a selection of Actions
+// ActionSelector specifies a selection of Actions.
 type ActionSelector struct {
 	// Name is the Action name in glob format
 	Name string `json:"name"`
@@ -139,7 +144,7 @@ type actionMetadata struct {
 	workflowOn       []actionlint.Event
 }
 
-// internalRuleGroup is a RuleGroup using internalRule
+// internalRuleGroup is a RuleGroup using internalRule.
 type internalRuleGroup struct {
 	*RuleGroup
 
@@ -149,7 +154,7 @@ type internalRuleGroup struct {
 	Rules []*internalRule `json:"rules"`
 }
 
-// internalRule is an Action Use rule with added internal fields
+// internalRule is an Action Use rule with added internal fields.
 type internalRule struct {
 	*Rule
 
@@ -161,7 +166,7 @@ type internalRule struct {
 	priorityInt int
 }
 
-// internalOrgConfig is the org-level Actions policy config with internalGroup
+// internalOrgConfig is the org-level Actions policy config with internalGroup.
 type internalOrgConfig struct {
 	// Action defines which action to take, default log, other: issue...
 	Action string `json:"action"`
@@ -173,11 +178,13 @@ type internalOrgConfig struct {
 
 var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
 
-var listWorkflows func(ctx context.Context, c *github.Client, owner, repo string) ([]*workflowMetadata, error)
-var listLanguages func(ctx context.Context, c *github.Client, owner, repo string) (map[string]int, error)
-var listWorkflowRunsByFilename func(ctx context.Context, c *github.Client, owner, repo string, workflowFilename string) ([]*github.WorkflowRun, error)
-var getLatestCommitHash func(ctx context.Context, c *github.Client, owner, repo string) (string, error)
-var listTags func(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryTag, error)
+var (
+	listWorkflows              func(ctx context.Context, c *github.Client, owner, repo string) ([]*workflowMetadata, error)
+	listLanguages              func(ctx context.Context, c *github.Client, owner, repo string) (map[string]int, error)
+	listWorkflowRunsByFilename func(ctx context.Context, c *github.Client, owner, repo string, workflowFilename string) ([]*github.WorkflowRun, error)
+	getLatestCommitHash        func(ctx context.Context, c *github.Client, owner, repo string) (string, error)
+	listTags                   func(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryTag, error)
+)
 
 func init() {
 	configFetchConfig = config.FetchConfig
@@ -188,7 +195,7 @@ func init() {
 	listTags = listTagsReal
 }
 
-// sortableRules is a sortable list of *Rule
+// sortableRules is a sortable list of *Rule.
 type sortableRules []*internalRule
 
 // Action is the Action Use policy object, implements policydef.Policy.
@@ -200,12 +207,12 @@ func NewAction() policydef.Policy {
 	return a
 }
 
-// Name returns the name of this policy, implementing policydef.Policy.Name()
+// Name returns the name of this policy, implementing policydef.Policy.Name().
 func (a Action) Name() string {
 	return polName
 }
 
-// Check whether this policy is enabled or not
+// Check whether this policy is enabled or not.
 func (a Action) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
 	oc := getConfig(ctx, c, owner, repo)
 	enabled := oc.Groups != nil
@@ -213,9 +220,10 @@ func (a Action) IsEnabled(ctx context.Context, c *github.Client, owner, repo str
 }
 
 // Check performs the policy check for Action Use policy based on the
-// configuration stored in the org, implementing policydef.Policy.Check()
+// configuration stored in the org, implementing policydef.Policy.Check().
 func (a Action) Check(ctx context.Context, c *github.Client, owner,
-	repo string) (*policydef.Result, error) {
+	repo string,
+) (*policydef.Result, error) {
 	oc := getConfig(ctx, c, owner, repo)
 	enabled := oc.Groups != nil
 	log.Info().
@@ -306,7 +314,6 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 		for _, rs := range g.Repos {
 			// Ignore error while checking match. Match will be false on error.
 			match, err := rs.match(ctx, c, owner, repo, repoSelectorExcludeDepthLimit, gc, sc)
-
 			if err != nil {
 				log.Warn().
 					Str("org", owner).
@@ -445,7 +452,7 @@ func (a Action) Fix(ctx context.Context, c *github.Client, owner, repo string) e
 
 // GetAction returns the configured action from Action Use policy's
 // configuration stored in the org repo, default log. Implementing
-// policydef.Policy.GetAction()
+// policydef.Policy.GetAction().
 func (a Action) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
 	oc := getConfig(ctx, c, owner, repo)
 	return oc.Action
@@ -630,7 +637,7 @@ func languageSatisfied(langs map[string]int, want []string) bool {
 	return false
 }
 
-// Len returns number of rules in s
+// Len returns number of rules in s.
 func (s sortableRules) Len() int {
 	return len(s)
 }
@@ -647,7 +654,7 @@ func (s sortableRules) Less(i, j int) bool {
 	return false
 }
 
-// Swap swaps the Rules at indices i and j
+// Swap swaps the Rules at indices i and j.
 func (s sortableRules) Swap(i, j int) {
 	hold := s[i]
 	s[i] = s[j]
@@ -696,7 +703,7 @@ func listWorkflowsReal(ctx context.Context, c *github.Client, owner, repo string
 	// implementation and make it public for use here.
 	_, workflowDirContents, resp, err := c.Repositories.GetContents(ctx, owner, repo, ".github/workflows", &github.RepositoryContentGetOptions{})
 	if err != nil {
-		if resp.StatusCode == 404 {
+		if resp.StatusCode == http.StatusNotFound {
 			// No workflows dir should yield no workflows
 			return []*workflowMetadata{}, nil
 		}

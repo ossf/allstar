@@ -24,21 +24,25 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-github/v59/github"
+	"github.com/rs/zerolog/log"
+
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/config/schedule"
-	"github.com/rs/zerolog/log"
-
-	"github.com/google/go-github/v59/github"
 )
 
-const issueRepoTitle = "Security Policy violation for repository %q %v"
-const sameRepoTitle = "Security Policy violation %v"
+const (
+	issueRepoTitle = "Security Policy violation for repository %q %v"
+	sameRepoTitle  = "Security Policy violation %v"
+)
 
-const issueSectionHeaderFormat = "<!-- Edit section #%s -->"
-const resultTextHashCommentFormat = "<!-- Current result text hash: %s -->"
-const updateWarningFormat = "\n%s\n:warning: There is an updated version of this policy result! [Click here to see the latest update](%s)\n\n---\n\n"
-const updateSectionName = "updates"
+const (
+	issueSectionHeaderFormat    = "<!-- Edit section #%s -->"
+	resultTextHashCommentFormat = "<!-- Current result text hash: %s -->"
+	updateWarningFormat         = "\n%s\n:warning: There is an updated version of this policy result! [Click here to see the latest update](%s)\n\n---\n\n"
+	updateSectionName           = "updates"
+)
 
 type issues interface {
 	ListByRepo(context.Context, string, string, *github.IssueListByRepoOptions) (
@@ -51,8 +55,10 @@ type issues interface {
 		*github.IssueComment, *github.Response, error)
 }
 
-var configGetAppConfigs func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig)
-var scheduleShouldPerform func(*config.ScheduleConfig) bool
+var (
+	configGetAppConfigs   func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig)
+	scheduleShouldPerform func(*config.ScheduleConfig) bool
+)
 
 func init() {
 	configGetAppConfigs = config.GetAppConfigs

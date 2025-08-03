@@ -25,14 +25,17 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v59/github"
+
 	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/policydef"
 )
 
-var policy1Results policyRepoResults
-var policy2Results policyRepoResults
-var action string
-var fixCalled bool
+var (
+	policy1Results policyRepoResults
+	policy2Results policyRepoResults
+	action         string
+	fixCalled      bool
+)
 
 type policyRepoResults map[string]policydef.Result
 
@@ -645,7 +648,7 @@ func TestAllowedRepositories(t *testing.T) {
 			listInstallations = func(ctx context.Context, ac *github.Client) ([]*github.Installation, error) {
 				repos := []*github.Installation{}
 				for _, r := range tt.orgs {
-					r := r
+
 					i := injective(r)
 					repos = append(repos, &github.Installation{Account: &github.User{Login: &r}, ID: &i})
 				}
@@ -655,7 +658,7 @@ func TestAllowedRepositories(t *testing.T) {
 			removed := []int64{}
 			deleteInstallation = func(ctx context.Context, ic *github.Client, instID int64) (*github.Response, error) {
 				removed = append(removed, instID)
-				return &github.Response{Response: &http.Response{StatusCode: 200}}, nil
+				return &github.Response{Response: &http.Response{StatusCode: http.StatusOK}}, nil
 			}
 
 			getAppInstallations = getAppInstallationsReal

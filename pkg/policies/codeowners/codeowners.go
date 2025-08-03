@@ -20,22 +20,24 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/policydef"
-
 	"github.com/google/go-github/v59/github"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ossf/allstar/pkg/config"
+	"github.com/ossf/allstar/pkg/policydef"
 )
 
-const configFile = "codeowners.yaml"
-const polName = "CODEOWNERS"
+const (
+	configFile = "codeowners.yaml"
+	polName    = "CODEOWNERS"
+)
 
 const notifyText = `A CODEOWNERS file can give users information about who is responsible for the maintenance of the repository, or specific folders/files. This is different the access control/permissions on a repository.
 
 To fix this, add a CODEOWNERS file to your repository, following the official Github documentation and maybe your company's policy.
 https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners`
 
-// OrgConfig is the org-level config definition for CODEOWNERS
+// OrgConfig is the org-level config definition for CODEOWNERS.
 type OrgConfig struct {
 	// OptConfig is the standard org-level opt in/out config, RepoOverride applies to all
 	// BP config.
@@ -49,7 +51,7 @@ type OrgConfig struct {
 	RequireCODEOWNERS bool `json:"requireCODEOWNERS"`
 }
 
-// RepoConfig is the repo-level config for CODEOWNERS
+// RepoConfig is the repo-level config for CODEOWNERS.
 type RepoConfig struct {
 	// OptConfig is the standard repo-level opt in/out config.
 	OptConfig config.RepoOptConfig `json:"optConfig"`
@@ -95,29 +97,30 @@ func NewCodeowners() policydef.Policy {
 	return s
 }
 
-// Name returns the name of this policy, implementing policydef.Policy.Name()
+// Name returns the name of this policy, implementing policydef.Policy.Name().
 func (s Codeowners) Name() string {
 	return polName
 }
 
 // Check performs the policy check for CODEOWNERS policy based on the
-// configuration stored in the org/repo, implementing policydef.Policy.Check()
+// configuration stored in the org/repo, implementing policydef.Policy.Check().
 func (s Codeowners) Check(ctx context.Context, c *github.Client, owner,
-	repo string) (*policydef.Result, error) {
+	repo string,
+) (*policydef.Result, error) {
 	return check(ctx, c.Repositories, c, owner, repo)
 }
 
-// Check whether this policy is enabled or not
+// Check whether this policy is enabled or not.
 func (s Codeowners) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	return configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 }
 
 func check(ctx context.Context, rep repositories, c *github.Client, owner,
-	repo string) (*policydef.Result, error) {
+	repo string,
+) (*policydef.Result, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	enabled, err := configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
-
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +151,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		}
 		// otherwise, fail because CODEOWNERS exists and has errors
 		d.CodeownersErrors = *codeownererrors
-		var errorMessage = fmt.Sprintf("%s\nCODEOWNERS file present but has %d errors.\n", notifyText, d.ErrorCount)
+		errorMessage := fmt.Sprintf("%s\nCODEOWNERS file present but has %d errors.\n", notifyText, d.ErrorCount)
 		for _, e := range codeownererrors.Errors {
 			errorMessage += fmt.Sprintf("- %s\n  - %s\n", e.Path, e.Message)
 		}
@@ -158,7 +161,6 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 			NotifyText: errorMessage,
 			Details:    d,
 		}, nil
-
 	} else if resp != nil && resp.StatusCode == http.StatusNotFound {
 		// "CODEOWNERS" does not exist, err is also not nil but we don't need it
 
@@ -179,7 +181,6 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 			NotifyText: "CODEOWNERS file not present.\n" + notifyText,
 			Details:    d,
 		}, nil
-
 	}
 	// Unknown error getting "CODEOWNERS", this could be an HTTP 500
 	return nil, err
@@ -198,7 +199,7 @@ func (s Codeowners) Fix(ctx context.Context, c *github.Client, owner, repo strin
 
 // GetAction returns the configured action from CODEOWNERS policy's
 // configuration stored in the org-level repo, default log. Implementing
-// policydef.Policy.GetAction()
+// policydef.Policy.GetAction().
 func (s Codeowners) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	mc := mergeConfig(oc, orc, rc, repo)

@@ -20,15 +20,17 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ossf/allstar/pkg/config"
-	"github.com/ossf/allstar/pkg/policydef"
-
 	"github.com/google/go-github/v59/github"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ossf/allstar/pkg/config"
+	"github.com/ossf/allstar/pkg/policydef"
 )
 
-const configFile = "branch_protection.yaml"
-const polName = "Branch Protection"
+const (
+	configFile = "branch_protection.yaml"
+	polName    = "Branch Protection"
+)
 
 // OrgConfig is the org-level config definition for Branch Protection.
 type OrgConfig struct {
@@ -84,7 +86,7 @@ type OrgConfig struct {
 	RequireSignedCommits bool `json:"requireSignedCommits"`
 }
 
-// RepoConfig is the repo-level config for Branch Protection
+// RepoConfig is the repo-level config for Branch Protection.
 type RepoConfig struct {
 	// OptConfig is the standard repo-level opt in/out config.
 	OptConfig config.RepoOptConfig `json:"optConfig"`
@@ -176,9 +178,11 @@ type details struct {
 	RequireCodeOwnerReviews bool
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
-var configIsEnabled func(ctx context.Context, o config.OrgOptConfig,
-	orc, r config.RepoOptConfig, c *github.Client, owner, repo string) (bool, error)
+var (
+	configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
+	configIsEnabled   func(ctx context.Context, o config.OrgOptConfig,
+		orc, r config.RepoOptConfig, c *github.Client, owner, repo string) (bool, error)
+)
 
 func init() {
 	configFetchConfig = config.FetchConfig
@@ -194,7 +198,7 @@ func NewBranch() policydef.Policy {
 	return b
 }
 
-// Name returns the name of this policy, implementing policydef.Policy.Name()
+// Name returns the name of this policy, implementing policydef.Policy.Name().
 func (b Branch) Name() string {
 	return polName
 }
@@ -214,21 +218,23 @@ type repositories interface {
 		*github.SignaturesProtectedBranch, *github.Response, error)
 }
 
-// Check whether this policy is enabled or not
+// Check whether this policy is enabled or not.
 func (b Branch) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	return configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 }
 
 // Check performs the policy check for Branch Protection based on the
-// configuration stored in the org/repo, implementing policydef.Policy.Check()
+// configuration stored in the org/repo, implementing policydef.Policy.Check().
 func (b Branch) Check(ctx context.Context, c *github.Client, owner,
-	repo string) (*policydef.Result, error) {
+	repo string,
+) (*policydef.Result, error) {
 	return check(ctx, c.Repositories, c, owner, repo)
 }
 
 func check(ctx context.Context, rep repositories, c *github.Client, owner,
-	repo string) (*policydef.Result, error) {
+	repo string,
+) (*policydef.Result, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	enabled, err := configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 	if err != nil {
@@ -423,7 +429,8 @@ func (b Branch) Fix(ctx context.Context, c *github.Client, owner, repo string) e
 }
 
 func fix(ctx context.Context, rep repositories, c *github.Client,
-	owner, repo string) error {
+	owner, repo string,
+) error {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	enabled, err := configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 	if err != nil {
@@ -644,7 +651,6 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 		}
 		if mc.RequireSignedCommits && !signatureProtectionEnabled {
 			_, rsp, err = rep.RequireSignaturesOnProtectedBranch(ctx, owner, repo, b)
-
 			if err != nil {
 				if rsp != nil && rsp.StatusCode == http.StatusForbidden {
 					log.Warn().
@@ -669,7 +675,8 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 }
 
 func getSignatureProtectionEnabled(ctx context.Context, rep repositories, owner string, repo string, branch string) (
-	bool, error) {
+	bool, error,
+) {
 	sp, rsp, err := rep.GetSignaturesProtectedBranch(ctx, owner, repo, branch)
 	if err != nil {
 		if rsp != nil && rsp.StatusCode == http.StatusNotFound {
@@ -685,7 +692,7 @@ func getSignatureProtectionEnabled(ctx context.Context, rep repositories, owner 
 
 // GetAction returns the configured action from Branch Protection's
 // configuration stored in the org-level repo, default log. Implementing
-// policydef.Policy.GetAction()
+// policydef.Policy.GetAction().
 func (b Branch) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	mc := mergeConfig(oc, orc, rc, repo)

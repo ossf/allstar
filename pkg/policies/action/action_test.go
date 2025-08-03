@@ -23,8 +23,9 @@ import (
 
 	"github.com/gobwas/glob"
 	"github.com/google/go-github/v59/github"
-	"github.com/ossf/allstar/pkg/config"
 	"github.com/rhysd/actionlint"
+
+	"github.com/ossf/allstar/pkg/config"
 )
 
 func TestCheck(t *testing.T) {
@@ -1051,7 +1052,8 @@ func TestCheck(t *testing.T) {
 			// Override external functions
 
 			configFetchConfig = func(ctx context.Context, c *github.Client, owner, repo, path string,
-				ol config.ConfigLevel, out interface{}) error {
+				ol config.ConfigLevel, out interface{},
+			) error {
 				if ol == config.OrgLevel {
 					oc := out.(*OrgConfig)
 					*oc = test.Org
@@ -1060,7 +1062,8 @@ func TestCheck(t *testing.T) {
 			}
 
 			listWorkflows = func(ctx context.Context, c *github.Client, owner, repo string) (
-				[]*workflowMetadata, error) {
+				[]*workflowMetadata, error,
+			) {
 				var wfs []*workflowMetadata
 				for _, w := range test.Workflows {
 					d, err := os.ReadFile(filepath.Join("test_workflows", w.File))
@@ -1090,7 +1093,8 @@ func TestCheck(t *testing.T) {
 			}
 
 			listWorkflowRunsByFilename = func(ctx context.Context, c *github.Client, owner, repo,
-				workflowFilename string) ([]*github.WorkflowRun, error) {
+				workflowFilename string,
+			) ([]*github.WorkflowRun, error) {
 				for _, wf := range test.Workflows {
 					if wf.File == workflowFilename {
 						return wf.Runs, nil
@@ -1114,9 +1118,7 @@ func TestCheck(t *testing.T) {
 			}
 
 			res, err := a.Check(context.Background(), nil, "thisorg", "thisrepo")
-
 			// Check result
-
 			if err != nil {
 				t.Errorf("Error: %e", err)
 			}

@@ -19,8 +19,13 @@ package enforce
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync"
 	"time"
+
+	"github.com/google/go-github/v59/github"
+	"github.com/rs/zerolog/log"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/config/operator"
@@ -29,25 +34,25 @@ import (
 	"github.com/ossf/allstar/pkg/policies"
 	"github.com/ossf/allstar/pkg/policydef"
 	"github.com/ossf/allstar/pkg/scorecard"
-	"golang.org/x/sync/errgroup"
-
-	"github.com/google/go-github/v59/github"
-	"github.com/rs/zerolog/log"
 )
 
-type EnforceRepoResults = map[string]bool
-type EnforceAllResults = map[string]map[string]int
+type (
+	EnforceRepoResults = map[string]bool
+	EnforceAllResults  = map[string]map[string]int
+)
 
-var doNothingOnOptOut = operator.DoNothingOnOptOut
-var policiesGetPolicies func() []policydef.Policy
-var issueEnsure func(context.Context, *github.Client, string, string, string, string) error
-var issueClose func(context.Context, *github.Client, string, string, string) error
-var configIsBotEnabled func(context.Context, *github.Client, string, string) bool
-var getAppInstallations func(context.Context, *github.Client) ([]*github.Installation, error)
-var getAppInstallationRepos func(context.Context, *github.Client) ([]*github.Repository, *github.Response, error)
-var runPolicies func(context.Context, *github.Client, string, string, bool, string) (EnforceRepoResults, error)
-var deleteInstallation func(context.Context, *github.Client, int64) (*github.Response, error)
-var listInstallations func(context.Context, *github.Client) ([]*github.Installation, error)
+var (
+	doNothingOnOptOut       = operator.DoNothingOnOptOut
+	policiesGetPolicies     func() []policydef.Policy
+	issueEnsure             func(context.Context, *github.Client, string, string, string, string) error
+	issueClose              func(context.Context, *github.Client, string, string, string) error
+	configIsBotEnabled      func(context.Context, *github.Client, string, string) bool
+	getAppInstallations     func(context.Context, *github.Client) ([]*github.Installation, error)
+	getAppInstallationRepos func(context.Context, *github.Client) ([]*github.Repository, *github.Response, error)
+	runPolicies             func(context.Context, *github.Client, string, string, bool, string) (EnforceRepoResults, error)
+	deleteInstallation      func(context.Context, *github.Client, int64) (*github.Response, error)
+	listInstallations       func(context.Context, *github.Client) ([]*github.Installation, error)
+)
 
 func init() {
 	policiesGetPolicies = policies.GetPolicies
@@ -69,7 +74,7 @@ func init() {
 // from EnforceJob.
 func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificPolicyArg string, specificRepoArg string) (EnforceAllResults, error) {
 	var repoCount int
-	var enforceAllResults = make(EnforceAllResults)
+	enforceAllResults := make(EnforceAllResults)
 	ac, err := ghc.Get(0)
 	if err != nil {
 		return nil, err
@@ -112,7 +117,6 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificP
 		iid := i.GetID()
 
 		g.Go(func() error {
-
 			repos, _, err := getAppInstallationRepos(ctx, ic)
 
 			if specificRepoArg != "" {
@@ -183,8 +187,9 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificP
 }
 
 func runPoliciesOnInstRepos(ctx context.Context, repos []*github.Repository, ghclient *github.Client, specificPolicyArg string) (
-	EnforceAllResults, error) {
-	var instResults = make(EnforceAllResults)
+	EnforceAllResults, error,
+) {
+	instResults := make(EnforceAllResults)
 	var repoLoopErr error
 	var owner string
 	for _, r := range repos {
@@ -219,7 +224,6 @@ func listInstallationsReal(ctx context.Context, ac *github.Client) ([]*github.In
 	var err error
 	for {
 		is, resp, err := ac.Apps.ListInstallations(ctx, opts)
-
 		if err != nil {
 			return nil, err
 		}
@@ -259,7 +263,7 @@ func getAppInstallationsReal(ctx context.Context, ac *github.Client) ([]*github.
 		}
 		if !m {
 			resp, err := deleteInstallation(ctx, ac, i.GetID())
-			if err != nil || resp.StatusCode != 200 {
+			if err != nil || resp.StatusCode != http.StatusOK {
 				log.Error().
 					Err(err).
 					Str("area", "bot").
@@ -325,12 +329,12 @@ func EnforceJob(ctx context.Context, ghc *ghclients.GHClients, d time.Duration, 
 // from either jobs, webhooks, or delayed checks. TODO: implement concurrency
 // check to only run a single instance per repo at a time.
 func runPoliciesReal(ctx context.Context, c *github.Client, owner, repo string, enabled bool, specificPolicyArg string) (EnforceRepoResults, error) {
-	var enforceResults = make(EnforceRepoResults)
+	enforceResults := make(EnforceRepoResults)
 	ps := policiesGetPolicies()
 	if specificPolicyArg != "" {
 		var found policydef.Policy
 		for _, p := range ps {
-			var policyName = p.Name()
+			policyName := p.Name()
 			if policyName == specificPolicyArg {
 				found = p
 			}
@@ -345,7 +349,7 @@ func runPoliciesReal(ctx context.Context, c *github.Client, owner, repo string, 
 		if err != nil {
 			return nil, err
 		}
-		if !(repo_enabled && enabled) && doNothingOnOptOut {
+		if (!repo_enabled || !enabled) && doNothingOnOptOut {
 			log.Info().
 				Str("org", owner).
 				Str("repo", repo).

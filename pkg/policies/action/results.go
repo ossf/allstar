@@ -101,7 +101,7 @@ func (de *denyRuleEvaluationResult) relevantRule() *internalRule {
 	return de.denyingRule
 }
 
-// string returns the string representation of this step
+// string returns the string representation of this step.
 func (des *denyRuleEvaluationStepResult) string() string {
 	switch des.status {
 	case denyRuleStepStatusActionVersionMismatch:
@@ -129,7 +129,7 @@ type requireRuleEvaluationResult struct {
 	fixes []*requireRuleEvaluationFix
 }
 
-// requireRuleEvaluationFixMethod represents a way to help satisfy the require rule
+// requireRuleEvaluationFixMethod represents a way to help satisfy the require rule.
 type requireRuleEvaluationFixMethod int
 
 const (
@@ -139,7 +139,7 @@ const (
 	requireRuleEvaluationFixMethodEnable
 )
 
-// requireRuleEvaluationFix represents a fix option for a require rule evaluation
+// requireRuleEvaluationFix represents a fix option for a require rule evaluation.
 type requireRuleEvaluationFix struct {
 	fixMethod requireRuleEvaluationFixMethod
 

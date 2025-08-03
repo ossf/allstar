@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v59/github"
+
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
 )
@@ -115,7 +116,8 @@ func TestConfigPrecedence(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			configFetchConfig = func(ctx context.Context, c *github.Client,
-				owner, repo, path string, ol config.ConfigLevel, out interface{}) error {
+				owner, repo, path string, ol config.ConfigLevel, out interface{},
+			) error {
 				switch ol {
 				case config.RepoLevel:
 					rc := out.(*RepoConfig)
@@ -205,7 +207,7 @@ func TestCheck(t *testing.T) {
 			CodeOwnPresent: true,
 			cofigEnabled:   true,
 			ErrorCount:     2,
-			CodeOwnErrs:    github.CodeownersErrors{Errors: []*github.CodeownersError{&github.CodeownersError{Message: "test1", Path: ".github/CODEOWNERS"}, &github.CodeownersError{Message: "test2", Path: "CODEOWNERS"}}},
+			CodeOwnErrs:    github.CodeownersErrors{Errors: []*github.CodeownersError{{Message: "test1", Path: ".github/CODEOWNERS"}, {Message: "test2", Path: "CODEOWNERS"}}},
 			Exp: policydef.Result{
 				Enabled: true,
 				Pass:    false,
@@ -217,7 +219,7 @@ func TestCheck(t *testing.T) {
 				Details: details{
 					CodeownersFound:  true,
 					ErrorCount:       2,
-					CodeownersErrors: github.CodeownersErrors{Errors: []*github.CodeownersError{&github.CodeownersError{Message: "test1", Path: ".github/CODEOWNERS"}, &github.CodeownersError{Message: "test2", Path: "CODEOWNERS"}}},
+					CodeownersErrors: github.CodeownersErrors{Errors: []*github.CodeownersError{{Message: "test1", Path: ".github/CODEOWNERS"}, {Message: "test2", Path: "CODEOWNERS"}}},
 				},
 			},
 		},
@@ -226,7 +228,8 @@ func TestCheck(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			configFetchConfig = func(ctx context.Context, c *github.Client,
-				owner, repo, path string, ol config.ConfigLevel, out interface{}) error {
+				owner, repo, path string, ol config.ConfigLevel, out interface{},
+			) error {
 				if repo == "thisrepo" && ol == config.RepoLevel {
 					rc := out.(*RepoConfig)
 					*rc = test.Repo
@@ -246,7 +249,8 @@ func TestCheck(t *testing.T) {
 				return &github.CodeownersErrors{Errors: make([]*github.CodeownersError, test.ErrorCount)}, &github.Response{Response: &http.Response{StatusCode: http.StatusNotFound}}, errors.New("Fake error")
 			}
 			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig,
-				c *github.Client, owner, repo string) (bool, error) {
+				c *github.Client, owner, repo string,
+			) (bool, error) {
 				return test.cofigEnabled, nil
 			}
 			res, err := check(context.Background(), mockRepos{}, nil, "", "thisrepo")

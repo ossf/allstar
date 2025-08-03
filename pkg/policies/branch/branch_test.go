@@ -23,53 +23,65 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v59/github"
+
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
 )
 
 var get func(context.Context, string, string) (*github.Repository,
 	*github.Response, error)
+
 var listBranches func(context.Context, string, string,
 	*github.BranchListOptions) ([]*github.Branch, *github.Response, error)
+
 var getBranchProtection func(context.Context, string, string, string) (
 	*github.Protection, *github.Response, error)
+
 var updateBranchProtection func(context.Context, string, string, string,
 	*github.ProtectionRequest) (*github.Protection, *github.Response, error)
+
 var getSignaturesProtectedBranch func(context.Context, string, string, string) (
 	*github.SignaturesProtectedBranch, *github.Response, error)
+
 var requireSignaturesProtectedBranch func(context.Context, string, string, string) (
 	*github.SignaturesProtectedBranch, *github.Response, error)
 
 type mockRepos struct{}
 
 func (m mockRepos) Get(ctx context.Context, o string, r string) (
-	*github.Repository, *github.Response, error) {
+	*github.Repository, *github.Response, error,
+) {
 	return get(ctx, o, r)
 }
 
 func (m mockRepos) ListBranches(ctx context.Context, o string, r string,
-	op *github.BranchListOptions) ([]*github.Branch, *github.Response, error) {
+	op *github.BranchListOptions,
+) ([]*github.Branch, *github.Response, error) {
 	return listBranches(ctx, o, r, op)
 }
 
 func (m mockRepos) GetBranchProtection(ctx context.Context, o string, r string,
-	b string) (*github.Protection, *github.Response, error) {
+	b string,
+) (*github.Protection, *github.Response, error) {
 	return getBranchProtection(ctx, o, r, b)
 }
 
 func (m mockRepos) UpdateBranchProtection(ctx context.Context, owner, repo,
 	branch string, preq *github.ProtectionRequest) (*github.Protection,
-	*github.Response, error) {
+	*github.Response, error,
+) {
 	return updateBranchProtection(ctx, owner, repo, branch, preq)
 }
 
 func (m mockRepos) GetSignaturesProtectedBranch(ctx context.Context, owner, repo,
-	branch string) (*github.SignaturesProtectedBranch, *github.Response, error) {
+	branch string,
+) (*github.SignaturesProtectedBranch, *github.Response, error) {
 	return getSignaturesProtectedBranch(ctx, owner, repo, branch)
 }
 
 func (m mockRepos) RequireSignaturesOnProtectedBranch(ctx context.Context, owner, repo, branch string) (
-	*github.SignaturesProtectedBranch, *github.Response, error) {
+	*github.SignaturesProtectedBranch, *github.Response, error,
+) {
 	return requireSignaturesProtectedBranch(ctx, owner, repo, branch)
 }
 
@@ -205,7 +217,8 @@ func TestConfigPrecedence(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			configFetchConfig = func(ctx context.Context, c *github.Client,
-				owner, repo, path string, ol config.ConfigLevel, out interface{}) error {
+				owner, repo, path string, ol config.ConfigLevel, out interface{},
+			) error {
 				switch ol {
 				case config.RepoLevel:
 					rc := out.(*RepoConfig)
@@ -277,7 +290,8 @@ func TestGetSignatureProtectionEnabled(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			getSignaturesProtectedBranch = func(ctx context.Context, o string, r string, b string) (
-				*github.SignaturesProtectedBranch, *github.Response, error) {
+				*github.SignaturesProtectedBranch, *github.Response, error,
+			) {
 				return &github.SignaturesProtectedBranch{Enabled: github.Bool(test.SignatureProtEnabled)},
 					&test.GetResponse, test.GetError
 			}
@@ -317,7 +331,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 1,
@@ -325,7 +339,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -335,7 +349,7 @@ func TestCheck(t *testing.T) {
 				Pass:       true,
 				NotifyText: "",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:    true,
 						NumReviews:   1,
 						DismissStale: true,
@@ -358,7 +372,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 5,
@@ -369,7 +383,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -379,7 +393,7 @@ func TestCheck(t *testing.T) {
 				Pass:       false,
 				NotifyText: "Block force push not configured for branch main\n",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:    true,
 						NumReviews:   5,
 						DismissStale: true,
@@ -404,19 +418,19 @@ func TestCheck(t *testing.T) {
 				EnforceBranches: []string{"release"},
 			},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 2,
 					},
 				},
-				"release": github.Protection{},
+				"release": {},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
-				"release": github.SignaturesProtectedBranch{
+				"release": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -426,13 +440,13 @@ func TestCheck(t *testing.T) {
 				Pass:       false,
 				NotifyText: "PR Approvals not configured for branch release\n",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:    true,
 						NumReviews:   2,
 						DismissStale: true,
 						BlockForce:   true,
 					},
-					"release": details{
+					"release": {
 						PRReviews:    false,
 						NumReviews:   0,
 						DismissStale: false,
@@ -456,7 +470,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 5,
@@ -467,7 +481,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -477,7 +491,7 @@ func TestCheck(t *testing.T) {
 				Pass:       true,
 				NotifyText: "",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:             true,
 						NumReviews:            5,
 						DismissStale:          true,
@@ -505,7 +519,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 5,
@@ -522,7 +536,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -532,7 +546,7 @@ func TestCheck(t *testing.T) {
 				Pass:       false,
 				NotifyText: "Require up to date branch not configured for branch main\n",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:             true,
 						NumReviews:            5,
 						DismissStale:          true,
@@ -562,7 +576,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 5,
@@ -573,7 +587,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -583,7 +597,7 @@ func TestCheck(t *testing.T) {
 				Pass:       false,
 				NotifyText: "Status checks required by policy, but none found for branch main\n",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:    true,
 						NumReviews:   5,
 						DismissStale: true,
@@ -609,7 +623,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 5,
@@ -626,7 +640,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -636,7 +650,7 @@ func TestCheck(t *testing.T) {
 				Pass:       false,
 				NotifyText: "Status check theothercheck (any app) not found for branch main\n",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:           true,
 						NumReviews:          5,
 						DismissStale:        true,
@@ -661,7 +675,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 5,
@@ -678,7 +692,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -688,7 +702,7 @@ func TestCheck(t *testing.T) {
 				Pass:       true,
 				NotifyText: "",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:           true,
 						NumReviews:          5,
 						DismissStale:        true,
@@ -713,7 +727,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 5,
@@ -730,7 +744,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -740,7 +754,7 @@ func TestCheck(t *testing.T) {
 				Pass:       false,
 				NotifyText: "Status check mycheck (AppID: 123456) not found for branch main\n",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:           true,
 						NumReviews:          5,
 						DismissStale:        true,
@@ -765,7 +779,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 5,
@@ -776,7 +790,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -786,7 +800,7 @@ func TestCheck(t *testing.T) {
 				Pass:       false,
 				NotifyText: "Enforce status checks on admins not configured for branch main\n",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:             true,
 						NumReviews:            5,
 						DismissStale:          true,
@@ -812,7 +826,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 5,
@@ -826,7 +840,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -836,7 +850,7 @@ func TestCheck(t *testing.T) {
 				Pass:       false,
 				NotifyText: "Enforce status checks on admins not configured for branch main\n",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:             true,
 						NumReviews:            5,
 						DismissStale:          true,
@@ -864,7 +878,7 @@ func TestCheck(t *testing.T) {
 				DismissStale:  github.Bool(false),
 			},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          false,
 						RequiredApprovingReviewCount: 1,
@@ -872,7 +886,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -882,7 +896,7 @@ func TestCheck(t *testing.T) {
 				Pass:       true,
 				NotifyText: "",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:    true,
 						NumReviews:   1,
 						DismissStale: false,
@@ -909,7 +923,7 @@ func TestCheck(t *testing.T) {
 				DismissStale:  github.Bool(false),
 			},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          false,
 						RequiredApprovingReviewCount: 1,
@@ -917,7 +931,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -927,7 +941,7 @@ func TestCheck(t *testing.T) {
 				Pass:       false,
 				NotifyText: "Dismiss stale reviews not configured for branch main\nPR Approvals below threshold 1 : 2 for branch main\n",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:    true,
 						NumReviews:   1,
 						DismissStale: false,
@@ -951,7 +965,7 @@ func TestCheck(t *testing.T) {
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -961,7 +975,7 @@ func TestCheck(t *testing.T) {
 				Pass:       false,
 				NotifyText: "No protection found for branch main\n",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:    false,
 						NumReviews:   0,
 						DismissStale: false,
@@ -983,7 +997,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 1,
@@ -991,7 +1005,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -1001,7 +1015,7 @@ func TestCheck(t *testing.T) {
 				Pass:       false,
 				NotifyText: "Signed commits required, but not enabled for branch: main\n",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:            true,
 						NumReviews:           1,
 						DismissStale:         true,
@@ -1024,7 +1038,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 1,
@@ -1032,7 +1046,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(true),
 				},
 			},
@@ -1042,7 +1056,7 @@ func TestCheck(t *testing.T) {
 				Pass:       true,
 				NotifyText: "",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:            true,
 						NumReviews:           1,
 						DismissStale:         true,
@@ -1065,7 +1079,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 1,
@@ -1073,7 +1087,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -1083,7 +1097,7 @@ func TestCheck(t *testing.T) {
 				Pass:       true,
 				NotifyText: "",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:            true,
 						NumReviews:           1,
 						DismissStale:         true,
@@ -1106,7 +1120,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 1,
@@ -1143,7 +1157,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 1,
@@ -1151,7 +1165,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -1161,7 +1175,7 @@ func TestCheck(t *testing.T) {
 				Pass:       false,
 				NotifyText: "Require Code Owner Reviews not configured for branch main\n",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:               true,
 						NumReviews:              1,
 						DismissStale:            true,
@@ -1184,7 +1198,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 1,
@@ -1193,7 +1207,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -1203,7 +1217,7 @@ func TestCheck(t *testing.T) {
 				Pass:       true,
 				NotifyText: "",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:               true,
 						NumReviews:              1,
 						DismissStale:            true,
@@ -1226,7 +1240,7 @@ func TestCheck(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 1,
@@ -1234,7 +1248,7 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -1244,7 +1258,7 @@ func TestCheck(t *testing.T) {
 				Pass:       true,
 				NotifyText: "",
 				Details: map[string]details{
-					"main": details{
+					"main": {
 						PRReviews:               true,
 						NumReviews:              1,
 						DismissStale:            true,
@@ -1257,23 +1271,26 @@ func TestCheck(t *testing.T) {
 	}
 
 	get = func(context.Context, string, string) (*github.Repository,
-		*github.Response, error) {
+		*github.Response, error,
+	) {
 		b := "main"
 		return &github.Repository{
 			DefaultBranch: &b,
 		}, nil, nil
 	}
 	listBranches = func(context.Context, string, string,
-		*github.BranchListOptions) ([]*github.Branch, *github.Response, error) {
+		*github.BranchListOptions,
+	) ([]*github.Branch, *github.Response, error) {
 		return []*github.Branch{
-			&github.Branch{},
+			{},
 		}, &github.Response{NextPage: 0}, nil
 	}
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			configFetchConfig = func(ctx context.Context, c *github.Client,
-				owner, repo, path string, ol config.ConfigLevel, out interface{}) error {
+				owner, repo, path string, ol config.ConfigLevel, out interface{},
+			) error {
 				if repo == "thisrepo" && ol == config.RepoLevel {
 					rc := out.(*RepoConfig)
 					*rc = test.Repo
@@ -1284,7 +1301,8 @@ func TestCheck(t *testing.T) {
 				return nil
 			}
 			getBranchProtection = func(ctx context.Context, o string, r string,
-				b string) (*github.Protection, *github.Response, error) {
+				b string,
+			) (*github.Protection, *github.Response, error) {
 				p, ok := test.Prot[b]
 				if ok {
 					return &p, nil, nil
@@ -1297,7 +1315,8 @@ func TestCheck(t *testing.T) {
 				}
 			}
 			getSignaturesProtectedBranch = func(ctx context.Context, o string, r string, b string) (
-				*github.SignaturesProtectedBranch, *github.Response, error) {
+				*github.SignaturesProtectedBranch, *github.Response, error,
+			) {
 				sp, ok := test.SigProtection[b]
 				if ok {
 					return &sp, nil, nil
@@ -1310,7 +1329,8 @@ func TestCheck(t *testing.T) {
 				}
 			}
 			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig,
-				c *github.Client, owner, repo string) (bool, error) {
+				c *github.Client, owner, repo string,
+			) (bool, error) {
 				return test.cofigEnabled, nil
 			}
 			res, err := check(context.Background(), mockRepos{}, nil, "", "thisrepo")
@@ -1324,7 +1344,8 @@ func TestCheck(t *testing.T) {
 	}
 	t.Run("Emptyrepo", func(t *testing.T) {
 		listBranches = func(context.Context, string, string,
-			*github.BranchListOptions) ([]*github.Branch, *github.Response, error) {
+			*github.BranchListOptions,
+		) ([]*github.Branch, *github.Response, error) {
 			return []*github.Branch{}, &github.Response{NextPage: 0}, nil
 		}
 		res, err := check(context.Background(), mockRepos{}, nil, "", "thisrepo")
@@ -1364,7 +1385,7 @@ func TestFix(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: false,
 					},
@@ -1380,7 +1401,7 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp:          map[string]github.ProtectionRequest{},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -1398,7 +1419,7 @@ func TestFix(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: false,
 					},
@@ -1410,7 +1431,7 @@ func TestFix(t *testing.T) {
 						Strict:   true,
 						Contexts: []string{"mycheck"},
 						Checks: []*github.RequiredStatusCheck{
-							&github.RequiredStatusCheck{
+							{
 								Context: "mycheck",
 								AppID:   github.Int64(123),
 							},
@@ -1420,7 +1441,7 @@ func TestFix(t *testing.T) {
 			},
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
-				"main": github.ProtectionRequest{
+				"main": {
 					AllowForcePushes: github.Bool(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						DismissStaleReviews:          true,
@@ -1429,7 +1450,7 @@ func TestFix(t *testing.T) {
 					RequiredStatusChecks: &github.RequiredStatusChecks{
 						Strict: true,
 						Checks: []*github.RequiredStatusCheck{ // No Contexts in request
-							&github.RequiredStatusCheck{
+							{
 								Context: "mycheck",
 								AppID:   github.Int64(123),
 							},
@@ -1438,7 +1459,7 @@ func TestFix(t *testing.T) {
 				},
 			},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -1458,7 +1479,7 @@ func TestFix(t *testing.T) {
 			Prot:         map[string]github.Protection{},
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
-				"main": github.ProtectionRequest{
+				"main": {
 					EnforceAdmins:    true,
 					AllowForcePushes: github.Bool(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
@@ -1480,7 +1501,7 @@ func TestFix(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: false,
 					},
@@ -1506,7 +1527,7 @@ func TestFix(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: true,
 					},
@@ -1521,7 +1542,7 @@ func TestFix(t *testing.T) {
 			},
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
-				"main": github.ProtectionRequest{
+				"main": {
 					AllowForcePushes: github.Bool(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						DismissStaleReviews:          true,
@@ -1530,7 +1551,7 @@ func TestFix(t *testing.T) {
 				},
 			},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -1544,7 +1565,7 @@ func TestFix(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: true,
 					},
@@ -1558,7 +1579,7 @@ func TestFix(t *testing.T) {
 			},
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
-				"main": github.ProtectionRequest{
+				"main": {
 					AllowForcePushes: github.Bool(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						RequiredApprovingReviewCount: 0,
@@ -1566,7 +1587,7 @@ func TestFix(t *testing.T) {
 				},
 			},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -1580,7 +1601,7 @@ func TestFix(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: false,
 					},
@@ -1595,7 +1616,7 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp:          map[string]github.ProtectionRequest{},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -1612,7 +1633,7 @@ func TestFix(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: false,
 					},
@@ -1626,7 +1647,7 @@ func TestFix(t *testing.T) {
 			},
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
-				"main": github.ProtectionRequest{
+				"main": {
 					AllowForcePushes: github.Bool(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						RequiredApprovingReviewCount: 0,
@@ -1640,7 +1661,7 @@ func TestFix(t *testing.T) {
 				},
 			},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -1654,7 +1675,7 @@ func TestFix(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: false,
 					},
@@ -1668,7 +1689,7 @@ func TestFix(t *testing.T) {
 			},
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
-				"main": github.ProtectionRequest{
+				"main": {
 					AllowForcePushes: github.Bool(false),
 					EnforceAdmins:    true,
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
@@ -1677,7 +1698,7 @@ func TestFix(t *testing.T) {
 				},
 			},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -1693,7 +1714,7 @@ func TestFix(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: false,
 					},
@@ -1707,7 +1728,7 @@ func TestFix(t *testing.T) {
 			},
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
-				"main": github.ProtectionRequest{
+				"main": {
 					AllowForcePushes: github.Bool(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						RequiredApprovingReviewCount: 0,
@@ -1721,7 +1742,7 @@ func TestFix(t *testing.T) {
 				},
 			},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -1737,7 +1758,7 @@ func TestFix(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: false,
 					},
@@ -1757,7 +1778,7 @@ func TestFix(t *testing.T) {
 			},
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
-				"main": github.ProtectionRequest{
+				"main": {
 					AllowForcePushes: github.Bool(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						RequiredApprovingReviewCount: 0,
@@ -1771,7 +1792,7 @@ func TestFix(t *testing.T) {
 				},
 			},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -1782,13 +1803,14 @@ func TestFix(t *testing.T) {
 			Org: OrgConfig{
 				EnforceDefault: true,
 				RequireStatusChecks: []StatusCheck{
-					{"mycheck", github.Int64(123456)}, {"theothercheck", nil},
+					{"mycheck", github.Int64(123456)},
+					{"theothercheck", nil},
 					{"someothercheck", github.Int64(654321)},
 				},
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: false,
 					},
@@ -1809,7 +1831,7 @@ func TestFix(t *testing.T) {
 			},
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
-				"main": github.ProtectionRequest{
+				"main": {
 					AllowForcePushes: github.Bool(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						RequiredApprovingReviewCount: 0,
@@ -1827,7 +1849,7 @@ func TestFix(t *testing.T) {
 				},
 			},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -1843,7 +1865,7 @@ func TestFix(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: false,
 					},
@@ -1864,7 +1886,7 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp:          map[string]github.ProtectionRequest{},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -1882,7 +1904,7 @@ func TestFix(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: false,
 					},
@@ -1898,7 +1920,7 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp:          map[string]github.ProtectionRequest{},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -1918,7 +1940,7 @@ func TestFix(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: false,
 					},
@@ -1934,7 +1956,7 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp:          map[string]github.ProtectionRequest{},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(true),
 				},
 			},
@@ -1951,7 +1973,7 @@ func TestFix(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: false,
 					},
@@ -1969,7 +1991,7 @@ func TestFix(t *testing.T) {
 			},
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
-				"main": github.ProtectionRequest{
+				"main": {
 					AllowForcePushes: github.Bool(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						DismissStaleReviews:          true,
@@ -1979,7 +2001,7 @@ func TestFix(t *testing.T) {
 				},
 			},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
-				"main": github.SignaturesProtectedBranch{
+				"main": {
 					Enabled: github.Bool(false),
 				},
 			},
@@ -1997,7 +2019,7 @@ func TestFix(t *testing.T) {
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
-				"main": github.Protection{
+				"main": {
 					AllowForcePushes: &github.AllowForcePushes{
 						Enabled: false,
 					},
@@ -2019,16 +2041,18 @@ func TestFix(t *testing.T) {
 		},
 	}
 	get = func(context.Context, string, string) (*github.Repository,
-		*github.Response, error) {
+		*github.Response, error,
+	) {
 		b := "main"
 		return &github.Repository{
 			DefaultBranch: &b,
 		}, nil, nil
 	}
 	listBranches = func(context.Context, string, string,
-		*github.BranchListOptions) ([]*github.Branch, *github.Response, error) {
+		*github.BranchListOptions,
+	) ([]*github.Branch, *github.Response, error) {
 		return []*github.Branch{
-			&github.Branch{},
+			{},
 		}, &github.Response{NextPage: 0}, nil
 	}
 
@@ -2039,12 +2063,14 @@ func TestFix(t *testing.T) {
 
 			updateBranchProtection = func(ctx context.Context, owner, repo,
 				branch string, preq *github.ProtectionRequest) (*github.Protection,
-				*github.Response, error) {
+				*github.Response, error,
+			) {
 				got[branch] = *preq
 				return nil, nil, nil
 			}
 			configFetchConfig = func(ctx context.Context, c *github.Client,
-				owner, repo, path string, ol config.ConfigLevel, out interface{}) error {
+				owner, repo, path string, ol config.ConfigLevel, out interface{},
+			) error {
 				if repo == "thisrepo" && ol == config.RepoLevel {
 					rc := out.(*RepoConfig)
 					*rc = test.Repo
@@ -2055,7 +2081,8 @@ func TestFix(t *testing.T) {
 				return nil
 			}
 			getBranchProtection = func(ctx context.Context, o string, r string,
-				b string) (*github.Protection, *github.Response, error) {
+				b string,
+			) (*github.Protection, *github.Response, error) {
 				p, ok := test.Prot[b]
 				if ok {
 					return &p, nil, nil
@@ -2068,7 +2095,8 @@ func TestFix(t *testing.T) {
 				}
 			}
 			getSignaturesProtectedBranch = func(ctx context.Context, o string, r string,
-				b string) (*github.SignaturesProtectedBranch, *github.Response, error) {
+				b string,
+			) (*github.SignaturesProtectedBranch, *github.Response, error) {
 				p, ok := test.SignatureProt[b]
 				if ok {
 					return &p, nil, nil
@@ -2081,12 +2109,14 @@ func TestFix(t *testing.T) {
 				}
 			}
 			requireSignaturesProtectedBranch = func(ctx context.Context, owner, repo, branch string) (
-				*github.SignaturesProtectedBranch, *github.Response, error) {
+				*github.SignaturesProtectedBranch, *github.Response, error,
+			) {
 				requireSignatureRequests[branch] = true
 				return nil, nil, nil
 			}
 			configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig,
-				c *github.Client, owner, repo string) (bool, error) {
+				c *github.Client, owner, repo string,
+			) (bool, error) {
 				return test.cofigEnabled, nil
 			}
 			err := fix(context.Background(), mockRepos{}, nil, "", "thisrepo")
@@ -2122,5 +2152,4 @@ func TestFix(t *testing.T) {
 			}
 		})
 	}
-
 }

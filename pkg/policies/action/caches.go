@@ -19,10 +19,10 @@ import (
 	"github.com/gobwas/glob"
 )
 
-// globCache is a cache for compiled globs
+// globCache is a cache for compiled globs.
 type globCache map[string]glob.Glob
 
-// newGlobCache returns a new globCache
+// newGlobCache returns a new globCache.
 func newGlobCache() globCache {
 	return globCache{}
 }
@@ -41,13 +41,13 @@ func (g globCache) compileGlob(s string) (glob.Glob, error) {
 }
 
 // semverCache is a cache for compiled versions & constraints
-// globCache is a cache for compiled globs
+// globCache is a cache for compiled globs.
 type semverCache struct {
 	version     map[string]*semver.Version
 	constraints map[string]*semver.Constraints
 }
 
-// newSemverCache returns a new semverCache
+// newSemverCache returns a new semverCache.
 func newSemverCache() semverCache {
 	return semverCache{
 		version:     map[string]*semver.Version{},

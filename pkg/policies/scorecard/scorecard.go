@@ -32,8 +32,10 @@ import (
 	"github.com/ossf/allstar/pkg/scorecard"
 )
 
-const configFile = "scorecard.yaml"
-const polName = "OpenSSF Scorecard"
+const (
+	configFile = "scorecard.yaml"
+	polName    = "OpenSSF Scorecard"
+)
 
 // OrgConfig is the org-level config definition for this policy.
 type OrgConfig struct {
@@ -85,11 +87,13 @@ type details struct {
 	Findings map[string][]string
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
-var configIsEnabled func(context.Context, config.OrgOptConfig, config.RepoOptConfig, config.RepoOptConfig, *github.Client, string, string) (bool, error)
-var scorecardGet func(context.Context, string, bool, http.RoundTripper) (*scorecard.ScClient, error)
-var checksAllChecks checker.CheckNameToFnMap
-var scRun func(context.Context, clients.Repo, ...sc.Option) (sc.Result, error)
+var (
+	configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
+	configIsEnabled   func(context.Context, config.OrgOptConfig, config.RepoOptConfig, config.RepoOptConfig, *github.Client, string, string) (bool, error)
+	scorecardGet      func(context.Context, string, bool, http.RoundTripper) (*scorecard.ScClient, error)
+	checksAllChecks   checker.CheckNameToFnMap
+	scRun             func(context.Context, clients.Repo, ...sc.Option) (sc.Result, error)
+)
 
 func init() {
 	configFetchConfig = config.FetchConfig
@@ -109,21 +113,22 @@ func NewScorecard() policydef.Policy {
 	return b
 }
 
-// Name returns the name of this policy, implementing policydef.Policy.Name()
+// Name returns the name of this policy, implementing policydef.Policy.Name().
 func (b Scorecard) Name() string {
 	return polName
 }
 
-// Check whether this policy is enabled or not
+// Check whether this policy is enabled or not.
 func (b Scorecard) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	return configIsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 }
 
 // Check performs the policy check for this policy based on the
-// configuration stored in the org/repo, implementing policydef.Policy.Check()
+// configuration stored in the org/repo, implementing policydef.Policy.Check().
 func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
-	repo string) (*policydef.Result, error) {
+	repo string,
+) (*policydef.Result, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	enabled, err := configIsEnabled(ctx, oc.OptConfig, orc.OptConfig,
 		rc.OptConfig, c, owner, repo)
@@ -151,7 +156,6 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 	f := make(map[string][]string)
 
 	for _, n := range mc.Checks {
-
 		_, ok := checksAllChecks[n]
 		if !ok {
 			log.Warn().
@@ -163,7 +167,7 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 			break
 		}
 
-		// Run each check seperately for now.
+		// Run each check separately for now.
 		allRes, err := scRun(ctx, scc.ScRepo,
 			sc.WithRepoClient(scc.ScRepoClient),
 			sc.WithChecks([]string{n}),
@@ -279,7 +283,7 @@ func (b Scorecard) Fix(ctx context.Context, c *github.Client, owner, repo string
 
 // GetAction returns the configured action from this policy's configuration
 // stored in the org-level repo, default log. Implementing
-// policydef.Policy.GetAction()
+// policydef.Policy.GetAction().
 func (b Scorecard) GetAction(ctx context.Context, c *github.Client, owner, repo string) string {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	mc := mergeConfig(oc, orc, rc, repo)

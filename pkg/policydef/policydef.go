@@ -50,7 +50,6 @@ type Result struct {
 // Policy is the interface that policies must implement to be included in
 // Allstar.
 type Policy interface {
-
 	// Name must return the human readable name of the policy.
 	Name() string
 

@@ -24,8 +24,9 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v59/github"
-	"github.com/ossf/allstar/pkg/config/operator"
 	"sigs.k8s.io/yaml"
+
+	"github.com/ossf/allstar/pkg/config/operator"
 )
 
 var getContents func(context.Context, string, string, string,
@@ -39,12 +40,14 @@ type mockRepos struct{}
 
 func (m mockRepos) GetContents(ctx context.Context, owner, repo, path string,
 	opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
-	[]*github.RepositoryContent, *github.Response, error) {
+	[]*github.RepositoryContent, *github.Response, error,
+) {
 	return getContents(ctx, owner, repo, path, opts)
 }
 
 func (m mockRepos) Get(ctx context.Context, owner, repo string) (*github.Repository,
-	*github.Response, error) {
+	*github.Response, error,
+) {
 	return get(ctx, owner, repo)
 }
 
@@ -160,7 +163,8 @@ optConfig:
 		t.Run(test.Name, func(t *testing.T) {
 			walkGC = func(ctx context.Context, r repositories, owner, repo, path string,
 				opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
-				[]*github.RepositoryContent, *github.Response, error) {
+				[]*github.RepositoryContent, *github.Response, error,
+			) {
 				e := "base64"
 				c := base64.StdEncoding.EncodeToString([]byte(test.Input))
 				return &github.RepositoryContent{
@@ -169,7 +173,8 @@ optConfig:
 				}, nil, nil, nil
 			}
 			get = func(ctx context.Context, owner, repo string) (*github.Repository,
-				*github.Response, error) {
+				*github.Response, error,
+			) {
 				return nil, nil, nil
 			}
 			err := fetchConfig(context.Background(), mockRepos{}, "", "", "", OrgLevel, test.Got)
@@ -450,7 +455,8 @@ func TestIsEnabled(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			get = func(context.Context, string, string) (*github.Repository,
-				*github.Response, error) {
+				*github.Response, error,
+			) {
 				return &github.Repository{
 					Private:  &test.IsPrivateRepo,
 					Archived: &test.IsArchivedRepo,
@@ -481,7 +487,8 @@ optConfig:
 `
 	walkGC = func(ctx context.Context, r repositories, owner, repo, path string,
 		opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
-		[]*github.RepositoryContent, *github.Response, error) {
+		[]*github.RepositoryContent, *github.Response, error,
+	) {
 		e := "base64"
 		var c string
 		if repo == "thisrepo" {
@@ -549,7 +556,8 @@ func TestCreateIL(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			get = func(ctx context.Context, owner, repo string) (*github.Repository,
-				*github.Response, error) {
+				*github.Response, error,
+			) {
 				if repo == operator.OrgConfigRepo && test.DotAllstar {
 					return nil, nil, nil
 				}
@@ -572,7 +580,8 @@ func TestCreateIL(t *testing.T) {
 func TestGetIL(t *testing.T) {
 	var getCalled bool
 	get = func(ctx context.Context, owner, repo string) (*github.Repository,
-		*github.Response, error) {
+		*github.Response, error,
+	) {
 		getCalled = true
 		return nil, nil, nil
 	}
@@ -613,7 +622,8 @@ func TestWalkGetContents(t *testing.T) {
 	var got []string
 	getContents = func(ctx context.Context, owner, repo, pt string,
 		opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
-		[]*github.RepositoryContent, *github.Response, error) {
+		[]*github.RepositoryContent, *github.Response, error,
+	) {
 		got = append(got, pt)
 		if strings.HasSuffix(pt, ".yaml") {
 			e := "base64"
@@ -624,9 +634,9 @@ func TestWalkGetContents(t *testing.T) {
 			}, nil, nil, nil
 		} else {
 			return nil, []*github.RepositoryContent{ // All three are always there
-				&github.RepositoryContent{Name: github.String("long")},
-				&github.RepositoryContent{Name: github.String("path")},
-				&github.RepositoryContent{Name: github.String("file.yaml")},
+				{Name: github.String("long")},
+				{Name: github.String("path")},
+				{Name: github.String("file.yaml")},
 			}, nil, nil
 		}
 	}
@@ -639,7 +649,8 @@ func TestWalkGetContents(t *testing.T) {
 	var got2 []string
 	getContents = func(ctx context.Context, owner, repo, pt string,
 		opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
-		[]*github.RepositoryContent, *github.Response, error) {
+		[]*github.RepositoryContent, *github.Response, error,
+	) {
 		got2 = append(got2, pt)
 		if strings.HasSuffix(pt, ".yaml") {
 			e := "base64"
@@ -650,8 +661,8 @@ func TestWalkGetContents(t *testing.T) {
 			}, nil, nil, nil
 		} else {
 			return nil, []*github.RepositoryContent{ // path is not there
-				&github.RepositoryContent{Name: github.String("long")},
-				&github.RepositoryContent{Name: github.String("file.yaml")},
+				{Name: github.String("long")},
+				{Name: github.String("file.yaml")},
 			}, nil, nil
 		}
 	}
@@ -741,7 +752,8 @@ foo: asdf
 		t.Run(test.Name, func(t *testing.T) {
 			getContents = func(ctx context.Context, owner, repo, path string,
 				opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
-				[]*github.RepositoryContent, *github.Response, error) {
+				[]*github.RepositoryContent, *github.Response, error,
+			) {
 				// check owner / repo / path??
 				e := "base64"
 				c := base64.StdEncoding.EncodeToString([]byte(test.Base))
