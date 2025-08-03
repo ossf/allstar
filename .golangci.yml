@@ -11,18 +11,22 @@ linters:
     - copyloopvar
     - dogsled
     - durationcheck
-    - err113
+    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
+    #- err113
     - errchkjson
     - errname
     - errorlint
     - exhaustive
     - forbidigo
     - gocheckcompilerdirectives
-    - gochecknoinits
+    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
+    #- gochecknoinits
     - gochecksumtype
-    - gocognit
+    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
+    #- gocognit
     - goconst
-    - gocritic
+    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
+    #- gocritic
     - gocyclo
     - godot
     - godox
@@ -34,7 +38,8 @@ linters:
     - goprintffuncname
     - gosec
     - gosmopolitan
-    - lll
+    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
+    #- lll
     - loggercheck
     - makezero
     - mirror
@@ -46,7 +51,8 @@ linters:
     - nilnesserr
     - noctx
     - nolintlint
-    - paralleltest
+    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
+    #- paralleltest
     - predeclared
     - protogetter
     - reassign
@@ -63,7 +69,8 @@ linters:
     - usestdlibvars
     - usetesting
     - whitespace
-    - wrapcheck
+    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
+    #- wrapcheck
     - zerologlint
   disable:
     - exhaustruct # initializing every struct makes tests longer without much benefit
