@@ -24,16 +24,16 @@ jobs:
 
       - uses: ko-build/setup-ko@d006021bd0c28d1ce33a07e7943d48b079944c8d # v0.9
 
-      - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.workflow }} --password-stdin
+      - run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor}} --password-stdin
 
       - run: ko publish -B ./cmd/allstar --tags ${{ github.ref_name }} --image-refs allstar.ref
         env:
           KO_DOCKER_REPO: ghcr.io/${{ github.repository_owner }}
           KO_DEFAULTPLATFORMS: linux/arm64,linux/amd64
-      - run: ko publish -B ./cmd/allstar --tags ${{ github.ref_name }}-busybox --image-refs allstar-busybox.ref
+      - run: ko publish -B ./cmd/allstar --tags ${{ github.ref_name }}-gha --image-refs allstar-gha.ref
         env:
           KO_DOCKER_REPO: ghcr.io/${{ github.repository_owner }}
-          KO_DEFAULTBASEIMAGE: cgr.dev/chainguard/busybox
+          KO_DEFAULTBASEIMAGE: cgr.dev/chainguard/node:latest
           KO_DEFAULTPLATFORMS: linux/arm64,linux/amd64
       - run: |
           while read ref; do
@@ -43,11 +43,10 @@ jobs:
           while read ref; do
             echo "signing $ref"
             cosign sign --yes -a git_sha="$GITHUB_SHA" "$ref"
-          done < allstar-busybox.ref
-
+          done < allstar-gha.ref
       - run: |
           gh release create ${{ github.ref_name }} --notes "Images:
-          * ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}
-          * ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}-busybox"
+          * ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }} # Minimal image based on scratch
+          * ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }}-gha # Image for use as a GitHub Action"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
