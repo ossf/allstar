@@ -80,9 +80,9 @@ func evaluateActionDenied(ctx context.Context, c *github.Client, rules []*intern
 			continue
 		}
 		switch r.Method {
-		case "allow":
+		case ruleMethodAllow:
 			fallthrough
-		case "require":
+		case ruleMethodRequire:
 			if ruleMatch {
 				stepResult.status = denyRuleStepStatusAllowed
 				break
@@ -93,7 +93,7 @@ func evaluateActionDenied(ctx context.Context, c *github.Client, rules []*intern
 				break
 			}
 			stepResult.status = denyRuleStepStatusMissingAction
-		case "deny":
+		case ruleMethodDeny:
 			if ruleMatch {
 				stepResult.status = denyRuleStepStatusDenied
 				result.denied = true
@@ -124,7 +124,7 @@ func evaluateActionDenied(ctx context.Context, c *github.Client, rules []*intern
 func evaluateRequireRule(ctx context.Context, c *github.Client, owner, repo string, rule *internalRule,
 	actions []*actionMetadata, headSHA string, gc globCache, sc semverCache,
 ) (*requireRuleEvaluationResult, error) {
-	if rule.Method != "require" {
+	if rule.Method != ruleMethodRequire {
 		return nil, fmt.Errorf("rule is not a require rule")
 	}
 	useCount := 1
