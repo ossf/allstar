@@ -34,13 +34,16 @@ import (
 const (
 	configFile = "actions.yaml"
 	polName    = "GitHub Actions"
-)
 
-const failText = "This policy, specified at the organization level, sets requirements for Action use by repos within the organization. This repo is failing to fully comply with organization policies, as explained below.\n\n```\n%s```\n\nSee the org-level %s policy configuration for details."
+	failText = "This policy, specified at the organization level, sets requirements for Action use by repos within the organization. This repo is failing to fully comply with organization policies, as explained below.\n\n```\n%s```\n\nSee the org-level %s policy configuration for details."
 
-const (
 	maxWorkflows                  = 50
 	repoSelectorExcludeDepthLimit = 3
+
+	// Rule methods.
+	ruleMethodRequire = "require"
+	ruleMethodAllow   = "allow"
+	ruleMethodDeny    = "deny"
 )
 
 var priorities = map[string]int{
@@ -373,7 +376,7 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 	var headSHA string
 
 	for _, r := range applicableRules {
-		if r.Method == "require" { //nolint:goconst // TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
+		if r.Method == ruleMethodRequire {
 			if r.MustPass && wfr == nil {
 				var err error
 				hash, err := getLatestCommitHash(ctx, c, owner, repo)
