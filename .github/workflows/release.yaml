@@ -5,20 +5,25 @@ on:
     tags:
       - '*'
 
-permissions:
-  id-token: write # Undocumented OIDC support.
-  packages: write # To publish container images to GHCR
-  contents: write # To create a release
+permissions: {}
 
 jobs:
   release:
     runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write # Undocumented OIDC support.
+      packages: write # To publish container images to GHCR
+      contents: write # To create a release
+
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version-file: 'go.mod'
+          check-latest: true
+          cache: false
 
       - uses: sigstore/cosign-installer@d58896d6a1865668819e1d91763c7751a165e159 # v3.9.2
 
@@ -30,11 +35,13 @@ jobs:
         env:
           KO_DOCKER_REPO: ghcr.io/${{ github.repository_owner }}
           KO_DEFAULTPLATFORMS: linux/arm64,linux/amd64
+
       - run: ko publish -B ./cmd/allstar --tags ${{ github.ref_name }}-gha --image-refs allstar-gha.ref
         env:
           KO_DOCKER_REPO: ghcr.io/${{ github.repository_owner }}
           KO_DEFAULTBASEIMAGE: cgr.dev/chainguard/node:latest
           KO_DEFAULTPLATFORMS: linux/arm64,linux/amd64
+
       - run: |
           while read ref; do
             echo "signing $ref"
@@ -44,6 +51,7 @@ jobs:
             echo "signing $ref"
             cosign sign --yes -a git_sha="$GITHUB_SHA" "$ref"
           done < allstar-gha.ref
+
       - run: |
           gh release create ${{ github.ref_name }} --notes "Images:
           * ghcr.io/${{ github.repository_owner }}/allstar:${{ github.ref_name }} # Minimal image based on scratch
