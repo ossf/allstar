@@ -157,6 +157,16 @@ optConfig:
 			},
 			Got: &RepoConfig{},
 		},
+		{
+			Name: "IssueDetails",
+			Input: `
+issueDetails: test Issue Detail
+`,
+			Expect: &OrgConfig{
+				IssueDetails: "test Issue Detail",
+			},
+			Got: &OrgConfig{},
+		},
 	}
 
 	for _, test := range tests {
