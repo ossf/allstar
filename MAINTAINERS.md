@@ -20,4 +20,4 @@
 Former maintainers are listed here.
 Thanks for your contributions to Scorecard!
 
-- 
+-
