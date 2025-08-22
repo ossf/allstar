@@ -63,6 +63,10 @@ type OrgConfig struct {
 	// policies.
 	IssueFooter string `json:"issueFooter"`
 
+	// IssueDetails is a custom message to add when need more information regarding
+	// a specific configuration
+	IssueDetails string `json:"issueDetails"`
+
 	// Schedule specifies whether to perform certain actions on specific days.
 	Schedule *ScheduleConfig `json:"schedule"`
 }

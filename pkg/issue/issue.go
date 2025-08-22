@@ -124,7 +124,12 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		} else {
 			footer = fmt.Sprintf("%v\n\n%v", oc.IssueFooter, operator.GitHubIssueFooter)
 		}
-		body := createIssueBody(owner, repo, text, hash, footer, issueRepo == repo)
+
+		issueDetails := ""
+		if oc.IssueDetails != "" {
+			issueDetails = fmt.Sprintf("For more: %v", oc.IssueDetails)
+		}
+		body := createIssueBody(owner, repo, text, hash, issueDetails, footer, issueRepo == repo)
 		newIssueReq := &github.IssueRequest{
 			Title:  &title,
 			Body:   &body,
@@ -294,7 +299,7 @@ func getIssueRepoTitle(ctx context.Context, c *github.Client, owner, repo, polic
 	return repo, fmt.Sprintf(sameRepoTitle, policy)
 }
 
-func createIssueBody(owner, repo, text, hash, footer string, isIssueRepo bool) string {
+func createIssueBody(owner, repo, text, hash, issueDetails, footer string, isIssueRepo bool) string {
 	var refersTo string
 	if !isIssueRepo {
 		ownerRepo := fmt.Sprintf("%s/%s", owner, repo)
@@ -302,8 +307,8 @@ func createIssueBody(owner, repo, text, hash, footer string, isIssueRepo bool) s
 	}
 	editHeader := issueSectionHeader(updateSectionName)
 	return fmt.Sprintf("_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)%s._\n\n**Security Policy Violation**\n"+
-		"%v\n\n---\n\n%s%s%s\n%v",
-		refersTo, text, editHeader, fmt.Sprintf(resultTextHashCommentFormat, hash), editHeader, footer)
+		"%v\n\n---\n\n%s%s%s\n%s\n\n%v",
+		refersTo, text, editHeader, fmt.Sprintf(resultTextHashCommentFormat, hash), editHeader, issueDetails, footer)
 }
 
 func issueSectionHeader(sectionName string) string {
