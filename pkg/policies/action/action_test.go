@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/gobwas/glob"
-	"github.com/google/go-github/v59/github"
+	"github.com/google/go-github/v74/github"
 	"github.com/rhysd/actionlint"
 
 	"github.com/ossf/allstar/pkg/config"

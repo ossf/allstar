@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	"github.com/bradleyfalzon/ghinstallation/v2"
-	"github.com/google/go-github/v59/github"
+	"github.com/google/go-github/v74/github"
 	"github.com/gregjones/httpcache"
 	"gocloud.dev/runtimevar"
 	_ "gocloud.dev/runtimevar/awssecretsmanager"

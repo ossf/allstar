@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-github/v59/github"
+	"github.com/google/go-github/v74/github"
 	"sigs.k8s.io/yaml"
 
 	"github.com/ossf/allstar/pkg/config/operator"
@@ -634,9 +634,9 @@ func TestWalkGetContents(t *testing.T) {
 			}, nil, nil, nil
 		} else {
 			return nil, []*github.RepositoryContent{ // All three are always there
-				{Name: github.String("long")},
-				{Name: github.String("path")},
-				{Name: github.String("file.yaml")},
+				{Name: github.Ptr("long")},
+				{Name: github.Ptr("path")},
+				{Name: github.Ptr("file.yaml")},
 			}, nil, nil
 		}
 	}
@@ -661,8 +661,8 @@ func TestWalkGetContents(t *testing.T) {
 			}, nil, nil, nil
 		} else {
 			return nil, []*github.RepositoryContent{ // path is not there
-				{Name: github.String("long")},
-				{Name: github.String("file.yaml")},
+				{Name: github.Ptr("long")},
+				{Name: github.Ptr("file.yaml")},
 			}, nil, nil
 		}
 	}

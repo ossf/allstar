@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-github/v59/github"
+	"github.com/google/go-github/v74/github"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ossf/allstar/pkg/config"
@@ -86,7 +86,7 @@ func getPolicyIssue(ctx context.Context, issues issues, owner, repo, policy, tit
 		if resp.NextPage == 0 {
 			break
 		}
-		opt.Page = resp.NextPage
+		opt.ListOptions.Page = resp.NextPage
 	}
 	return nil, nil
 }

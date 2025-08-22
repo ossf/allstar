@@ -9,7 +9,7 @@ require (
 	github.com/go-git/go-git/v5 v5.16.2
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-cmp v0.7.0
-	github.com/google/go-github/v59 v59.0.0
+	github.com/google/go-github/v74 v74.0.0
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79
 	github.com/ossf/scorecard/v5 v5.2.1
 	github.com/rhysd/actionlint v1.7.7
