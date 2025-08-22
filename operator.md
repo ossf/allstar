@@ -71,11 +71,11 @@ Allstar supports various operator configuration options which can be set via env
 In case you want to operate Allstar with a self-hosted GitHub Enterprise instance, you need to set the `ALLSTAR_GHE_URL` environment variable to the URL of your GitHub Enterprise instance URL.
 The different API endpoints for API and upload are appended automatically.
 
-Example: 
+Example:
 
 Given, your GHE instance URL is "https://my-ghe.example.com", you need to set the following environment variables:
 
 ```shell
 export ALLSTAR_GHE_URL="https://my-ghe.example.com"
-export GH_HOST="my-ghe.example.com"  # This is used by the Scorecard dependency. Might result in errors if not set. 
+export GH_HOST="my-ghe.example.com"  # This is used by the Scorecard dependency. Might result in errors if not set.
 ```
