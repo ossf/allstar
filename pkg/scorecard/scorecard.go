@@ -30,7 +30,7 @@ import (
 	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	plumbinghttp "github.com/go-git/go-git/v5/plumbing/transport/http"
-	"github.com/google/go-github/v59/github"
+	"github.com/google/go-github/v74/github"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ossf/allstar/pkg/ghclients"
@@ -247,7 +247,7 @@ func _createLocal(ctx context.Context, fullRepo string) (*ScClient, error) {
 	opts := &github.InstallationTokenOptions{
 		Repositories: []string{repo},
 		Permissions: &github.InstallationPermissions{
-			Contents: github.String("read"),
+			Contents: github.Ptr("read"),
 		},
 	}
 	token, _, err := client.Apps.CreateInstallationToken(ctx, installation.GetID(), opts)

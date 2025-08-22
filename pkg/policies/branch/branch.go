@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/google/go-github/v59/github"
+	"github.com/google/go-github/v74/github"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ossf/allstar/pkg/config"
@@ -376,11 +376,11 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 							b)
 					pass = false
 				}
-				for _, c := range rsc.Checks {
+				for _, c := range rsc.GetChecks() {
 					sc := StatusCheck{Context: c.Context, AppID: c.AppID}
 					d.RequireStatusChecks = append(d.RequireStatusChecks, sc)
 				}
-				lt := makeSCLookupTable(rsc.Checks)
+				lt := makeSCLookupTable(rsc.GetChecks())
 				for _, c := range mc.RequireStatusChecks {
 					appIDTxt := "(any app)"
 					sch := statusCheckHash{context: c.Context}
@@ -479,7 +479,7 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 					}
 					rsc := &github.RequiredStatusChecks{
 						Strict: mc.RequireUpToDateBranch,
-						Checks: checks,
+						Checks: github.Ptr(checks),
 					}
 					pr.RequiredStatusChecks = rsc
 				}
@@ -525,7 +525,7 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 			pr.RequiredStatusChecks.Contexts = nil
 			// If there are no actual checks or contexts, then unset RequiredStatusChecks entirely,
 			// otherwise update fails
-			if len(pr.RequiredStatusChecks.Checks) == 0 && len(pr.RequiredStatusChecks.Contexts) == 0 {
+			if len(pr.RequiredStatusChecks.GetChecks()) == 0 && len(pr.RequiredStatusChecks.GetContexts()) == 0 {
 				update = true
 				pr.RequiredStatusChecks = nil
 			}
@@ -600,7 +600,7 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 				}
 				rsc := &github.RequiredStatusChecks{
 					Strict: mc.RequireUpToDateBranch,
-					Checks: checks,
+					Checks: github.Ptr(checks),
 				}
 				pr.RequiredStatusChecks = rsc
 				update = true
@@ -609,8 +609,8 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 					pr.RequiredStatusChecks.Strict = true
 					update = true
 				}
-				ac := pr.RequiredStatusChecks.Checks
-				lt := makeSCLookupTable(pr.RequiredStatusChecks.Checks)
+				ac := pr.RequiredStatusChecks.GetChecks()
+				lt := makeSCLookupTable(pr.RequiredStatusChecks.GetChecks())
 				for _, c := range mc.RequireStatusChecks {
 					// Only mark for update if there are status checks required, but not already set.
 					sch := statusCheckHash{context: c.Context}
@@ -622,7 +622,7 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 						update = true
 					}
 				}
-				pr.RequiredStatusChecks.Checks = ac
+				pr.RequiredStatusChecks.Checks = github.Ptr(ac)
 			}
 		}
 		if update {

@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-github/v59/github"
+	"github.com/google/go-github/v74/github"
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
@@ -73,9 +73,9 @@ func TestConfigPrecedence(t *testing.T) {
 				PushAllowed: true,
 			},
 			OrgRepo: RepoConfig{
-				Action:       github.String("log"),
-				PushAllowed:  github.Bool(false),
-				AdminAllowed: github.Bool(true),
+				Action:       github.Ptr("log"),
+				PushAllowed:  github.Ptr(false),
+				AdminAllowed: github.Ptr(true),
 			},
 			Repo:      RepoConfig{},
 			ExpAction: "log",
@@ -91,14 +91,14 @@ func TestConfigPrecedence(t *testing.T) {
 				Action: "issue",
 			},
 			OrgRepo: RepoConfig{
-				Action:       github.String("log"),
-				PushAllowed:  github.Bool(true),
-				AdminAllowed: github.Bool(true),
+				Action:       github.Ptr("log"),
+				PushAllowed:  github.Ptr(true),
+				AdminAllowed: github.Ptr(true),
 			},
 			Repo: RepoConfig{
-				Action:       github.String("email"),
-				PushAllowed:  github.Bool(false),
-				AdminAllowed: github.Bool(false),
+				Action:       github.Ptr("email"),
+				PushAllowed:  github.Ptr(false),
+				AdminAllowed: github.Ptr(false),
 			},
 			ExpAction: "email",
 			Exp: mergedConfig{
@@ -114,14 +114,14 @@ func TestConfigPrecedence(t *testing.T) {
 				Action: "issue",
 			},
 			OrgRepo: RepoConfig{
-				Action:       github.String("log"),
-				PushAllowed:  github.Bool(true),
-				AdminAllowed: github.Bool(true),
+				Action:       github.Ptr("log"),
+				PushAllowed:  github.Ptr(true),
+				AdminAllowed: github.Ptr(true),
 			},
 			Repo: RepoConfig{
-				Action:       github.String("email"),
-				PushAllowed:  github.Bool(false),
-				AdminAllowed: github.Bool(false),
+				Action:       github.Ptr("email"),
+				PushAllowed:  github.Ptr(false),
+				AdminAllowed: github.Ptr(false),
 			},
 			ExpAction: "log",
 			Exp: mergedConfig{

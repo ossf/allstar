@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-github/v59/github"
+	"github.com/google/go-github/v74/github"
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
@@ -60,7 +60,7 @@ func TestConfigPrecedence(t *testing.T) {
 				Action: "issue",
 			},
 			OrgRepo: RepoConfig{
-				Action: github.String("log"),
+				Action: github.Ptr("log"),
 			},
 			Repo:      RepoConfig{},
 			ExpAction: "log",
@@ -74,10 +74,10 @@ func TestConfigPrecedence(t *testing.T) {
 				Action: "issue",
 			},
 			OrgRepo: RepoConfig{
-				Action: github.String("log"),
+				Action: github.Ptr("log"),
 			},
 			Repo: RepoConfig{
-				Action: github.String("email"),
+				Action: github.Ptr("email"),
 			},
 			ExpAction: "email",
 			Exp: mergedConfig{
@@ -93,10 +93,10 @@ func TestConfigPrecedence(t *testing.T) {
 				Action: "issue",
 			},
 			OrgRepo: RepoConfig{
-				Action: github.String("log"),
+				Action: github.Ptr("log"),
 			},
 			Repo: RepoConfig{
-				Action: github.String("email"),
+				Action: github.Ptr("email"),
 			},
 			ExpAction: "log",
 			Exp: mergedConfig{

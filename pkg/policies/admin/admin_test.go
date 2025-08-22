@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-github/v59/github"
+	"github.com/google/go-github/v74/github"
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
@@ -85,12 +85,12 @@ func TestConfigPrecedence(t *testing.T) {
 				MaxNumberAdminTeams: 2,
 			},
 			OrgRepo: RepoConfig{
-				Action:              github.String("log"),
-				OwnerlessAllowed:    github.Bool(false),
-				UserAdminsAllowed:   github.Bool(false),
-				MaxNumberUserAdmins: github.Int(4),
-				TeamAdminsAllowed:   github.Bool(false),
-				MaxNumberAdminTeams: github.Int(3),
+				Action:              github.Ptr("log"),
+				OwnerlessAllowed:    github.Ptr(false),
+				UserAdminsAllowed:   github.Ptr(false),
+				MaxNumberUserAdmins: github.Ptr(4),
+				TeamAdminsAllowed:   github.Ptr(false),
+				MaxNumberAdminTeams: github.Ptr(3),
 			},
 			Repo:      RepoConfig{},
 			ExpAction: "log",
@@ -109,20 +109,20 @@ func TestConfigPrecedence(t *testing.T) {
 				Action: "issue",
 			},
 			OrgRepo: RepoConfig{
-				Action:              github.String("log"),
-				OwnerlessAllowed:    github.Bool(true),
-				UserAdminsAllowed:   github.Bool(true),
-				MaxNumberUserAdmins: github.Int(1),
-				TeamAdminsAllowed:   github.Bool(true),
-				MaxNumberAdminTeams: github.Int(2),
+				Action:              github.Ptr("log"),
+				OwnerlessAllowed:    github.Ptr(true),
+				UserAdminsAllowed:   github.Ptr(true),
+				MaxNumberUserAdmins: github.Ptr(1),
+				TeamAdminsAllowed:   github.Ptr(true),
+				MaxNumberAdminTeams: github.Ptr(2),
 			},
 			Repo: RepoConfig{
-				Action:              github.String("email"),
-				OwnerlessAllowed:    github.Bool(false),
-				UserAdminsAllowed:   github.Bool(false),
-				MaxNumberUserAdmins: github.Int(4),
-				TeamAdminsAllowed:   github.Bool(false),
-				MaxNumberAdminTeams: github.Int(3),
+				Action:              github.Ptr("email"),
+				OwnerlessAllowed:    github.Ptr(false),
+				UserAdminsAllowed:   github.Ptr(false),
+				MaxNumberUserAdmins: github.Ptr(4),
+				TeamAdminsAllowed:   github.Ptr(false),
+				MaxNumberAdminTeams: github.Ptr(3),
 			},
 			ExpAction: "email",
 			Exp: mergedConfig{
@@ -140,20 +140,20 @@ func TestConfigPrecedence(t *testing.T) {
 				Action: "issue",
 			},
 			OrgRepo: RepoConfig{
-				Action:              github.String("log"),
-				OwnerlessAllowed:    github.Bool(true),
-				UserAdminsAllowed:   github.Bool(true),
-				MaxNumberUserAdmins: github.Int(1),
-				TeamAdminsAllowed:   github.Bool(true),
-				MaxNumberAdminTeams: github.Int(2),
+				Action:              github.Ptr("log"),
+				OwnerlessAllowed:    github.Ptr(true),
+				UserAdminsAllowed:   github.Ptr(true),
+				MaxNumberUserAdmins: github.Ptr(1),
+				TeamAdminsAllowed:   github.Ptr(true),
+				MaxNumberAdminTeams: github.Ptr(2),
 			},
 			Repo: RepoConfig{
-				Action:              github.String("email"),
-				OwnerlessAllowed:    github.Bool(false),
-				UserAdminsAllowed:   github.Bool(false),
-				MaxNumberUserAdmins: github.Int(4),
-				TeamAdminsAllowed:   github.Bool(false),
-				MaxNumberAdminTeams: github.Int(3),
+				Action:              github.Ptr("email"),
+				OwnerlessAllowed:    github.Ptr(false),
+				UserAdminsAllowed:   github.Ptr(false),
+				MaxNumberUserAdmins: github.Ptr(4),
+				TeamAdminsAllowed:   github.Ptr(false),
+				MaxNumberAdminTeams: github.Ptr(3),
 			},
 			ExpAction: "log",
 			Exp: mergedConfig{

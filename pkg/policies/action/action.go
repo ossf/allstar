@@ -23,7 +23,7 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"github.com/google/go-github/v59/github"
+	"github.com/google/go-github/v74/github"
 	"github.com/rhysd/actionlint"
 	"github.com/rs/zerolog/log"
 

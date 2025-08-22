@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-github/v59/github"
+	"github.com/google/go-github/v74/github"
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
@@ -129,7 +129,7 @@ func TestConfigPrecedence(t *testing.T) {
 				},
 			},
 			OrgRepo: RepoConfig{
-				Action: github.String("log"),
+				Action: github.Ptr("log"),
 				RequireStatusChecks: []StatusCheck{
 					{"someothercheck", nil},
 				},
@@ -156,13 +156,13 @@ func TestConfigPrecedence(t *testing.T) {
 				},
 			},
 			OrgRepo: RepoConfig{
-				Action: github.String("log"),
+				Action: github.Ptr("log"),
 				RequireStatusChecks: []StatusCheck{
 					{"someothercheck", nil},
 				},
 			},
 			Repo: RepoConfig{
-				Action: github.String("email"),
+				Action: github.Ptr("email"),
 				RequireStatusChecks: []StatusCheck{
 					{"bestcheck", nil},
 				},
@@ -191,13 +191,13 @@ func TestConfigPrecedence(t *testing.T) {
 				},
 			},
 			OrgRepo: RepoConfig{
-				Action: github.String("log"),
+				Action: github.Ptr("log"),
 				RequireStatusChecks: []StatusCheck{
 					{"someothercheck", nil},
 				},
 			},
 			Repo: RepoConfig{
-				Action: github.String("email"),
+				Action: github.Ptr("email"),
 				RequireStatusChecks: []StatusCheck{
 					{"bestcheck", nil},
 				},
@@ -292,7 +292,7 @@ func TestGetSignatureProtectionEnabled(t *testing.T) {
 			getSignaturesProtectedBranch = func(ctx context.Context, o string, r string, b string) (
 				*github.SignaturesProtectedBranch, *github.Response, error,
 			) {
-				return &github.SignaturesProtectedBranch{Enabled: github.Bool(test.SignatureProtEnabled)},
+				return &github.SignaturesProtectedBranch{Enabled: github.Ptr(test.SignatureProtEnabled)},
 					&test.GetResponse, test.GetError
 			}
 
@@ -340,7 +340,7 @@ func TestCheck(t *testing.T) {
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: false,
@@ -384,7 +384,7 @@ func TestCheck(t *testing.T) {
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: true,
@@ -428,10 +428,10 @@ func TestCheck(t *testing.T) {
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 				"release": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: true,
@@ -482,7 +482,7 @@ func TestCheck(t *testing.T) {
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: true,
@@ -529,7 +529,7 @@ func TestCheck(t *testing.T) {
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
 						Strict: false,
-						Checks: []*github.RequiredStatusCheck{
+						Checks: &[]*github.RequiredStatusCheck{
 							{Context: "mycheck"}, {Context: "theothercheck"},
 						},
 					},
@@ -537,7 +537,7 @@ func TestCheck(t *testing.T) {
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: true,
@@ -588,7 +588,7 @@ func TestCheck(t *testing.T) {
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: true,
@@ -633,7 +633,7 @@ func TestCheck(t *testing.T) {
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
 						Strict: false,
-						Checks: []*github.RequiredStatusCheck{
+						Checks: &[]*github.RequiredStatusCheck{
 							{Context: "mycheck"},
 						},
 					},
@@ -641,7 +641,7 @@ func TestCheck(t *testing.T) {
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: true,
@@ -685,15 +685,15 @@ func TestCheck(t *testing.T) {
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
 						Strict: false,
-						Checks: []*github.RequiredStatusCheck{
-							{Context: "mycheck", AppID: github.Int64(123456)},
+						Checks: &[]*github.RequiredStatusCheck{
+							{Context: "mycheck", AppID: github.Ptr(int64(123456))},
 						},
 					},
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: true,
@@ -707,7 +707,7 @@ func TestCheck(t *testing.T) {
 						NumReviews:          5,
 						DismissStale:        true,
 						BlockForce:          true,
-						RequireStatusChecks: []StatusCheck{{"mycheck", github.Int64(123456)}},
+						RequireStatusChecks: []StatusCheck{{"mycheck", github.Ptr(int64(123456))}},
 					},
 				},
 			},
@@ -723,7 +723,7 @@ func TestCheck(t *testing.T) {
 				ApprovalCount:       1,
 				DismissStale:        true,
 				BlockForce:          true,
-				RequireStatusChecks: []StatusCheck{{"mycheck", github.Int64(123456)}},
+				RequireStatusChecks: []StatusCheck{{"mycheck", github.Ptr(int64(123456))}},
 			},
 			Repo: RepoConfig{},
 			Prot: map[string]github.Protection{
@@ -737,15 +737,15 @@ func TestCheck(t *testing.T) {
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
 						Strict: false,
-						Checks: []*github.RequiredStatusCheck{
-							{Context: "mycheck", AppID: github.Int64(654321)},
+						Checks: &[]*github.RequiredStatusCheck{
+							{Context: "mycheck", AppID: github.Ptr(int64(654321))},
 						},
 					},
 				},
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: true,
@@ -759,7 +759,7 @@ func TestCheck(t *testing.T) {
 						NumReviews:          5,
 						DismissStale:        true,
 						BlockForce:          true,
-						RequireStatusChecks: []StatusCheck{{"mycheck", github.Int64(654321)}},
+						RequireStatusChecks: []StatusCheck{{"mycheck", github.Ptr(int64(654321))}},
 					},
 				},
 			},
@@ -791,7 +791,7 @@ func TestCheck(t *testing.T) {
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: true,
@@ -841,7 +841,7 @@ func TestCheck(t *testing.T) {
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: true,
@@ -874,8 +874,8 @@ func TestCheck(t *testing.T) {
 				BlockForce:      true,
 			},
 			Repo: RepoConfig{
-				ApprovalCount: github.Int(1),
-				DismissStale:  github.Bool(false),
+				ApprovalCount: github.Ptr(1),
+				DismissStale:  github.Ptr(false),
 			},
 			Prot: map[string]github.Protection{
 				"main": {
@@ -887,7 +887,7 @@ func TestCheck(t *testing.T) {
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: true,
@@ -919,8 +919,8 @@ func TestCheck(t *testing.T) {
 				BlockForce:      true,
 			},
 			Repo: RepoConfig{
-				ApprovalCount: github.Int(1),
-				DismissStale:  github.Bool(false),
+				ApprovalCount: github.Ptr(1),
+				DismissStale:  github.Ptr(false),
 			},
 			Prot: map[string]github.Protection{
 				"main": {
@@ -932,7 +932,7 @@ func TestCheck(t *testing.T) {
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: true,
@@ -966,7 +966,7 @@ func TestCheck(t *testing.T) {
 			Prot: map[string]github.Protection{},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: true,
@@ -1006,7 +1006,7 @@ func TestCheck(t *testing.T) {
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: true,
@@ -1047,7 +1047,7 @@ func TestCheck(t *testing.T) {
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(true),
+					Enabled: github.Ptr(true),
 				},
 			},
 			cofigEnabled: true,
@@ -1088,7 +1088,7 @@ func TestCheck(t *testing.T) {
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: true,
@@ -1166,7 +1166,7 @@ func TestCheck(t *testing.T) {
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: true,
@@ -1208,7 +1208,7 @@ func TestCheck(t *testing.T) {
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: true,
@@ -1249,7 +1249,7 @@ func TestCheck(t *testing.T) {
 			},
 			SigProtection: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			cofigEnabled: true,
@@ -1402,7 +1402,7 @@ func TestFix(t *testing.T) {
 			Exp:          map[string]github.ProtectionRequest{},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			ExpSignatureRequests: map[string]bool{},
@@ -1429,11 +1429,11 @@ func TestFix(t *testing.T) {
 					RequiredPullRequestReviews: nil,
 					RequiredStatusChecks: &github.RequiredStatusChecks{
 						Strict:   true,
-						Contexts: []string{"mycheck"},
-						Checks: []*github.RequiredStatusCheck{
+						Contexts: github.Ptr([]string{"mycheck"}),
+						Checks: &[]*github.RequiredStatusCheck{
 							{
 								Context: "mycheck",
-								AppID:   github.Int64(123),
+								AppID:   github.Ptr(int64(123)),
 							},
 						},
 					},
@@ -1442,17 +1442,17 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
 				"main": {
-					AllowForcePushes: github.Bool(false),
+					AllowForcePushes: github.Ptr(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 2,
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
 						Strict: true,
-						Checks: []*github.RequiredStatusCheck{ // No Contexts in request
+						Checks: &[]*github.RequiredStatusCheck{ // No Contexts in request
 							{
 								Context: "mycheck",
-								AppID:   github.Int64(123),
+								AppID:   github.Ptr(int64(123)),
 							},
 						},
 					},
@@ -1460,7 +1460,7 @@ func TestFix(t *testing.T) {
 			},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			ExpSignatureRequests: map[string]bool{},
@@ -1481,7 +1481,7 @@ func TestFix(t *testing.T) {
 			Exp: map[string]github.ProtectionRequest{
 				"main": {
 					EnforceAdmins:    true,
-					AllowForcePushes: github.Bool(false),
+					AllowForcePushes: github.Ptr(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 2,
@@ -1543,7 +1543,7 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
 				"main": {
-					AllowForcePushes: github.Bool(false),
+					AllowForcePushes: github.Ptr(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 2,
@@ -1552,7 +1552,7 @@ func TestFix(t *testing.T) {
 			},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			ExpSignatureRequests: map[string]bool{},
@@ -1580,7 +1580,7 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
 				"main": {
-					AllowForcePushes: github.Bool(false),
+					AllowForcePushes: github.Ptr(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						RequiredApprovingReviewCount: 0,
 					},
@@ -1588,7 +1588,7 @@ func TestFix(t *testing.T) {
 			},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			ExpSignatureRequests: map[string]bool{},
@@ -1617,7 +1617,7 @@ func TestFix(t *testing.T) {
 			Exp:          map[string]github.ProtectionRequest{},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			ExpSignatureRequests: map[string]bool{},
@@ -1648,13 +1648,13 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
 				"main": {
-					AllowForcePushes: github.Bool(false),
+					AllowForcePushes: github.Ptr(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						RequiredApprovingReviewCount: 0,
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
 						Strict: true,
-						Checks: []*github.RequiredStatusCheck{
+						Checks: &[]*github.RequiredStatusCheck{
 							{Context: "mycheck"}, {Context: "theothercheck"},
 						},
 					},
@@ -1662,7 +1662,7 @@ func TestFix(t *testing.T) {
 			},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			ExpSignatureRequests: map[string]bool{},
@@ -1690,7 +1690,7 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
 				"main": {
-					AllowForcePushes: github.Bool(false),
+					AllowForcePushes: github.Ptr(false),
 					EnforceAdmins:    true,
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						RequiredApprovingReviewCount: 0,
@@ -1699,7 +1699,7 @@ func TestFix(t *testing.T) {
 			},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			ExpSignatureRequests: map[string]bool{},
@@ -1729,13 +1729,13 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
 				"main": {
-					AllowForcePushes: github.Bool(false),
+					AllowForcePushes: github.Ptr(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						RequiredApprovingReviewCount: 0,
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
 						Strict: false,
-						Checks: []*github.RequiredStatusCheck{
+						Checks: &[]*github.RequiredStatusCheck{
 							{Context: "mycheck"}, {Context: "theothercheck"},
 						},
 					},
@@ -1743,7 +1743,7 @@ func TestFix(t *testing.T) {
 			},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			ExpSignatureRequests: map[string]bool{},
@@ -1770,7 +1770,7 @@ func TestFix(t *testing.T) {
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
 						Strict: false,
-						Checks: []*github.RequiredStatusCheck{
+						Checks: &[]*github.RequiredStatusCheck{
 							{Context: "mycheck"}, {Context: "someothercheck"},
 						},
 					},
@@ -1779,13 +1779,13 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
 				"main": {
-					AllowForcePushes: github.Bool(false),
+					AllowForcePushes: github.Ptr(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						RequiredApprovingReviewCount: 0,
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
 						Strict: false,
-						Checks: []*github.RequiredStatusCheck{
+						Checks: &[]*github.RequiredStatusCheck{
 							{Context: "mycheck"}, {Context: "someothercheck"}, {Context: "theothercheck"},
 						},
 					},
@@ -1793,7 +1793,7 @@ func TestFix(t *testing.T) {
 			},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			ExpSignatureRequests: map[string]bool{},
@@ -1803,9 +1803,9 @@ func TestFix(t *testing.T) {
 			Org: OrgConfig{
 				EnforceDefault: true,
 				RequireStatusChecks: []StatusCheck{
-					{"mycheck", github.Int64(123456)},
+					{"mycheck", github.Ptr(int64(123456))},
 					{"theothercheck", nil},
-					{"someothercheck", github.Int64(654321)},
+					{"someothercheck", github.Ptr(int64(654321))},
 				},
 			},
 			Repo: RepoConfig{},
@@ -1822,9 +1822,9 @@ func TestFix(t *testing.T) {
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
 						Strict: false,
-						Checks: []*github.RequiredStatusCheck{
+						Checks: &[]*github.RequiredStatusCheck{
 							{Context: "mycheck"},
-							{Context: "someothercheck", AppID: github.Int64(123456)},
+							{Context: "someothercheck", AppID: github.Ptr(int64(123456))},
 						},
 					},
 				},
@@ -1832,17 +1832,17 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
 				"main": {
-					AllowForcePushes: github.Bool(false),
+					AllowForcePushes: github.Ptr(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						RequiredApprovingReviewCount: 0,
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
 						Strict: false,
-						Checks: []*github.RequiredStatusCheck{
+						Checks: &[]*github.RequiredStatusCheck{
 							{Context: "mycheck"},
-							{Context: "mycheck", AppID: github.Int64(123456)},
-							{Context: "someothercheck", AppID: github.Int64(123456)},
-							{Context: "someothercheck", AppID: github.Int64(654321)},
+							{Context: "mycheck", AppID: github.Ptr(int64(123456))},
+							{Context: "someothercheck", AppID: github.Ptr(int64(123456))},
+							{Context: "someothercheck", AppID: github.Ptr(int64(654321))},
 							{Context: "theothercheck"},
 						},
 					},
@@ -1850,7 +1850,7 @@ func TestFix(t *testing.T) {
 			},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			ExpSignatureRequests: map[string]bool{},
@@ -1877,7 +1877,7 @@ func TestFix(t *testing.T) {
 					},
 					RequiredStatusChecks: &github.RequiredStatusChecks{
 						Strict: false,
-						Checks: []*github.RequiredStatusCheck{
+						Checks: &[]*github.RequiredStatusCheck{
 							{Context: "mycheck"}, {Context: "theothercheck"},
 						},
 					},
@@ -1887,7 +1887,7 @@ func TestFix(t *testing.T) {
 			Exp:          map[string]github.ProtectionRequest{},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			ExpSignatureRequests: map[string]bool{},
@@ -1921,7 +1921,7 @@ func TestFix(t *testing.T) {
 			Exp:          map[string]github.ProtectionRequest{},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			ExpSignatureRequests: map[string]bool{
@@ -1957,7 +1957,7 @@ func TestFix(t *testing.T) {
 			Exp:          map[string]github.ProtectionRequest{},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(true),
+					Enabled: github.Ptr(true),
 				},
 			},
 			ExpSignatureRequests: map[string]bool{},
@@ -1992,7 +1992,7 @@ func TestFix(t *testing.T) {
 			cofigEnabled: true,
 			Exp: map[string]github.ProtectionRequest{
 				"main": {
-					AllowForcePushes: github.Bool(false),
+					AllowForcePushes: github.Ptr(false),
 					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcementRequest{
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 1,
@@ -2002,7 +2002,7 @@ func TestFix(t *testing.T) {
 			},
 			SignatureProt: map[string]github.SignaturesProtectedBranch{
 				"main": {
-					Enabled: github.Bool(false),
+					Enabled: github.Ptr(false),
 				},
 			},
 			ExpSignatureRequests: map[string]bool{},
@@ -2129,7 +2129,7 @@ func TestFix(t *testing.T) {
 				if pr.RequiredStatusChecks != nil {
 					sc := make([]*github.RequiredStatusCheck, 0)
 					cm := make(map[string][]*github.RequiredStatusCheck)
-					for _, check := range pr.RequiredStatusChecks.Checks {
+					for _, check := range pr.RequiredStatusChecks.GetChecks() {
 						cm[check.Context] = append(cm[check.Context], check)
 					}
 					ctx := make([]string, 0)
@@ -2140,7 +2140,7 @@ func TestFix(t *testing.T) {
 					for _, c := range ctx {
 						sc = append(sc, cm[c]...)
 					}
-					pr.RequiredStatusChecks.Checks = sc
+					pr.RequiredStatusChecks.Checks = github.Ptr(sc)
 				}
 			}
 

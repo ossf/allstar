@@ -24,7 +24,7 @@ import (
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/gobwas/glob"
-	"github.com/google/go-github/v59/github"
+	"github.com/google/go-github/v74/github"
 	"github.com/rs/zerolog/log"
 	"sigs.k8s.io/yaml"
 
