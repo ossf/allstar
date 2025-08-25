@@ -258,7 +258,7 @@ by default, also the default `log` action won't produce visible results. A
 simple way to enable all policies is to create a yaml file for each policy with
 the contents:
 
-```
+```yaml
 optConfig:
   optOutStrategy: true
 action: issue
