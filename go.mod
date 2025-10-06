@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/bradleyfalzon/ghinstallation/v2 v2.17.0
 	github.com/evanphx/json-patch/v5 v5.9.11
-	github.com/go-git/go-git/v5 v5.16.2
+	github.com/go-git/go-git/v5 v5.16.3
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-github/v74 v74.0.0
