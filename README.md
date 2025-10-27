@@ -195,7 +195,7 @@ Steps:
     1.  Select "All Repositories" under Repository Access, even if you
         plan to disable Allstar on some repositories later
 1.  Fork the sample repository
-    1.  [Open the sample repository](https://github.com/jeffmendoza/dot-allstar-quickstart)
+    1.  [Open the sample repository](https://github.com/ossf/dot-allstar-quickstart)
         and click the "Use this template" button
     1.  In the field for Repository Name, type `.allstar`
     1.  Click "Create repository from template"
