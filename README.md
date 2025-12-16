@@ -342,11 +342,22 @@ itself](https://github.com/ossf/scorecard) to see all the detailed information.
 
 ### CODEOWNERS
 
-This policy's config file is named `codeowners.yaml`, and the [config
-definitions are
-here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/codeowners#OrgConfig).
+This policy's config file is named `codeowners.yaml`, and the [config definitions are here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/codeowners#OrgConfig).
 
-This policy checks for the presence of a [`CODEOWNERS` file](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners) on your repositories.
+This policy ensures that repositories define code ownership via a `.github/CODEOWNERS` (or `CODEOWNERS` at root) file, so that pull requests are automatically assigned to appropriate reviewers.
+
+**What it checks**:
+- Presence of a `CODEOWNERS` file
+- That critical paths (e.g., `*.js`, `Dockerfile`, `*.py`) are covered by at least one owner
+- That owners are valid GitHub users or teams in the org
+
+**Example configuration**:
+```yaml
+# .allstar/codeowners.yaml
+optConfig:
+  optOutStrategy: true
+action: issue
+```
 
 ### Outside Collaborators
 
@@ -400,14 +411,22 @@ for more information on each check.
 
 ### GitHub Actions
 
-This policy's config file is named `actions.yaml`, and the [config definitions
-are
-here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/action#OrgConfig).
+This policy's config file is named `actions.yaml`, and the [config definitions are here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/action#OrgConfig).
 
-This policy checks the GitHub Actions workflow configuration files
-(`.github/workflows`) (and workflow runs in some cases) in each repo to ensure
-they are in line with rules (eg. require, deny) defined in the
-organization-level config for the policy.
+This policy checks GitHub Actions workflow files (in `.github/workflows/`) for insecure patterns, such as:
+- Use of deprecated or untrusted actions
+- Excessive permissions granted to `GITHUB_TOKEN`
+- Workflows that allow arbitrary code execution
+
+It leverages the [OpenSSF Scorecard **Dangerous Workflow** and **Token Permissions** checks](https://github.com/ossf/scorecard/blob/main/docs/checks.md) under the hood.
+
+**Example configuration**:
+```yaml
+# .allstar/actions.yaml
+optConfig:
+  optOutStrategy: true
+action: issue
+```
 
 ### Repository Administrators
 
