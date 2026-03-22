@@ -398,6 +398,36 @@ the [OpenSSF Scorecard
 documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md)
 for more information on each check.
 
+#### SARIF Upload
+
+The Scorecard policy can optionally upload results as
+[SARIF](https://sarifweb.azurewebsites.net/) to each repository's
+**Security > Code Scanning** tab. This gives organization administrators
+visibility into Scorecard findings alongside other security tools (CodeQL,
+Dependabot, etc.) without requiring per-repository workflow setup.
+
+To enable SARIF upload, add the `upload` field to your `scorecard.yaml`:
+
+```yaml
+optConfig:
+  optOutStrategy: true
+action: issue
+checks:
+  - Binary-Artifacts
+  - Signed-Releases
+threshold: 8
+upload:
+  sarif: true
+```
+
+**Requirements:**
+- The Allstar GitHub App must have the `security_events: write` permission.
+  Self-hosted operators need to add this permission to their GitHub App. The
+  public Allstar App operated by OpenSSF does not yet include this permission.
+- SARIF upload is non-blocking: if the upload fails (e.g., due to missing
+  permissions), the policy check continues normally.
+- Change detection prevents redundant uploads when scan results have not changed.
+
 ### GitHub Actions
 
 This policy's config file is named `actions.yaml`, and the [config definitions
