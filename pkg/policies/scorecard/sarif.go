@@ -18,15 +18,18 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"io"
+	"sync"
 
 	"github.com/google/go-github/v74/github"
+	"github.com/rs/zerolog/log"
 
 	"github.com/ossf/scorecard/v5/clients"
 	docs "github.com/ossf/scorecard/v5/docs/checks"
-	"github.com/ossf/scorecard/v5/log"
+	sclog "github.com/ossf/scorecard/v5/log"
 	"github.com/ossf/scorecard/v5/options"
 	sc "github.com/ossf/scorecard/v5/pkg/scorecard"
 	spol "github.com/ossf/scorecard/v5/policy"
@@ -34,8 +37,14 @@ import (
 
 // Mockable function variables for testing.
 var (
-	codeScanningUploadFunc = codeScanningUploadReal
+	codeScanningUploadFunc  = codeScanningUploadReal
 	getDefaultBranchRefFunc = getDefaultBranchRefReal
+)
+
+// Change detection: in-memory hash of last uploaded SARIF per repo.
+var (
+	sarifHashMu  sync.Mutex
+	sarifHashMap = make(map[string]string) // "owner/repo" -> SHA-256 hex
 )
 
 // generateSARIF runs all configured checks at once and writes the results
@@ -76,7 +85,7 @@ func generateSARIF(
 
 	opts := &options.Options{}
 
-	return result.AsSARIF(true, log.DefaultLevel, writer, checkDocs, policy, opts)
+	return result.AsSARIF(true, sclog.DefaultLevel, writer, checkDocs, policy, opts)
 }
 
 // buildPolicy constructs a ScorecardPolicy from Allstar's check names and
@@ -175,4 +184,64 @@ func compressAndEncode(data []byte) (string, error) {
 	}
 
 	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
+}
+
+// uploadSARIF generates SARIF for the configured checks and uploads
+// it to GitHub's Code Scanning API, skipping the upload if the SARIF content
+// has not changed since the last upload.
+func uploadSARIF(
+	ctx context.Context,
+	c *github.Client,
+	owner, repo string,
+	checkNames []string,
+	threshold int,
+	scRepo clients.Repo,
+	scRepoClient clients.RepoClient,
+) error {
+	var buf bytes.Buffer
+	if err := generateSARIF(ctx, scRepo, scRepoClient, checkNames, threshold, &buf); err != nil {
+		return fmt.Errorf("generating SARIF: %w", err)
+	}
+
+	sarifBytes := buf.Bytes()
+
+	// Change detection: skip upload if SARIF is unchanged.
+	hash := fmt.Sprintf("%x", sha256.Sum256(sarifBytes))
+	repoKey := fmt.Sprintf("%s/%s", owner, repo)
+
+	sarifHashMu.Lock()
+	lastHash := sarifHashMap[repoKey]
+	sarifHashMu.Unlock()
+
+	if hash == lastHash {
+		log.Debug().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("area", polName).
+			Msg("SARIF unchanged, skipping upload.")
+		return nil
+	}
+
+	if err := uploadToCodeScanning(ctx, c, owner, repo, sarifBytes); err != nil {
+		return err
+	}
+
+	sarifHashMu.Lock()
+	sarifHashMap[repoKey] = hash
+	sarifHashMu.Unlock()
+
+	log.Info().
+		Str("org", owner).
+		Str("repo", repo).
+		Str("area", polName).
+		Msg("SARIF uploaded to Code Scanning.")
+
+	return nil
+}
+
+// clearSARIFHashes resets the change detection state. Exported for testing.
+func clearSARIFHashes() {
+	sarifHashMu.Lock()
+	sarifHashMap = make(map[string]string)
+	sarifHashMu.Unlock()
 }
