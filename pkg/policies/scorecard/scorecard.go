@@ -252,6 +252,18 @@ The score was %v, and the passing threshold is %v.
 		}
 	}
 
+	if mc.Upload.SARIF {
+		if err := uploadSARIF(ctx, c, owner, repo, mc.Checks, mc.Threshold,
+			scc.ScRepo, scc.ScRepoClient); err != nil {
+			log.Warn().
+				Str("org", owner).
+				Str("repo", repo).
+				Str("area", polName).
+				Err(err).
+				Msg("SARIF upload failed, continuing.")
+		}
+	}
+
 	return &policydef.Result{
 		Enabled:    enabled,
 		Pass:       pass,
