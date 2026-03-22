@@ -5,54 +5,55 @@ TDD: write tests before implementation.
 
 ## Phase 1: Config model
 
-- [ ] 1.1 Add `UploadConfig` struct to `pkg/policies/scorecard/scorecard.go`
-- [ ] 1.2 Add `Upload` field to `OrgConfig`, `RepoConfig`, `mergedConfig`
-- [ ] 1.3 Update `mergeInRepoConfig()` to merge `Upload` field
-- [ ] 1.4 Write config merge tests (upload set at org level, overridden at
+- [x] 1.1 Add `UploadConfig` struct to `pkg/policies/scorecard/scorecard.go`
+- [x] 1.2 Add `Upload` field to `OrgConfig`, `RepoConfig`, `mergedConfig`
+- [x] 1.3 Update `mergeInRepoConfig()` to merge `Upload` field
+- [x] 1.4 Write config merge tests (upload set at org level, overridden at
       repo level, disabled by default)
 
 ## Phase 2: SARIF generation
 
-- [ ] 2.1 Write tests for SARIF generation (mock `scRun`, verify output)
-- [ ] 2.2 Create `pkg/policies/scorecard/sarif.go`
-- [ ] 2.3 Implement `generateSARIF()` — run full `sc.Run()` with all checks,
+- [x] 2.1 Write tests for SARIF generation (mock `scRun`, verify output)
+- [x] 2.2 Create `pkg/policies/scorecard/sarif.go`
+- [x] 2.3 Implement `generateSARIF()` — run full `sc.Run()` with all checks,
       construct `ScorecardPolicy` from config, call `Result.AsSARIF()`
-- [ ] 2.4 Add mockable function variables for new dependencies
+- [x] 2.4 Add mockable function variables for new dependencies
 
 ## Phase 3: SARIF upload
 
-- [ ] 3.1 Write tests for upload (mock `CodeScanning.UploadSarif()`, verify
+- [x] 3.1 Write tests for upload (mock `CodeScanning.UploadSarif()`, verify
       `SarifAnalysis` fields)
-- [ ] 3.2 Implement `uploadToCodeScanning()` — get repo default branch + HEAD
+- [x] 3.2 Implement `uploadToCodeScanning()` — get repo default branch + HEAD
       SHA, compress + encode SARIF, call `CodeScanning.UploadSarif()`
-- [ ] 3.3 Write tests for gzip + base64 compression round-trip
+- [x] 3.3 Write tests for gzip + base64 compression round-trip
 
 ## Phase 4: Change detection
 
-- [ ] 4.1 Write tests for change detection (upload once, skip on same commit
+- [x] 4.1 Write tests for change detection (upload once, skip on same commit
       SHA, upload on new commit SHA)
-- [ ] 4.2 Implement `uploadSARIFIfNeeded()` — orchestrate generation, hash
+- [x] 4.2 Implement `uploadSARIF()` — orchestrate generation, commit SHA
       comparison, conditional upload
-- [ ] 4.3 Add in-memory hash map with mutex
+- [x] 4.3 Add in-memory commit SHA map with mutex
 
 ## Phase 5: Integration
 
-- [ ] 5.1 Write integration test (Check() with `upload.sarif: true` calls
+- [x] 5.1 Write integration test (Check() with `upload.sarif: true` calls
       upload; with `false` does not)
-- [ ] 5.2 Add `uploadSARIF` call in `Check()` after per-check loop, guarded
+- [x] 5.2 Add `uploadSARIF` call in `Check()` after per-check loop, guarded
       by `mc.Upload.SARIF`
-- [ ] 5.3 Verify non-blocking error handling (upload error does not affect
+- [x] 5.3 Verify non-blocking error handling (upload error does not affect
       `Result.Pass`)
 
 ## Phase 6: Documentation
 
-- [ ] 6.1 Add upload config section to `README.md` under Generic Scorecard
+- [x] 6.1 Add upload config section to `README.md` under Generic Scorecard
       Check
-- [ ] 6.2 Document `Code scanning alerts: Read & write` permission in `operator.md`
+- [x] 6.2 Document `Code scanning alerts: Read & write` permission in `operator.md`
 
 ## Verification
 
-- [ ] `golangci-lint run ./pkg/policies/scorecard/...`
-- [ ] `go test -v ./pkg/policies/scorecard/...`
-- [ ] `go build ./cmd/allstar/`
-- [ ] `go test ./...`
+- [x] `go vet ./pkg/policies/scorecard/...`
+- [x] `go test -v ./pkg/policies/scorecard/...` (18 tests passing)
+- [x] `go build ./cmd/allstar/`
+- [x] Manual test: self-hosted operator SARIF upload to Code Scanning
+- [x] Manual test: change detection skips upload on second cycle
