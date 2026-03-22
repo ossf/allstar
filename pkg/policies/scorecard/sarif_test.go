@@ -16,9 +16,14 @@ package scorecard
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
+	"encoding/base64"
 	"errors"
+	"io"
 	"testing"
+
+	"github.com/google/go-github/v74/github"
 
 	"github.com/ossf/scorecard/v5/checker"
 	"github.com/ossf/scorecard/v5/clients"
@@ -130,6 +135,119 @@ func TestGenerateSARIFRunError(t *testing.T) {
 	)
 	if err == nil {
 		t.Fatal("Expected error from failed scorecard run")
+	}
+}
+
+func TestCompressAndEncode(t *testing.T) {
+	input := []byte(`{"version":"2.1.0","runs":[]}`)
+
+	encoded, err := compressAndEncode(input)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if len(encoded) == 0 {
+		t.Fatal("Expected non-empty encoded output")
+	}
+
+	// Decode base64
+	compressed, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil {
+		t.Fatalf("Invalid base64: %v", err)
+	}
+
+	// Decompress gzip
+	reader, err := gzip.NewReader(bytes.NewReader(compressed))
+	if err != nil {
+		t.Fatalf("Invalid gzip: %v", err)
+	}
+	defer reader.Close()
+
+	decompressed, err := io.ReadAll(reader)
+	if err != nil {
+		t.Fatalf("Failed to read gzip: %v", err)
+	}
+
+	if !bytes.Equal(decompressed, input) {
+		t.Errorf("Round-trip failed. want %q, got %q", input, decompressed)
+	}
+}
+
+func TestUploadToCodeScanning(t *testing.T) {
+	origUpload := codeScanningUploadFunc
+	origGetRef := getDefaultBranchRefFunc
+	t.Cleanup(func() {
+		codeScanningUploadFunc = origUpload
+		getDefaultBranchRefFunc = origGetRef
+	})
+
+	var capturedAnalysis *github.SarifAnalysis
+	codeScanningUploadFunc = func(_ context.Context, _ *github.Client,
+		_, _ string, analysis *github.SarifAnalysis,
+	) (*github.SarifID, *github.Response, error) {
+		capturedAnalysis = analysis
+		return &github.SarifID{ID: github.Ptr("test-id")}, nil, nil
+	}
+	getDefaultBranchRefFunc = func(_ context.Context, _ *github.Client,
+		_, _ string,
+	) (ref, sha string, err error) {
+		return "refs/heads/main", "abc123", nil
+	}
+
+	sarifContent := []byte(`{"version":"2.1.0","runs":[]}`)
+	err := uploadToCodeScanning(
+		context.Background(),
+		github.NewClient(nil),
+		"testorg", "testrepo",
+		sarifContent,
+	)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	if capturedAnalysis == nil {
+		t.Fatal("Expected upload to be called")
+	}
+	if capturedAnalysis.GetCommitSHA() != "abc123" {
+		t.Errorf("Expected commit SHA abc123, got %s", capturedAnalysis.GetCommitSHA())
+	}
+	if capturedAnalysis.GetRef() != "refs/heads/main" {
+		t.Errorf("Expected ref refs/heads/main, got %s", capturedAnalysis.GetRef())
+	}
+	if capturedAnalysis.GetToolName() != "OpenSSF Scorecard" {
+		t.Errorf("Expected tool name OpenSSF Scorecard, got %s", capturedAnalysis.GetToolName())
+	}
+	if capturedAnalysis.GetSarif() == "" {
+		t.Error("Expected non-empty SARIF content")
+	}
+}
+
+func TestUploadToCodeScanningAPIError(t *testing.T) {
+	origUpload := codeScanningUploadFunc
+	origGetRef := getDefaultBranchRefFunc
+	t.Cleanup(func() {
+		codeScanningUploadFunc = origUpload
+		getDefaultBranchRefFunc = origGetRef
+	})
+
+	codeScanningUploadFunc = func(_ context.Context, _ *github.Client,
+		_, _ string, _ *github.SarifAnalysis,
+	) (*github.SarifID, *github.Response, error) {
+		return nil, nil, errTest
+	}
+	getDefaultBranchRefFunc = func(_ context.Context, _ *github.Client,
+		_, _ string,
+	) (ref, sha string, err error) {
+		return "refs/heads/main", "abc123", nil
+	}
+
+	err := uploadToCodeScanning(
+		context.Background(),
+		github.NewClient(nil),
+		"testorg", "testrepo",
+		[]byte(`{}`),
+	)
+	if err == nil {
+		t.Fatal("Expected error from failed API call")
 	}
 }
 
