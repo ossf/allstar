@@ -120,6 +120,6 @@ This is a self-contained feature within the Allstar codebase. Per the
 PR-driven governance approach:
 
 - Open a well-documented PR on `ossf/allstar`
-- Self-hosted operators can use it immediately (requires adding
-  `security_events: write` to their GitHub App)
+- Self-hosted operators can use it immediately (requires adding the
+  **Code scanning alerts** permission to their GitHub App)
 - Public Allstar App permission update coordinated separately with OpenSSF

@@ -48,7 +48,7 @@ TDD: write tests before implementation.
 
 - [ ] 6.1 Add upload config section to `README.md` under Generic Scorecard
       Check
-- [ ] 6.2 Document `security_events: write` permission in `operator.md`
+- [ ] 6.2 Document `Code scanning alerts: Read & write` permission in `operator.md`
 
 ## Verification
 
