@@ -100,6 +100,83 @@ func TestConfigPrecedence(t *testing.T) {
 				Action: "log",
 			},
 		},
+		{
+			Name: "UploadDefaultDisabled",
+			Org: OrgConfig{
+				Action: "issue",
+			},
+			OrgRepo:   RepoConfig{},
+			Repo:      RepoConfig{},
+			ExpAction: "issue",
+			Exp: mergedConfig{
+				Action: "issue",
+			},
+		},
+		{
+			Name: "UploadEnabledAtOrg",
+			Org: OrgConfig{
+				Action: "issue",
+				Upload: UploadConfig{SARIF: true},
+			},
+			OrgRepo:   RepoConfig{},
+			Repo:      RepoConfig{},
+			ExpAction: "issue",
+			Exp: mergedConfig{
+				Action: "issue",
+				Upload: UploadConfig{SARIF: true},
+			},
+		},
+		{
+			Name: "UploadOrgRepoOverridesOrg",
+			Org: OrgConfig{
+				Action: "issue",
+				Upload: UploadConfig{SARIF: true},
+			},
+			OrgRepo: RepoConfig{
+				Upload: &UploadConfig{SARIF: false},
+			},
+			Repo:      RepoConfig{},
+			ExpAction: "issue",
+			Exp: mergedConfig{
+				Action: "issue",
+				Upload: UploadConfig{SARIF: false},
+			},
+		},
+		{
+			Name: "UploadRepoOverridesAll",
+			Org: OrgConfig{
+				Action: "issue",
+				Upload: UploadConfig{SARIF: false},
+			},
+			OrgRepo: RepoConfig{},
+			Repo: RepoConfig{
+				Upload: &UploadConfig{SARIF: true},
+			},
+			ExpAction: "issue",
+			Exp: mergedConfig{
+				Action: "issue",
+				Upload: UploadConfig{SARIF: true},
+			},
+		},
+		{
+			Name: "UploadRepoDisallowed",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					DisableRepoOverride: true,
+				},
+				Action: "issue",
+				Upload: UploadConfig{SARIF: false},
+			},
+			OrgRepo: RepoConfig{},
+			Repo: RepoConfig{
+				Upload: &UploadConfig{SARIF: true},
+			},
+			ExpAction: "issue",
+			Exp: mergedConfig{
+				Action: "issue",
+				Upload: UploadConfig{SARIF: false},
+			},
+		},
 	}
 
 	for _, test := range tests {

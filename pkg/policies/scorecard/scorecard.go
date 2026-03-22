@@ -38,6 +38,13 @@ const (
 	polName    = "OpenSSF Scorecard"
 )
 
+// UploadConfig configures evidence upload for the Scorecard policy.
+type UploadConfig struct {
+	// SARIF enables uploading SARIF results to GitHub's Code Scanning API.
+	// Requires the GitHub App to have security_events: write permission.
+	SARIF bool `json:"sarif"`
+}
+
 // OrgConfig is the org-level config definition for this policy.
 type OrgConfig struct {
 	// OptConfig is the standard org-level opt in/out config, RepoOverride
@@ -60,6 +67,9 @@ type OrgConfig struct {
 	// policy will pass. The default is checker.MaxResultScore:
 	// https://pkg.go.dev/github.com/ossf/scorecard/v5/checker#pkg-constants
 	Threshold int `json:"threshold"`
+
+	// Upload configures evidence upload. See UploadConfig for details.
+	Upload UploadConfig `json:"upload"`
 }
 
 // RepoConfig is the repo-level config for this policy.
@@ -75,12 +85,16 @@ type RepoConfig struct {
 
 	// Threshold overrides the same setting in org-level, only if present.
 	Threshold *int `json:"threshold"`
+
+	// Upload overrides the same setting in org-level, only if present.
+	Upload *UploadConfig `json:"upload,omitempty"`
 }
 
 type mergedConfig struct {
 	Action    string
 	Checks    []string
 	Threshold int
+	Upload    UploadConfig
 }
 
 type details struct {
@@ -336,6 +350,7 @@ func mergeConfig(oc *OrgConfig, orc, rc *RepoConfig, repo string) *mergedConfig 
 		Action:    oc.Action,
 		Checks:    oc.Checks,
 		Threshold: oc.Threshold,
+		Upload:    oc.Upload,
 	}
 	mc = mergeInRepoConfig(mc, orc, repo)
 
@@ -354,6 +369,9 @@ func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedCon
 	}
 	if rc.Threshold != nil {
 		mc.Threshold = *rc.Threshold
+	}
+	if rc.Upload != nil {
+		mc.Upload = *rc.Upload
 	}
 	return mc
 }
