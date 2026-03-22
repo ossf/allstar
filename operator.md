@@ -18,6 +18,10 @@ to create a new app.
   listen for webhooks at this time.
 * **Permissions** Follow this example: ![image](https://user-images.githubusercontent.com/771387/121067612-1bbc5200-c780-11eb-9bd3-214dfe808bf7.png)
 
+> **Note:** If you plan to use the SARIF upload feature (`upload: {sarif: true}`
+> in `scorecard.yaml`), your GitHub App also needs the **Security events** /
+> `security_events` permission set to **Read & write**. This is required for
+> uploading SARIF results to the Code Scanning API.
 
 > **Note:** As Allstar is developed, it may evolve the permissions needed or start
 > listening for webhooks, please follow along development in this repo.
