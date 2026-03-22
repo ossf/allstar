@@ -147,7 +147,7 @@ directly.
 - Format: SARIF 2.1.0 only (no other formats supported by GitHub)
 - Encoding: gzip compressed, base64 encoded
 - Size limit: 10 MB compressed
-- Permission: `security_events: write`
+- Permission: **Code scanning alerts: Read & write** (API scope: `security_events`)
 - Response: 202 Accepted
 
 **go-github types:**
@@ -187,7 +187,8 @@ should not disrupt the enforcement loop.
 
 ## Permission requirements
 
-The Allstar GitHub App requires `security_events: write` permission for SARIF
+The Allstar GitHub App requires the **Code scanning alerts** repository
+permission (API scope: `security_events`) set to **Read & write** for SARIF
 upload. This is a new permission not currently declared.
 
 **Rollout:**

@@ -421,7 +421,8 @@ upload:
 ```
 
 **Requirements:**
-- The Allstar GitHub App must have the `security_events: write` permission.
+- The Allstar GitHub App must have the **Code scanning alerts** repository
+  permission set to **Read & write** (API scope: `security_events`).
   Self-hosted operators need to add this permission to their GitHub App. The
   public Allstar App operated by OpenSSF does not yet include this permission.
 - SARIF upload is non-blocking: if the upload fails (e.g., due to missing
