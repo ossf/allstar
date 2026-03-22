@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"testing"
@@ -311,7 +312,7 @@ func TestUploadSARIF(t *testing.T) {
 	}
 }
 
-func TestUploadSARIFDifferentResult(t *testing.T) {
+func TestUploadSARIFNewCommit(t *testing.T) {
 	origScRun := scRun
 	origUpload := codeScanningUploadFunc
 	origGetRef := getDefaultBranchRefFunc
@@ -322,20 +323,22 @@ func TestUploadSARIFDifferentResult(t *testing.T) {
 		clearSARIFHashes()
 	})
 
-	callNum := 0
 	scRun = func(_ context.Context, _ clients.Repo, _ ...sc.Option) (sc.Result, error) {
-		callNum++
 		return sc.Result{
 			Repo: sc.RepoInfo{Name: "github.com/test/repo"},
 			Checks: []checker.CheckResult{
-				{Name: "Binary-Artifacts", Score: callNum}, // different score each call
+				{Name: "Binary-Artifacts", Score: 10},
 			},
 		}, nil
 	}
+
+	callNum := 0
 	getDefaultBranchRefFunc = func(_ context.Context, _ *github.Client,
 		_, _ string,
 	) (ref, sha string, err error) {
-		return "refs/heads/main", "abc123", nil
+		callNum++
+		// Different commit SHA each call — simulates a new push
+		return "refs/heads/main", fmt.Sprintf("sha-%d", callNum), nil
 	}
 
 	uploadCount := 0
@@ -354,12 +357,12 @@ func TestUploadSARIFDifferentResult(t *testing.T) {
 	if err := uploadSARIF(ctx, c, "testorg", "testrepo", checks, 8, nil, nil); err != nil {
 		t.Fatalf("First upload failed: %v", err)
 	}
-	// Second call should also upload because the result changed.
+	// Second call should also upload because the commit SHA changed.
 	if err := uploadSARIF(ctx, c, "testorg", "testrepo", checks, 8, nil, nil); err != nil {
 		t.Fatalf("Second upload failed: %v", err)
 	}
 	if uploadCount != 2 {
-		t.Errorf("Expected 2 uploads (result changed), got %d", uploadCount)
+		t.Errorf("Expected 2 uploads (new commit), got %d", uploadCount)
 	}
 }
 
