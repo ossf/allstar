@@ -21,9 +21,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"io"
+	"net/http"
 	"testing"
 
 	"github.com/google/go-github/v74/github"
+
+	"github.com/ossf/allstar/pkg/config"
+	"github.com/ossf/allstar/pkg/scorecard"
 
 	"github.com/ossf/scorecard/v5/checker"
 	"github.com/ossf/scorecard/v5/clients"
@@ -356,6 +360,182 @@ func TestUploadSARIFDifferentResult(t *testing.T) {
 	}
 	if uploadCount != 2 {
 		t.Errorf("Expected 2 uploads (result changed), got %d", uploadCount)
+	}
+}
+
+func TestCheckWithSARIFUpload(t *testing.T) {
+	origScRun := scRun
+	origUpload := codeScanningUploadFunc
+	origGetRef := getDefaultBranchRefFunc
+	origFetch := configFetchConfig
+	origEnabled := configIsEnabled
+	origGet := scorecardGet
+	origChecks := checksAllChecks
+	t.Cleanup(func() {
+		scRun = origScRun
+		codeScanningUploadFunc = origUpload
+		getDefaultBranchRefFunc = origGetRef
+		configFetchConfig = origFetch
+		configIsEnabled = origEnabled
+		scorecardGet = origGet
+		checksAllChecks = origChecks
+		clearSARIFHashes()
+	})
+
+	uploadCount := 0
+	codeScanningUploadFunc = func(_ context.Context, _ *github.Client,
+		_, _ string, _ *github.SarifAnalysis,
+	) (*github.SarifID, *github.Response, error) {
+		uploadCount++
+		return &github.SarifID{ID: github.Ptr("test-id")}, nil, nil
+	}
+	getDefaultBranchRefFunc = func(_ context.Context, _ *github.Client,
+		_, _ string,
+	) (ref, sha string, err error) {
+		return "refs/heads/main", "abc123", nil
+	}
+	configIsEnabled = func(_ context.Context, _ config.OrgOptConfig, _,
+		_ config.RepoOptConfig, _ *github.Client, _, _ string,
+	) (bool, error) {
+		return true, nil
+	}
+	scorecardGet = func(_ context.Context, _ string, _ bool,
+		_ http.RoundTripper,
+	) (*scorecard.ScClient, error) {
+		return &scorecard.ScClient{}, nil
+	}
+	checksAllChecks = checker.CheckNameToFnMap{"Binary-Artifacts": {}}
+	scRun = func(_ context.Context, _ clients.Repo, _ ...sc.Option) (sc.Result, error) {
+		return sc.Result{
+			Repo:   sc.RepoInfo{Name: "github.com/test/repo"},
+			Checks: []checker.CheckResult{{Name: "Binary-Artifacts", Score: 10}},
+		}, nil
+	}
+
+	tests := []struct {
+		Name         string
+		Upload       UploadConfig
+		ExpectUpload bool
+	}{
+		{
+			Name:         "UploadEnabled",
+			Upload:       UploadConfig{SARIF: true},
+			ExpectUpload: true,
+		},
+		{
+			Name:         "UploadDisabled",
+			Upload:       UploadConfig{SARIF: false},
+			ExpectUpload: false,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			uploadCount = 0
+			clearSARIFHashes()
+
+			configFetchConfig = func(_ context.Context, _ *github.Client,
+				_, _, _ string, ol config.ConfigLevel, out interface{},
+			) error {
+				if ol == config.OrgLevel {
+					oc := out.(*OrgConfig)
+					*oc = OrgConfig{
+						Action:    "issue",
+						Checks:    []string{"Binary-Artifacts"},
+						Threshold: 8,
+						Upload:    test.Upload,
+					}
+				}
+				return nil
+			}
+
+			s := NewScorecard()
+			res, err := s.Check(context.Background(), github.NewClient(nil), "testorg", "testrepo")
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if !res.Pass {
+				t.Error("Expected pass")
+			}
+			if test.ExpectUpload && uploadCount == 0 {
+				t.Error("Expected SARIF upload but none occurred")
+			}
+			if !test.ExpectUpload && uploadCount > 0 {
+				t.Errorf("Expected no SARIF upload but got %d", uploadCount)
+			}
+		})
+	}
+}
+
+func TestCheckSARIFUploadErrorNonBlocking(t *testing.T) {
+	origScRun := scRun
+	origUpload := codeScanningUploadFunc
+	origGetRef := getDefaultBranchRefFunc
+	origFetch := configFetchConfig
+	origEnabled := configIsEnabled
+	origGet := scorecardGet
+	origChecks := checksAllChecks
+	t.Cleanup(func() {
+		scRun = origScRun
+		codeScanningUploadFunc = origUpload
+		getDefaultBranchRefFunc = origGetRef
+		configFetchConfig = origFetch
+		configIsEnabled = origEnabled
+		scorecardGet = origGet
+		checksAllChecks = origChecks
+		clearSARIFHashes()
+	})
+
+	codeScanningUploadFunc = func(_ context.Context, _ *github.Client,
+		_, _ string, _ *github.SarifAnalysis,
+	) (*github.SarifID, *github.Response, error) {
+		return nil, nil, errTest
+	}
+	getDefaultBranchRefFunc = func(_ context.Context, _ *github.Client,
+		_, _ string,
+	) (ref, sha string, err error) {
+		return "refs/heads/main", "abc123", nil
+	}
+	configFetchConfig = func(_ context.Context, _ *github.Client,
+		_, _, _ string, ol config.ConfigLevel, out interface{},
+	) error {
+		if ol == config.OrgLevel {
+			oc := out.(*OrgConfig)
+			*oc = OrgConfig{
+				Action:    "issue",
+				Checks:    []string{"Binary-Artifacts"},
+				Threshold: 8,
+				Upload:    UploadConfig{SARIF: true},
+			}
+		}
+		return nil
+	}
+	configIsEnabled = func(_ context.Context, _ config.OrgOptConfig, _,
+		_ config.RepoOptConfig, _ *github.Client, _, _ string,
+	) (bool, error) {
+		return true, nil
+	}
+	scorecardGet = func(_ context.Context, _ string, _ bool,
+		_ http.RoundTripper,
+	) (*scorecard.ScClient, error) {
+		return &scorecard.ScClient{}, nil
+	}
+	checksAllChecks = checker.CheckNameToFnMap{"Binary-Artifacts": {}}
+	scRun = func(_ context.Context, _ clients.Repo, _ ...sc.Option) (sc.Result, error) {
+		return sc.Result{
+			Repo:   sc.RepoInfo{Name: "github.com/test/repo"},
+			Checks: []checker.CheckResult{{Name: "Binary-Artifacts", Score: 10}},
+		}, nil
+	}
+
+	s := NewScorecard()
+	res, err := s.Check(context.Background(), github.NewClient(nil), "testorg", "testrepo")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	// Upload failed, but Check() should still pass — non-blocking.
+	if !res.Pass {
+		t.Error("Expected pass despite SARIF upload failure")
 	}
 }
 
