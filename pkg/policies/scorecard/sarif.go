@@ -277,7 +277,6 @@ func uploadSARIF(
 	return nil
 }
 
-
 // clearSARIFHashes resets the change detection state. Exported for testing.
 func clearSARIFHashes() {
 	sarifHashMu.Lock()
