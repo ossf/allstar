@@ -29,8 +29,8 @@ TDD: write tests before implementation.
 
 ## Phase 4: Change detection
 
-- [ ] 4.1 Write tests for change detection (upload once, skip on same hash,
-      upload on different hash)
+- [ ] 4.1 Write tests for change detection (upload once, skip on same commit
+      SHA, upload on new commit SHA)
 - [ ] 4.2 Implement `uploadSARIFIfNeeded()` — orchestrate generation, hash
       comparison, conditional upload
 - [ ] 4.3 Add in-memory hash map with mutex
