@@ -91,7 +91,7 @@ Check() {
 **Cost:** One additional Scorecard scan per repo when upload is enabled. This
 is acceptable because:
 - Upload is opt-in
-- Change detection skips the upload when results haven't changed
+- Change detection skips the scan and upload when the commit SHA hasn't changed
 - Allstar already scans every 5 minutes; the additional scan adds ~seconds
 
 ## SARIF generation
@@ -163,15 +163,19 @@ type SarifAnalysis struct {
 
 ## Rate limiting
 
-**Decision:** Change detection via SHA-256 hash of SARIF content. Skip upload
-if unchanged since last upload.
+**Decision:** Change detection via commit SHA comparison. Skip the scan and
+upload if the repository HEAD hasn't changed since the last upload.
 
 **Rationale:** Allstar scans every 5 minutes. Most repos won't change between
-cycles, so the vast majority of uploads get skipped. This mirrors how
-`pkg/issue/issue.go` uses SHA-256 hashes to detect whether issue text changed.
+cycles, so the vast majority of uploads get skipped. Comparing the commit SHA
+is more reliable than hashing SARIF content, which includes timestamps and
+other run-specific metadata that differ between runs even when findings are
+identical. The commit SHA approach also avoids the cost of a redundant
+scorecard run.
 
-**Implementation:** In-memory hash map (package-level, mutex-protected),
-following the `pkg/scorecard/scorecard.go` caching pattern.
+**Implementation:** In-memory map of repo key to last-uploaded commit SHA
+(package-level, mutex-protected), following the `pkg/scorecard/scorecard.go`
+caching pattern.
 
 **Future improvement:** An `interval` field (`upload: {sarif: true, interval: 24h}`)
 could be added if change detection proves insufficient for large orgs.

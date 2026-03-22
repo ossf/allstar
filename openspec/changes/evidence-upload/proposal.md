@@ -66,7 +66,7 @@ Allstar's Scorecard policy (`pkg/policies/scorecard/scorecard.go`):
 
 - **SARIF upload** to GitHub Code Scanning API via `go-github/v74`
 - **Configuration** via `upload: {sarif: true}` on `scorecard.yaml`
-- **Change detection** to avoid redundant uploads (SHA-256 hash comparison)
+- **Change detection** to avoid redundant uploads (commit SHA comparison)
 - **Non-blocking error handling** (upload failures don't affect policy results)
 - **Documentation** for self-hosted operators (permission requirements)
 

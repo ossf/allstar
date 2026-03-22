@@ -427,7 +427,8 @@ upload:
   public Allstar App operated by OpenSSF does not yet include this permission.
 - SARIF upload is non-blocking: if the upload fails (e.g., due to missing
   permissions), the policy check continues normally.
-- Change detection prevents redundant uploads when scan results have not changed.
+- Change detection compares the repository HEAD commit SHA and skips the scan
+  and upload when the repo has not been pushed to since the last upload.
 
 ### GitHub Actions
 
