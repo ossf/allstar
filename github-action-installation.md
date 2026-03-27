@@ -91,6 +91,59 @@ parses Allstar output and generates a helpful overview. To see the summary:
   * `allstar-results.zip` - JSON versions of the analyze results
   * `allstar-scan` - Raw logs and errors from the Allstar run
 
+## Alternative: Build from source
+
+If you need to run an unreleased version of Allstar (e.g., a feature branch),
+you can build from source instead of using the published container image.
+
+Replace the `scan` job's container and steps with:
+
+~~~yaml
+  scan:
+    runs-on: ubuntu-latest
+    environment: prod
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Allstar source
+        uses: actions/checkout@v4
+        with:
+          repository: ossf/allstar
+          ref: main  # or a specific branch/tag
+          persist-credentials: false
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build Allstar
+        run: go build -o allstar-bin ./cmd/allstar/
+      - name: Create artifact directory
+        run: mkdir "$ARTIFACT_DIR"
+      - name: Run Allstar policy check
+        env:
+          NOTICE_PING_DURATION_HOURS: '168'
+          DO_NOTHING_ON_OPT_OUT: 'true'
+          ALLSTAR_LOG_LEVEL: info
+          KEY_SECRET: direct
+          APP_ID: ${{ vars.APP_ID }}
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+        run: |
+          ./allstar-bin -once 2> "$ARTIFACT_DIR/allstar.log" | tee "$ARTIFACT_DIR/allstar.out"
+          if [ -s "$ARTIFACT_DIR/allstar.log" ]; then
+            echo "==== Errors ===="
+            cat "$ARTIFACT_DIR/allstar.log"
+          fi
+      - name: Archive Allstar results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allstar-scan
+          path: ${{ env.ARTIFACT_DIR }}
+~~~
+
+> **Note:** Pin actions to commit SHAs (not tags) in production workflows.
+> The example above uses tags for readability.
+
 ## Maintenance
 
 ### Update the version of Allstar image used

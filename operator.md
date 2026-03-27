@@ -56,6 +56,29 @@ configuration needed. Only outgoing calls to GitHub are made. Allstar is
 currently stateless. It is best to only run one instance to avoid potential race
 conditions on enforcement actions, ex: pinging an issue twice at the same time.
 
+### Quick start for local testing
+
+To validate your setup before deploying, build and run Allstar locally:
+
+```shell
+go build -o allstar ./cmd/allstar/
+
+APP_ID=<your-app-id> \
+KEY_SECRET=direct \
+PRIVATE_KEY="$(cat /path/to/private-key.pem)" \
+GITHUB_ALLOWED_ORGS=<your-org> \
+ALLSTAR_LOG_LEVEL=debug \
+DO_NOTHING_ON_OPT_OUT=true \
+./allstar -once
+```
+
+Use `-once` to run a single enforcement cycle and exit. You can also filter
+to a specific policy or repository:
+
+```shell
+./allstar -once -policy "OpenSSF Scorecard" -repo "myorg/myrepo"
+```
+
 ## Configuration via Environment Variables
 
 Allstar supports various operator configuration options which can be set via environment variables:

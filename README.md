@@ -430,6 +430,10 @@ upload:
 - Change detection compares the repository HEAD commit SHA and skips the scan
   and upload when the repo has not been pushed to since the last upload.
 
+SARIF upload works with both [self-hosted deployment
+modes](operator.md): running as a service daemon or as a [GitHub
+Action](github-action-installation.md).
+
 ### GitHub Actions
 
 This policy's config file is named `actions.yaml`, and the [config definitions

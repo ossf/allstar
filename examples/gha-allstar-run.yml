@@ -1,6 +1,13 @@
 # Copy this file into your organization .allstar repo as `.github/workflows/allstar-run.yml`
 # to run AllStar as a scheduled GitHub action.
-# See https://github.com/ossf/allstar/blob/main/github-action-installtion.md for more information.
+# See https://github.com/ossf/allstar/blob/main/github-action-installation.md for more information.
+#
+# To enable SARIF upload to the Security > Code Scanning tab, add the following
+# to your scorecard.yaml policy config:
+#   upload:
+#     sarif: true
+# The GitHub App must have the "Code scanning alerts" permission set to
+# "Read & write". See operator.md for details.
 ---
 name: AllStar Enforcement Action
 
