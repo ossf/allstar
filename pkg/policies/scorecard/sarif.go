@@ -48,8 +48,7 @@ var (
 	sarifHashMap = make(map[string]string) // "owner/repo" -> commit SHA
 )
 
-// Results collector: accumulates Scorecard JSON v2 results across repos
-// for writing to a results file after the enforcement loop completes.
+// Results collector: accumulates Scorecard results across repos.
 var (
 	resultsMu      sync.Mutex
 	resultsEntries []sc.JSONScorecardResultV2
@@ -289,7 +288,7 @@ func uploadSARIF(
 	return nil
 }
 
-// clearSARIFHashes resets the change detection state. Exported for testing.
+// clearSARIFHashes resets the change detection state.
 func clearSARIFHashes() {
 	sarifHashMu.Lock()
 	sarifHashMap = make(map[string]string)
@@ -323,8 +322,7 @@ func collectResult(result *sc.Result) {
 }
 
 // WriteResults writes all collected Scorecard results to the specified file
-// as a JSON array of Scorecard JSON v2 objects. This is compatible with
-// scorecard-monitor's local-results-path input.
+// as a JSON array of Scorecard JSON v2 objects.
 func WriteResults(path string) error {
 	resultsMu.Lock()
 	entries := make([]sc.JSONScorecardResultV2, len(resultsEntries))
@@ -356,7 +354,7 @@ func WriteResults(path string) error {
 	return nil
 }
 
-// ClearResults resets the results collector. Exported for testing.
+// ClearResults resets the results collector.
 func ClearResults() {
 	resultsMu.Lock()
 	resultsEntries = nil
