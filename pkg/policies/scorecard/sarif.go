@@ -19,8 +19,10 @@ import (
 	"compress/gzip"
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 	"sync"
 
 	"github.com/google/go-github/v74/github"
@@ -40,10 +42,17 @@ var (
 	getDefaultBranchRefFunc = getDefaultBranchRefReal
 )
 
-// Change detection: in-memory hash of last uploaded SARIF per repo.
+// Change detection: in-memory commit SHA of last uploaded SARIF per repo.
 var (
 	sarifHashMu  sync.Mutex
-	sarifHashMap = make(map[string]string) // "owner/repo" -> SHA-256 hex
+	sarifHashMap = make(map[string]string) // "owner/repo" -> commit SHA
+)
+
+// Results collector: accumulates Scorecard JSON v2 results across repos
+// for writing to a results file after the enforcement loop completes.
+var (
+	resultsMu      sync.Mutex
+	resultsEntries []sc.JSONScorecardResultV2
 )
 
 // generateSARIF runs all configured checks at once and writes the results
@@ -254,6 +263,9 @@ func uploadSARIF(
 		return fmt.Errorf("scorecard run for SARIF: %w", err)
 	}
 
+	// Collect JSON v2 result for results file output.
+	collectResult(&result)
+
 	// Generate SARIF from the result.
 	var buf bytes.Buffer
 	if err := resultToSARIF(&result, checkNames, threshold, &buf); err != nil {
@@ -282,4 +294,71 @@ func clearSARIFHashes() {
 	sarifHashMu.Lock()
 	sarifHashMap = make(map[string]string)
 	sarifHashMu.Unlock()
+}
+
+// collectResult stores a Scorecard result for later export via WriteResults.
+func collectResult(result *sc.Result) {
+	checkDocs, err := docs.Read()
+	if err != nil {
+		log.Warn().Err(err).Msg("Failed to read check docs for results collection.")
+		return
+	}
+
+	// AsJSON2 writes JSON to a writer; capture it and decode back to struct.
+	var buf bytes.Buffer
+	if err := result.AsJSON2(&buf, checkDocs, nil); err != nil {
+		log.Warn().Err(err).Msg("Failed to convert result to JSON v2.")
+		return
+	}
+
+	var entry sc.JSONScorecardResultV2
+	if err := json.Unmarshal(buf.Bytes(), &entry); err != nil {
+		log.Warn().Err(err).Msg("Failed to parse JSON v2 result.")
+		return
+	}
+
+	resultsMu.Lock()
+	resultsEntries = append(resultsEntries, entry)
+	resultsMu.Unlock()
+}
+
+// WriteResults writes all collected Scorecard results to the specified file
+// as a JSON array of Scorecard JSON v2 objects. This is compatible with
+// scorecard-monitor's local-results-path input.
+func WriteResults(path string) error {
+	resultsMu.Lock()
+	entries := make([]sc.JSONScorecardResultV2, len(resultsEntries))
+	copy(entries, resultsEntries)
+	resultsMu.Unlock()
+
+	if len(entries) == 0 {
+		log.Debug().Msg("No results to write.")
+		return nil
+	}
+
+	f, err := os.Create(path)
+	if err != nil {
+		return fmt.Errorf("creating results file: %w", err)
+	}
+	defer f.Close()
+
+	encoder := json.NewEncoder(f)
+	encoder.SetIndent("", "  ")
+	if err := encoder.Encode(entries); err != nil {
+		return fmt.Errorf("encoding results: %w", err)
+	}
+
+	log.Info().
+		Str("path", path).
+		Int("count", len(entries)).
+		Msg("Scorecard results written to file.")
+
+	return nil
+}
+
+// ClearResults resets the results collector. Exported for testing.
+func ClearResults() {
+	resultsMu.Lock()
+	resultsEntries = nil
+	resultsMu.Unlock()
 }
