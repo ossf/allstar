@@ -31,6 +31,7 @@ import (
 	"github.com/ossf/allstar/pkg/enforce"
 	"github.com/ossf/allstar/pkg/ghclients"
 	"github.com/ossf/allstar/pkg/policies"
+	scorecardPolicy "github.com/ossf/allstar/pkg/policies/scorecard"
 )
 
 func main() {
@@ -61,6 +62,7 @@ func main() {
 
 	specificPolicyArg := flag.String("policy", "", fmt.Sprintf("Run a specific policy check. Supported policies: %s", supportedPoliciesMsg))
 	specificRepoArg := flag.String("repo", "", "Run on a specific \"owner/repo\". For example \"ossf/allstar\"")
+	resultsFileArg := flag.String("results-file", "", "Write Scorecard results to this file as JSON (Scorecard JSON v2 format).")
 
 	flag.Parse()
 
@@ -86,6 +88,13 @@ func main() {
 			log.Fatal().
 				Err(err).
 				Msg("Unexpected error enforcing policies.")
+		}
+		if *resultsFileArg != "" {
+			if err := scorecardPolicy.WriteResults(*resultsFileArg); err != nil {
+				log.Error().
+					Err(err).
+					Msg("Failed to write results file.")
+			}
 		}
 	} else {
 		var wg sync.WaitGroup
