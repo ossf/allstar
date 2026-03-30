@@ -25,7 +25,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/google/go-github/v74/github"
+	"github.com/google/go-github/v84/github"
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/scorecard"

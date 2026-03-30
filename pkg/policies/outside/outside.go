@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"github.com/gobwas/glob"
-	"github.com/google/go-github/v74/github"
+	"github.com/google/go-github/v84/github"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ossf/allstar/pkg/config"
@@ -290,7 +290,21 @@ func getUsers(ctx context.Context, r repositories, owner, repo, perm,
 
 	var rv []string
 	for _, u := range users {
-		if u.GetPermissions()[perm] {
+		p := u.GetPermissions()
+		var hasPerm bool
+		switch perm {
+		case "admin":
+			hasPerm = p.GetAdmin()
+		case "push":
+			hasPerm = p.GetPush()
+		case "maintain":
+			hasPerm = p.GetMaintain()
+		case "triage":
+			hasPerm = p.GetTriage()
+		case "pull":
+			hasPerm = p.GetPull()
+		}
+		if hasPerm {
 			if !isExempt(repo, u.GetLogin(), perm, exemptions, gc) {
 				rv = append(rv, u.GetLogin())
 			}

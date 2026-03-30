@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-github/v74/github"
+	"github.com/google/go-github/v84/github"
 
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
@@ -247,15 +247,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -282,16 +278,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -318,15 +309,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -353,16 +340,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -531,16 +513,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
 			Teams: []*github.Team{
@@ -582,15 +559,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 			},
 			Teams: []*github.Team{
@@ -639,15 +612,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -680,15 +649,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -715,16 +680,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -751,15 +711,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -786,15 +742,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 			},
 			Teams: []*github.Team{
@@ -837,16 +789,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -873,15 +820,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -915,16 +858,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -958,16 +896,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -1002,16 +935,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -1045,16 +973,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -1082,17 +1005,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -1120,17 +1037,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -1158,15 +1069,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -1203,17 +1110,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -1250,24 +1151,15 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 				{
 					Login: &dave,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
 			cofigEnabled: true,
@@ -1365,16 +1257,11 @@ func TestCheck(t *testing.T) {
 			Users: []*github.User{
 				{
 					Login: &alice,
-					Permissions: map[string]bool{
-						"push": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
 					Login: &bob,
-					Permissions: map[string]bool{
-						"push":  true,
-						"admin": true,
-					},
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
 			Teams: []*github.Team{

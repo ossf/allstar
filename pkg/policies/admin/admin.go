@@ -19,7 +19,7 @@ import (
 	"context"
 
 	"github.com/gobwas/glob"
-	"github.com/google/go-github/v74/github"
+	"github.com/google/go-github/v84/github"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ossf/allstar/pkg/config"
@@ -328,7 +328,7 @@ func getAdminUsers(ctx context.Context, r repositories, owner, repo string,
 
 	var rv []string
 	for _, u := range users {
-		if u.GetPermissions()["admin"] {
+		if u.GetPermissions().GetAdmin() {
 			rv = append(rv, u.GetLogin())
 		}
 	}

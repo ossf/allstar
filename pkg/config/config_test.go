@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-github/v74/github"
+	"github.com/google/go-github/v84/github"
 	"sigs.k8s.io/yaml"
 
 	"github.com/ossf/allstar/pkg/config/operator"
