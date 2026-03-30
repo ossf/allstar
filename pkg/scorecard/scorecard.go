@@ -30,7 +30,7 @@ import (
 	git "github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	plumbinghttp "github.com/go-git/go-git/v5/plumbing/transport/http"
-	"github.com/google/go-github/v74/github"
+	"github.com/google/go-github/v84/github"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ossf/allstar/pkg/ghclients"
