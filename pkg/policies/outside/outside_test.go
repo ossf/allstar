@@ -224,11 +224,11 @@ func TestCheck(t *testing.T) {
 			Repo: RepoConfig{},
 			Users: []*github.User{
 				{
-					Login: &alice,
+					Login:       &alice,
 					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
-					Login: &bob,
+					Login:       &bob,
 					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 			},
@@ -254,11 +254,11 @@ func TestCheck(t *testing.T) {
 			Repo: RepoConfig{},
 			Users: []*github.User{
 				{
-					Login: &alice,
+					Login:       &alice,
 					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
-					Login: &bob,
+					Login:       &bob,
 					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
@@ -287,11 +287,11 @@ func TestCheck(t *testing.T) {
 			Repo: RepoConfig{},
 			Users: []*github.User{
 				{
-					Login: &alice,
+					Login:       &alice,
 					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true)},
 				},
 				{
-					Login: &bob,
+					Login:       &bob,
 					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
@@ -326,7 +326,7 @@ func TestCheck(t *testing.T) {
 			Repo: RepoConfig{},
 			Users: []*github.User{
 				{
-					Login: &alice,
+					Login:       &alice,
 					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
@@ -359,7 +359,7 @@ func TestCheck(t *testing.T) {
 			Repo: RepoConfig{},
 			Users: []*github.User{
 				{
-					Login: &alice,
+					Login:       &alice,
 					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
@@ -393,7 +393,7 @@ func TestCheck(t *testing.T) {
 			Repo: RepoConfig{},
 			Users: []*github.User{
 				{
-					Login: &alice,
+					Login:       &alice,
 					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(true)},
 				},
 			},
@@ -427,7 +427,7 @@ func TestCheck(t *testing.T) {
 			Repo: RepoConfig{},
 			Users: []*github.User{
 				{
-					Login: &alice,
+					Login:       &alice,
 					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(false)},
 				},
 			},
@@ -460,7 +460,7 @@ func TestCheck(t *testing.T) {
 			Repo: RepoConfig{},
 			Users: []*github.User{
 				{
-					Login: &alice,
+					Login:       &alice,
 					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(false)},
 				},
 			},
@@ -490,7 +490,7 @@ func TestCheck(t *testing.T) {
 			Repo: RepoConfig{},
 			Users: []*github.User{
 				{
-					Login: &alice,
+					Login:       &alice,
 					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(false)},
 				},
 			},
