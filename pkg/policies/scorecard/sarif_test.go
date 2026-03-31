@@ -256,25 +256,15 @@ func TestUploadToCodeScanningAPIError(t *testing.T) {
 	}
 }
 
-func TestUploadSARIF(t *testing.T) {
-	origScRun := scRun
+func TestUploadSARIFResult(t *testing.T) {
 	origUpload := codeScanningUploadFunc
 	origGetRef := getDefaultBranchRefFunc
 	t.Cleanup(func() {
-		scRun = origScRun
 		codeScanningUploadFunc = origUpload
 		getDefaultBranchRefFunc = origGetRef
 		clearSARIFHashes()
 	})
 
-	scRun = func(_ context.Context, _ clients.Repo, _ ...sc.Option) (sc.Result, error) {
-		return sc.Result{
-			Repo: sc.RepoInfo{Name: "github.com/test/repo"},
-			Checks: []checker.CheckResult{
-				{Name: "Binary-Artifacts", Score: 10},
-			},
-		}, nil
-	}
 	getDefaultBranchRefFunc = func(_ context.Context, _ *github.Client,
 		_, _ string,
 	) (ref, sha string, err error) {
@@ -289,12 +279,19 @@ func TestUploadSARIF(t *testing.T) {
 		return &github.SarifID{ID: github.Ptr("test-id")}, nil, nil
 	}
 
+	result := &sc.Result{
+		Repo: sc.RepoInfo{Name: "github.com/test/repo"},
+		Checks: []checker.CheckResult{
+			{Name: "Binary-Artifacts", Score: 10},
+		},
+	}
+
 	ctx := context.Background()
 	c := github.NewClient(nil)
 	checks := []string{"Binary-Artifacts"}
 
 	// First call should upload.
-	err := uploadSARIF(ctx, c, "testorg", "testrepo", checks, 8, nil, nil)
+	err := uploadSARIFResult(ctx, c, "testorg", "testrepo", result, checks, 8)
 	if err != nil {
 		t.Fatalf("First upload failed: %v", err)
 	}
@@ -302,8 +299,8 @@ func TestUploadSARIF(t *testing.T) {
 		t.Errorf("Expected 1 upload, got %d", uploadCount)
 	}
 
-	// Second call with same result should skip (change detection).
-	err = uploadSARIF(ctx, c, "testorg", "testrepo", checks, 8, nil, nil)
+	// Second call with same commit SHA should skip (change detection).
+	err = uploadSARIFResult(ctx, c, "testorg", "testrepo", result, checks, 8)
 	if err != nil {
 		t.Fatalf("Second call failed: %v", err)
 	}
@@ -312,32 +309,20 @@ func TestUploadSARIF(t *testing.T) {
 	}
 }
 
-func TestUploadSARIFNewCommit(t *testing.T) {
-	origScRun := scRun
+func TestUploadSARIFResultNewCommit(t *testing.T) {
 	origUpload := codeScanningUploadFunc
 	origGetRef := getDefaultBranchRefFunc
 	t.Cleanup(func() {
-		scRun = origScRun
 		codeScanningUploadFunc = origUpload
 		getDefaultBranchRefFunc = origGetRef
 		clearSARIFHashes()
 	})
-
-	scRun = func(_ context.Context, _ clients.Repo, _ ...sc.Option) (sc.Result, error) {
-		return sc.Result{
-			Repo: sc.RepoInfo{Name: "github.com/test/repo"},
-			Checks: []checker.CheckResult{
-				{Name: "Binary-Artifacts", Score: 10},
-			},
-		}, nil
-	}
 
 	callNum := 0
 	getDefaultBranchRefFunc = func(_ context.Context, _ *github.Client,
 		_, _ string,
 	) (ref, sha string, err error) {
 		callNum++
-		// Different commit SHA each call — simulates a new push
 		return "refs/heads/main", fmt.Sprintf("sha-%d", callNum), nil
 	}
 
@@ -349,16 +334,23 @@ func TestUploadSARIFNewCommit(t *testing.T) {
 		return &github.SarifID{ID: github.Ptr("test-id")}, nil, nil
 	}
 
+	result := &sc.Result{
+		Repo: sc.RepoInfo{Name: "github.com/test/repo"},
+		Checks: []checker.CheckResult{
+			{Name: "Binary-Artifacts", Score: 10},
+		},
+	}
+
 	ctx := context.Background()
 	c := github.NewClient(nil)
 	checks := []string{"Binary-Artifacts"}
 
 	// First call uploads.
-	if err := uploadSARIF(ctx, c, "testorg", "testrepo", checks, 8, nil, nil); err != nil {
+	if err := uploadSARIFResult(ctx, c, "testorg", "testrepo", result, checks, 8); err != nil {
 		t.Fatalf("First upload failed: %v", err)
 	}
 	// Second call should also upload because the commit SHA changed.
-	if err := uploadSARIF(ctx, c, "testorg", "testrepo", checks, 8, nil, nil); err != nil {
+	if err := uploadSARIFResult(ctx, c, "testorg", "testrepo", result, checks, 8); err != nil {
 		t.Fatalf("Second upload failed: %v", err)
 	}
 	if uploadCount != 2 {
