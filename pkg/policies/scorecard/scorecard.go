@@ -166,68 +166,50 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 		return nil, err
 	}
 
-	var notify string
-	pass := true
-	f := make(map[string][]string)
-
+	// Filter out unknown checks before running.
+	var validChecks []string
 	for _, n := range mc.Checks {
-		_, ok := checksAllChecks[n]
-		if !ok {
+		if _, ok := checksAllChecks[n]; !ok {
 			log.Warn().
 				Str("org", owner).
 				Str("repo", repo).
 				Str("area", polName).
 				Str("check", n).
 				Msg("Unknown scorecard check specified.")
-			break
+			continue
 		}
+		validChecks = append(validChecks, n)
+	}
 
-		// Run each check separately for now.
-		allRes, err := scRun(ctx, scc.ScRepo,
-			sc.WithRepoClient(scc.ScRepoClient),
-			sc.WithChecks([]string{n}),
-		)
-		if err != nil {
-			log.Warn().
-				Str("org", owner).
-				Str("repo", repo).
-				Str("area", polName).
-				Str("check", n).
-				Err(err).
-				Msg("Scorecard check errored.")
-			break
-		}
-		if len(allRes.Checks) != 1 {
-			log.Warn().
-				Str("org", owner).
-				Str("repo", repo).
-				Str("area", polName).
-				Str("check", n).
-				Int("chk_len", len(allRes.Checks)).
-				Msg("Scorecard did not return expected checks.")
-			break
-		}
-		res := allRes.Checks[0]
+	// Run all checks at once. Scorecard executes them concurrently and
+	// captures per-check errors in CheckResult.Error rather than aborting.
+	allRes, err := scRun(ctx, scc.ScRepo,
+		sc.WithRepoClient(scc.ScRepoClient),
+		sc.WithChecks(validChecks),
+	)
+	if err != nil {
+		return nil, err
+	}
 
+	var notify string
+	pass := true
+	f := make(map[string][]string)
+
+	for _, res := range allRes.Checks {
 		if res.Error != nil {
-			// We are not sure that all checks are safe to run inside Allstar, some
-			// might error, and we don't want to abort a whole org enforcement loop
-			// for an expected error. Just log the error and move on. If there are
-			// any results from a previous check, those can be returned, so just
-			// break from the loop here.
 			log.Warn().
 				Str("org", owner).
 				Str("repo", repo).
 				Str("area", polName).
-				Str("check", n).
+				Str("check", res.Name).
 				Err(res.Error).
 				Msg("Scorecard check errored.")
-			break
+			continue
 		}
 
 		logs := convertLogs(res.Details)
 		if len(logs) > 0 {
-			f[n] = logs
+			f[res.Name] = logs
 		}
 		if res.Score < mc.Threshold && res.Score != checker.InconclusiveResultScore {
 			pass = false
@@ -253,8 +235,8 @@ The score was %v, and the passing threshold is %v.
 	}
 
 	if mc.Upload.SARIF {
-		if err := uploadSARIF(ctx, c, owner, repo, mc.Checks, mc.Threshold,
-			scc.ScRepo, scc.ScRepoClient); err != nil {
+		if err := uploadSARIFResult(ctx, c, owner, repo, &allRes,
+			mc.Checks, mc.Threshold); err != nil {
 			log.Warn().
 				Str("org", owner).
 				Str("repo", repo).

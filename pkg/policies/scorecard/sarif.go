@@ -214,21 +214,19 @@ func compressAndEncode(data []byte) (string, error) {
 	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }
 
-// uploadSARIF generates SARIF for the configured checks and uploads
-// it to GitHub's Code Scanning API, skipping the upload if the SARIF content
-// has not changed since the last upload.
-func uploadSARIF(
+// uploadSARIFResult uploads SARIF and collects results from an existing
+// sc.Result, skipping the upload if the repo HEAD hasn't changed since
+// the last upload.
+func uploadSARIFResult(
 	ctx context.Context,
 	c *github.Client,
 	owner, repo string,
+	result *sc.Result,
 	checkNames []string,
 	threshold int,
-	scRepo clients.Repo,
-	scRepoClient clients.RepoClient,
 ) error {
 	// Change detection: skip upload if the repo HEAD hasn't changed
-	// since the last upload. This avoids redundant uploads when Allstar
-	// runs on a 5-minute cycle and the repo hasn't been updated.
+	// since the last upload.
 	ref, commitSHA, err := getDefaultBranchRefFunc(ctx, c, owner, repo)
 	if err != nil {
 		return fmt.Errorf("getting branch info: %w", err)
@@ -249,25 +247,12 @@ func uploadSARIF(
 		return nil
 	}
 
-	// Run all checks at once to get a complete Result.
-	runOpts := []sc.Option{
-		sc.WithChecks(checkNames),
-	}
-	if scRepoClient != nil {
-		runOpts = append(runOpts, sc.WithRepoClient(scRepoClient))
-	}
-
-	result, err := scRun(ctx, scRepo, runOpts...)
-	if err != nil {
-		return fmt.Errorf("scorecard run for SARIF: %w", err)
-	}
-
 	// Collect JSON v2 result for results file output.
-	collectResult(&result)
+	collectResult(result)
 
 	// Generate SARIF from the result.
 	var buf bytes.Buffer
-	if err := resultToSARIF(&result, checkNames, threshold, &buf); err != nil {
+	if err := resultToSARIF(result, checkNames, threshold, &buf); err != nil {
 		return fmt.Errorf("generating SARIF: %w", err)
 	}
 
