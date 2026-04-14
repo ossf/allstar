@@ -301,6 +301,19 @@ func TestCheck(t *testing.T) {
 }
 
 func TestCheckUnknownCheckSkipped(t *testing.T) {
+	origConfigFetchConfig := configFetchConfig
+	origConfigIsEnabled := configIsEnabled
+	origScorecardGet := scorecardGet
+	origChecksAllChecks := checksAllChecks
+	origScRun := scRun
+	t.Cleanup(func() {
+		configFetchConfig = origConfigFetchConfig
+		configIsEnabled = origConfigIsEnabled
+		scorecardGet = origScorecardGet
+		checksAllChecks = origChecksAllChecks
+		scRun = origScRun
+	})
+
 	configFetchConfig = func(_ context.Context, _ *github.Client, _, _, _ string,
 		ol config.ConfigLevel, out interface{},
 	) error {
@@ -324,9 +337,12 @@ func TestCheckUnknownCheckSkipped(t *testing.T) {
 		return &scorecard.ScClient{}, nil
 	}
 	checksAllChecks = checker.CheckNameToFnMap{"test": {}}
+	// "test" returns a score below threshold so that if the implementation
+	// regresses to break-on-unknown and never runs "test", pass stays true
+	// and the assertion below catches the regression.
 	scRun = func(_ context.Context, _ clients.Repo, _ ...sc.Option) (sc.Result, error) {
 		return sc.Result{
-			Checks: []checker.CheckResult{{Name: "test", Score: 10}},
+			Checks: []checker.CheckResult{{Name: "test", Score: 5}},
 		}, nil
 	}
 
@@ -335,19 +351,34 @@ func TestCheckUnknownCheckSkipped(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	if !res.Pass {
-		t.Error("Expected pass — unknown check should be skipped, valid check should still run")
+	// The unknown check is skipped; "test" still runs and scores 5 < threshold 8,
+	// so the policy should not pass.
+	if res.Pass {
+		t.Error("Expected fail — unknown check should be skipped, valid check with low score should still run and fail")
 	}
 }
 
 func TestCheckPerCheckErrorSkipped(t *testing.T) {
+	origConfigFetchConfig := configFetchConfig
+	origConfigIsEnabled := configIsEnabled
+	origScorecardGet := scorecardGet
+	origChecksAllChecks := checksAllChecks
+	origScRun := scRun
+	t.Cleanup(func() {
+		configFetchConfig = origConfigFetchConfig
+		configIsEnabled = origConfigIsEnabled
+		scorecardGet = origScorecardGet
+		checksAllChecks = origChecksAllChecks
+		scRun = origScRun
+	})
+
 	configFetchConfig = func(_ context.Context, _ *github.Client, _, _, _ string,
 		ol config.ConfigLevel, out interface{},
 	) error {
 		if ol == config.OrgLevel {
 			oc := out.(*OrgConfig)
 			*oc = OrgConfig{
-				Checks:    []string{"erroring", "passing"},
+				Checks:    []string{"erroring", "failing"},
 				Threshold: 8,
 			}
 		}
@@ -363,12 +394,15 @@ func TestCheckPerCheckErrorSkipped(t *testing.T) {
 	) (*scorecard.ScClient, error) {
 		return &scorecard.ScClient{}, nil
 	}
-	checksAllChecks = checker.CheckNameToFnMap{"erroring": {}, "passing": {}}
+	checksAllChecks = checker.CheckNameToFnMap{"erroring": {}, "failing": {}}
+	// "failing" returns a score below threshold so that if the implementation
+	// regresses to break-on-error and never processes "failing", pass stays true
+	// and the assertion below catches the regression.
 	scRun = func(_ context.Context, _ clients.Repo, _ ...sc.Option) (sc.Result, error) {
 		return sc.Result{
 			Checks: []checker.CheckResult{
 				{Name: "erroring", Error: fmt.Errorf("unsupported check")},
-				{Name: "passing", Score: 10},
+				{Name: "failing", Score: 5},
 			},
 		}, nil
 	}
@@ -378,7 +412,9 @@ func TestCheckPerCheckErrorSkipped(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
-	if !res.Pass {
-		t.Error("Expected pass — errored check should be skipped, passing check should still count")
+	// The errored check is skipped; "failing" still runs and scores 5 < threshold 8,
+	// so the policy should not pass.
+	if res.Pass {
+		t.Error("Expected fail — errored check should be skipped, failing check with low score should still run and fail")
 	}
 }
