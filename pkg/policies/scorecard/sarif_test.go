@@ -256,7 +256,7 @@ func TestUploadToCodeScanningAPIError(t *testing.T) {
 	}
 }
 
-func TestUploadSARIFResult(t *testing.T) {
+func TestUploadSARIF(t *testing.T) {
 	origUpload := codeScanningUploadFunc
 	origGetRef := getDefaultBranchRefFunc
 	t.Cleanup(func() {
@@ -291,7 +291,7 @@ func TestUploadSARIFResult(t *testing.T) {
 	checks := []string{"Binary-Artifacts"}
 
 	// First call should upload.
-	err := uploadSARIFResult(ctx, c, "testorg", "testrepo", result, checks, 8)
+	err := uploadSARIF(ctx, c, "testorg", "testrepo", result, checks, 8)
 	if err != nil {
 		t.Fatalf("First upload failed: %v", err)
 	}
@@ -300,7 +300,7 @@ func TestUploadSARIFResult(t *testing.T) {
 	}
 
 	// Second call with same commit SHA should skip (change detection).
-	err = uploadSARIFResult(ctx, c, "testorg", "testrepo", result, checks, 8)
+	err = uploadSARIF(ctx, c, "testorg", "testrepo", result, checks, 8)
 	if err != nil {
 		t.Fatalf("Second call failed: %v", err)
 	}
@@ -309,7 +309,7 @@ func TestUploadSARIFResult(t *testing.T) {
 	}
 }
 
-func TestUploadSARIFResultNewCommit(t *testing.T) {
+func TestUploadSARIFNewCommit(t *testing.T) {
 	origUpload := codeScanningUploadFunc
 	origGetRef := getDefaultBranchRefFunc
 	t.Cleanup(func() {
@@ -346,11 +346,11 @@ func TestUploadSARIFResultNewCommit(t *testing.T) {
 	checks := []string{"Binary-Artifacts"}
 
 	// First call uploads.
-	if err := uploadSARIFResult(ctx, c, "testorg", "testrepo", result, checks, 8); err != nil {
+	if err := uploadSARIF(ctx, c, "testorg", "testrepo", result, checks, 8); err != nil {
 		t.Fatalf("First upload failed: %v", err)
 	}
 	// Second call should also upload because the commit SHA changed.
-	if err := uploadSARIFResult(ctx, c, "testorg", "testrepo", result, checks, 8); err != nil {
+	if err := uploadSARIF(ctx, c, "testorg", "testrepo", result, checks, 8); err != nil {
 		t.Fatalf("Second upload failed: %v", err)
 	}
 	if uploadCount != 2 {
