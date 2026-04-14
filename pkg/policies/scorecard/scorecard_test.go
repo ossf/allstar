@@ -16,6 +16,7 @@ package scorecard
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -296,5 +297,88 @@ func TestCheck(t *testing.T) {
 				t.Errorf("Expected pass: %v, got: %v", test.ExpPass, res.Pass)
 			}
 		})
+	}
+}
+
+func TestCheckUnknownCheckSkipped(t *testing.T) {
+	configFetchConfig = func(_ context.Context, _ *github.Client, _, _, _ string,
+		ol config.ConfigLevel, out interface{},
+	) error {
+		if ol == config.OrgLevel {
+			oc := out.(*OrgConfig)
+			*oc = OrgConfig{
+				Checks:    []string{"nonexistent-check", "test"},
+				Threshold: 8,
+			}
+		}
+		return nil
+	}
+	configIsEnabled = func(_ context.Context, _ config.OrgOptConfig, _,
+		_ config.RepoOptConfig, _ *github.Client, _, _ string,
+	) (bool, error) {
+		return true, nil
+	}
+	scorecardGet = func(_ context.Context, _ string, _ bool,
+		_ http.RoundTripper,
+	) (*scorecard.ScClient, error) {
+		return &scorecard.ScClient{}, nil
+	}
+	checksAllChecks = checker.CheckNameToFnMap{"test": {}}
+	scRun = func(_ context.Context, _ clients.Repo, _ ...sc.Option) (sc.Result, error) {
+		return sc.Result{
+			Checks: []checker.CheckResult{{Name: "test", Score: 10}},
+		}, nil
+	}
+
+	s := NewScorecard()
+	res, err := s.Check(context.Background(), github.NewClient(nil), "", "")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !res.Pass {
+		t.Error("Expected pass — unknown check should be skipped, valid check should still run")
+	}
+}
+
+func TestCheckPerCheckErrorSkipped(t *testing.T) {
+	configFetchConfig = func(_ context.Context, _ *github.Client, _, _, _ string,
+		ol config.ConfigLevel, out interface{},
+	) error {
+		if ol == config.OrgLevel {
+			oc := out.(*OrgConfig)
+			*oc = OrgConfig{
+				Checks:    []string{"erroring", "passing"},
+				Threshold: 8,
+			}
+		}
+		return nil
+	}
+	configIsEnabled = func(_ context.Context, _ config.OrgOptConfig, _,
+		_ config.RepoOptConfig, _ *github.Client, _, _ string,
+	) (bool, error) {
+		return true, nil
+	}
+	scorecardGet = func(_ context.Context, _ string, _ bool,
+		_ http.RoundTripper,
+	) (*scorecard.ScClient, error) {
+		return &scorecard.ScClient{}, nil
+	}
+	checksAllChecks = checker.CheckNameToFnMap{"erroring": {}, "passing": {}}
+	scRun = func(_ context.Context, _ clients.Repo, _ ...sc.Option) (sc.Result, error) {
+		return sc.Result{
+			Checks: []checker.CheckResult{
+				{Name: "erroring", Error: fmt.Errorf("unsupported check")},
+				{Name: "passing", Score: 10},
+			},
+		}, nil
+	}
+
+	s := NewScorecard()
+	res, err := s.Check(context.Background(), github.NewClient(nil), "", "")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if !res.Pass {
+		t.Error("Expected pass — errored check should be skipped, passing check should still count")
 	}
 }

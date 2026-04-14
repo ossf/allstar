@@ -209,6 +209,10 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 
 	for _, res := range checkResults {
 		if res.Error != nil {
+			// Not all checks are safe to run inside Allstar — some might
+			// error due to missing tokens or unsupported features. Log
+			// the error and skip this check so remaining checks can still
+			// produce results.
 			log.Warn().
 				Str("org", owner).
 				Str("repo", repo).
@@ -247,7 +251,7 @@ The score was %v, and the passing threshold is %v.
 	}
 
 	if mc.Upload.SARIF && len(validChecks) > 0 && len(allRes.Checks) > 0 {
-		if err := uploadSARIFResult(ctx, c, owner, repo, &allRes,
+		if err := uploadSARIF(ctx, c, owner, repo, &allRes,
 			validChecks, mc.Threshold); err != nil {
 			log.Warn().
 				Str("org", owner).

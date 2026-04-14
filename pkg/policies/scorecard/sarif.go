@@ -214,10 +214,10 @@ func compressAndEncode(data []byte) (string, error) {
 	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }
 
-// uploadSARIFResult uploads SARIF and collects results from an existing
+// uploadSARIF uploads SARIF and collects results from an existing
 // sc.Result, skipping the upload if the repo HEAD hasn't changed since
 // the last upload.
-func uploadSARIFResult(
+func uploadSARIF(
 	ctx context.Context,
 	c *github.Client,
 	owner, repo string,
