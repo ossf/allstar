@@ -244,7 +244,7 @@ The score was %v, and the passing threshold is %v.
 		}
 	}
 
-	if mc.Upload.SARIF {
+	if mc.Upload.SARIF && len(validChecks) > 0 && len(allRes.Checks) > 0 {
 		if err := uploadSARIFResult(ctx, c, owner, repo, &allRes,
 			validChecks, mc.Threshold); err != nil {
 			log.Warn().
