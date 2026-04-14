@@ -181,21 +181,31 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 		validChecks = append(validChecks, n)
 	}
 
-	// Run all checks at once. Scorecard executes them concurrently and
-	// captures per-check errors in CheckResult.Error rather than aborting.
-	allRes, err := scRun(ctx, scc.ScRepo,
-		sc.WithRepoClient(scc.ScRepoClient),
-		sc.WithChecks(validChecks),
-	)
-	if err != nil {
-		return nil, err
+	var checkResults []checker.CheckResult
+	if len(validChecks) == 0 {
+		log.Warn().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("area", polName).
+			Msg("No valid scorecard checks configured; skipping scorecard run.")
+	} else {
+		// Run all checks at once. Scorecard executes them concurrently and
+		// captures per-check errors in CheckResult.Error rather than aborting.
+		allRes, err := scRun(ctx, scc.ScRepo,
+			sc.WithRepoClient(scc.ScRepoClient),
+			sc.WithChecks(validChecks),
+		)
+		if err != nil {
+			return nil, err
+		}
+		checkResults = allRes.Checks
 	}
 
 	var notify string
 	pass := true
 	f := make(map[string][]string)
 
-	for _, res := range allRes.Checks {
+	for _, res := range checkResults {
 		if res.Error != nil {
 			log.Warn().
 				Str("org", owner).
@@ -236,7 +246,7 @@ The score was %v, and the passing threshold is %v.
 
 	if mc.Upload.SARIF {
 		if err := uploadSARIFResult(ctx, c, owner, repo, &allRes,
-			mc.Checks, mc.Threshold); err != nil {
+			validChecks, mc.Threshold); err != nil {
 			log.Warn().
 				Str("org", owner).
 				Str("repo", repo).
