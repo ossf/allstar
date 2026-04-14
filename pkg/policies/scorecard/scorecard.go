@@ -181,6 +181,7 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 		validChecks = append(validChecks, n)
 	}
 
+	var allRes sc.Result
 	var checkResults []checker.CheckResult
 	if len(validChecks) == 0 {
 		log.Warn().
@@ -191,12 +192,13 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 	} else {
 		// Run all checks at once. Scorecard executes them concurrently and
 		// captures per-check errors in CheckResult.Error rather than aborting.
-		allRes, err := scRun(ctx, scc.ScRepo,
+		var runErr error
+		allRes, runErr = scRun(ctx, scc.ScRepo,
 			sc.WithRepoClient(scc.ScRepoClient),
 			sc.WithChecks(validChecks),
 		)
-		if err != nil {
-			return nil, err
+		if runErr != nil {
+			return nil, runErr
 		}
 		checkResults = allRes.Checks
 	}
