@@ -386,6 +386,20 @@ behavior. See the [OpenSSF Scorecard
 documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md#dangerous-workflow)
 for more information on this check.
 
+### Secret Scanning
+
+This policy's config file is named `secret_scanning.yaml`, and the [config definitions
+are
+here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/secretscanning#OrgConfig).
+
+This policy checks that [GitHub secret scanning](https://docs.github.com/en/code-security/secret-scanning/introduction/about-secret-scanning)
+is enabled on the repository. Secret scanning monitors your repository for
+known secret formats (API keys, tokens, credentials, etc.) and alerts you
+when any are detected, helping prevent accidental exposure.
+
+When the `fix` action is configured, Allstar will automatically enable secret
+scanning on non-compliant repositories.
+
 ### Generic Scorecard Check
 
 This policy's config file is named `scorecard.yaml`, and the [config definitions

@@ -153,13 +153,25 @@ func check(ctx context.Context, c *github.Client, owner, repo string) (*policyde
 	}, nil
 }
 
-// Fix implementing policydef.Policy.Fix(). Currently not supported.
+// Fix implementing policydef.Policy.Fix(). Enables secret scanning on the
+// repository if it is not already enabled.
 func (s SecretScanning) Fix(ctx context.Context, c *github.Client, owner, repo string) error {
-	log.Warn().
+	enabled := "enabled"
+	_, _, err := c.Repositories.Edit(ctx, owner, repo, &github.Repository{
+		SecurityAndAnalysis: &github.SecurityAndAnalysis{
+			SecretScanning: &github.SecretScanning{
+				Status: &enabled,
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
+	log.Info().
 		Str("org", owner).
 		Str("repo", repo).
 		Str("area", polName).
-		Msg("Action fix is configured, but not implemented.")
+		Msg("Enabled secret scanning with Fix action.")
 	return nil
 }
 
