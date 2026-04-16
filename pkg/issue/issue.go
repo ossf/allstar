@@ -35,6 +35,9 @@ import (
 const (
 	issueRepoTitle = "Security Policy violation for repository %q %v"
 	sameRepoTitle  = "Security Policy violation %v"
+
+	issueStateOpen   = "open"
+	issueStateClosed = "closed"
 )
 
 const (
@@ -177,7 +180,7 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 			return nil
 		}
 		// Ensure issue is open as well
-		state := "open"
+		state := issueStateOpen
 		_, _, err = issues.Edit(ctx, owner, issueRepo, issue.GetNumber(), &github.IssueRequest{
 			State: &state,
 			Body:  &newBody,
@@ -194,8 +197,8 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 	if !shouldPing {
 		return nil
 	}
-	if issue.GetState() == "closed" {
-		state := "open"
+	if issue.GetState() == issueStateClosed {
+		state := issueStateOpen
 		update := &github.IssueRequest{
 			State: &state,
 		}
@@ -249,7 +252,7 @@ func closeIssue(ctx context.Context, c *github.Client, issues issues, owner, rep
 	if err != nil {
 		return err
 	}
-	if issue.GetState() == "open" {
+	if issue.GetState() == issueStateOpen {
 		body := "Policy is now in compliance. Closing issue."
 		comment := &github.IssueComment{
 			Body: &body,
@@ -265,7 +268,7 @@ func closeIssue(ctx context.Context, c *github.Client, issues issues, owner, rep
 			}
 			return err
 		}
-		state := "closed"
+		state := issueStateClosed
 		update := &github.IssueRequest{
 			State: &state,
 		}
