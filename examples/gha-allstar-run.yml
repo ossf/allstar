@@ -1,5 +1,5 @@
 # Copy this file into your organization .allstar repo as `.github/workflows/allstar-run.yml`
-# to run AllStar as a scheduled GitHub action.
+# to run Allstar as a scheduled GitHub action.
 # See https://github.com/ossf/allstar/blob/main/github-action-installation.md for more information.
 #
 # To enable SARIF upload to the Security > Code Scanning tab, add the following
@@ -9,7 +9,7 @@
 # The GitHub App must have the "Code scanning alerts" permission set to
 # "Read & write". See operator.md for details.
 ---
-name: AllStar Enforcement Action
+name: Allstar Enforcement Action
 
 on:
   push:
@@ -35,7 +35,7 @@ jobs:
     steps:
       - name: Create Artifact Directory
         run: mkdir $ARTIFACT_DIR
-      - name: Run AllStar Policy Check
+      - name: Run Allstar Policy Check
         env:
           # Ping open issues every week (168 hours)
           NOTICE_PING_DURATION_HOURS: 168
@@ -47,7 +47,7 @@ jobs:
         run: |
           /ko-app/allstar -once 2> $ARTIFACT_DIR/allstar.log | tee $ARTIFACT_DIR/allstar.out
           test -s $ARTIFACT_DIR/allstar.log && echo "==== Errors ====" && cat $ARTIFACT_DIR/allstar.log
-      - name: Archive AllStar Results
+      - name: Archive Allstar Results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # @4.6.2
         with:
           name: allstar-scan
@@ -102,7 +102,7 @@ jobs:
           echo '## Scan Results by Repository' >> $GITHUB_STEP_SUMMARY
           SCAN_RESULTS_REPO=$(cat $ARTIFACT_DIR/scan_results_by_repo.json)
           echo "$SCAN_RESULTS_REPO" | jq -r '.[] | "\n<details>\n<summary>\(.repository) - Pass: \(.summary.pass_count), Fail: \(.summary.fail_count)</summary>\n\n| Pass Count | Fail Count | Passed | Failed |\n| --- | --- | --- | --- |\n| \(.summary.pass_count) | \(.summary.fail_count) | \(.summary.passed | join(", ")) | \(.summary.failed | join(", ")) |\n\n</details>\n"' >> $GITHUB_STEP_SUMMARY
-      - name: Archive AllStar Results
+      - name: Archive Allstar Results
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # @4.6.2
         with:
           name: allstar-results
