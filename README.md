@@ -21,12 +21,12 @@
 -  [Background](#background)
 -  [Org-Level Options](#org-level-options)
 -  [Installation Options](#installation-options)
-    - [Using the public AllStar app](#using-the-allstar-app)
+    - [Using the public Allstar app](#using-the-allstar-app)
         - [Quickstart Installation](#quickstart-installation)
         - [Manual Installation](#manual-installation)
-    - [Self-hosting AllStar](#self-hosting-allstar)
-        - [Running AllStar as a GitHub Action](#running-allstar-as-a-github-action)
-        - [Running AllStar as a service daemon](#running-allstar-as-a-service-daemon)
+    - [Self-hosting Allstar](#self-hosting-allstar)
+        - [Running Allstar as a GitHub Action](#running-allstar-as-a-github-action)
+        - [Running Allstar as a service daemon](#running-allstar-as-a-service-daemon)
 
 ## Policies and Actions
 - [Actions](#actions)
@@ -226,10 +226,10 @@ and ongoing maintenance. When a new Allstar version is released you will need
 to upgrade your self-hosted solution.
 
 Two self-hosting approaches are described:
-- [Running AllStar as a GitHub Action](#running-allstar-as-a-github-action) -
+- [Running Allstar as a GitHub Action](#running-allstar-as-a-github-action) -
   This option is relatively lightweight and leverages GitHub Actions to run
   Allstar checks.
-- [Running AllStar as a service daemon](#running-allstar-as-a-service-daemon) -
+- [Running Allstar as a service daemon](#running-allstar-as-a-service-daemon) -
   This option has the highest level of control and assumes you are able to run
   a persistent service on a reliable server or container orchestrator.
 
