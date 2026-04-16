@@ -16,7 +16,7 @@ on:
   #     - main
   # schedule:
   #   - cron: '0 0 * * *'
-  # workflow_dispatch: {}
+  workflow_dispatch: {}
 
 # Deny all permissions by default; grant per-job below.
 permissions: {}
@@ -31,6 +31,7 @@ env:
 
 jobs:
   scan:
+    name: Allstar policy scan
     runs-on: ubuntu-latest
     timeout-minutes: 60
     environment: prod
@@ -73,6 +74,7 @@ jobs:
           path: ${{ env.ARTIFACT_DIR }}
 
   analyze:
+    name: Analyze results
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10

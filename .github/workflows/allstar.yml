@@ -11,9 +11,8 @@ on:
   #   branches:
   #     - main
   # schedule:
-  #   # M-F at 6:00am UTC
   #   - cron: '0 0 * * *'
-  # workflow_dispatch: {}
+  workflow_dispatch: {}
 
 # Deny all permissions by default; grant per-job below.
 permissions: {}
@@ -28,6 +27,7 @@ env:
 
 jobs:
   scan:
+    name: Allstar policy scan
     runs-on: ubuntu-latest
     timeout-minutes: 60
     # Use chainguard/busybox based image - It has a tail for entrypoint
@@ -64,6 +64,7 @@ jobs:
           path: ${{ env.ARTIFACT_DIR }}
 
   analyze:
+    name: Analyze results
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10

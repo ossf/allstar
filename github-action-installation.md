@@ -45,7 +45,7 @@ the OpenSSF managed Allstar app into your organization!**
    into `.github/workflows/allstar.yml` in your new `.allstar` control
    repository.
 1. Edit `.github/workflows/allstar.yml`:
-  1. Uncomment the `push`, `schedule`, and `workflow_dispatch` triggers.
+  1. Uncomment the `push` and `schedule` triggers.
   1. You can update when the job runs by modifying its `schedule`:
      ~~~
      schedule:
@@ -97,8 +97,8 @@ If you customize it, preserve these properties:
 * **`persist-credentials: false`** — When checking out code (build-from-source
   path), credentials are not persisted to limit exposure if a later step is
   compromised.
-* **`workflow_dispatch`** — When uncommented, allows manual triggering for
-  debugging without requiring a push to `main`.
+* **`workflow_dispatch`** — Allows manual triggering for debugging without
+  requiring a push to `main`.
 
 For further reading, see the
 [Astral open source security post](https://astral.sh/blog/open-source-security-at-astral)
