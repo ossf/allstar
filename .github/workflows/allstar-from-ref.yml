@@ -1,0 +1,131 @@
+# Alternative workflow that builds Allstar from source instead of using the
+# published container image. Use this when you need to run an unreleased
+# version (e.g., a feature branch or fork).
+#
+# Copy this file into your organization .allstar repo as
+# `.github/workflows/allstar.yml`.
+# See https://github.com/ossf/allstar/blob/main/github-action-installation.md for more information.
+---
+name: Allstar GitHub Action
+
+on:
+  # Uncomment these triggers when deploying to your organization's .allstar repo:
+  #
+  # push:
+  #   branches:
+  #     - main
+  # schedule:
+  #   - cron: '0 0 * * *'
+  # workflow_dispatch: {}
+
+# Deny all permissions by default; grant per-job below.
+permissions: {}
+
+# Prevent overlapping runs from racing on issues or artifacts.
+concurrency:
+  group: allstar-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  ARTIFACT_DIR: /tmp/artifacts
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    environment: prod
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Allstar source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ossf/allstar
+          ref: main  # or a specific branch/tag
+          persist-credentials: false
+      - name: Setup Go
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+      - name: Build Allstar
+        run: go build -o allstar-bin ./cmd/allstar/
+      - name: Create artifact directory
+        run: mkdir "$ARTIFACT_DIR"
+      - name: Run Allstar policy check
+        env:
+          NOTICE_PING_DURATION_HOURS: '168'
+          DO_NOTHING_ON_OPT_OUT: 'true'
+          ALLSTAR_LOG_LEVEL: info
+          KEY_SECRET: direct
+          APP_ID: ${{ vars.APP_ID }}
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+        run: |
+          ./allstar-bin -once 2> "$ARTIFACT_DIR/allstar.log" | tee "$ARTIFACT_DIR/allstar.out"
+          if [ -s "$ARTIFACT_DIR/allstar.log" ]; then
+            echo "==== Errors ===="
+            cat "$ARTIFACT_DIR/allstar.log"
+          fi
+      - name: Archive Allstar results
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: allstar-scan
+          path: ${{ env.ARTIFACT_DIR }}
+
+  analyze:
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: scan
+    permissions: {}
+    steps:
+      - name: Download scan artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: allstar-scan
+      - name: Make artifacts directory
+        run: mkdir "$ARTIFACT_DIR"
+      - name: Summarize Results by Check
+        run: |
+          grep '^{' "$GITHUB_WORKSPACE/allstar.log" |
+            jq --slurp '[.[] | select(.enabled == true and .message == "Policy run result.") ] |
+              group_by(.area) | map({
+                area: .[0].area,
+                summary: {
+                  pass_count: map(select(.result == true)) | length,
+                  fail_count: map(select(.result == false)) | length,
+                  passed: map(select(.result == true)| .repo),
+                  failed: map(select(.result == false)| .repo)
+                }
+              })' |
+            tee "$ARTIFACT_DIR/scan_results_by_check.json"
+      - name: Output Scan Results by Check to Step Summary
+        run: |
+          echo '## Scan Results by Check' >> "$GITHUB_STEP_SUMMARY"
+          SCAN_RESULTS=$(cat "$ARTIFACT_DIR/scan_results_by_check.json")
+          echo "$SCAN_RESULTS" | jq -r '.[] | "\n<details>\n<summary>\(.area) - Pass: \(.summary.pass_count), Fail: \(.summary.fail_count)</summary>\n\n| Pass Count | Fail Count | Passed | Failed |\n| --- | --- | --- | --- |\n| \(.summary.pass_count) | \(.summary.fail_count) | \(.summary.passed | join(", ")) | \(.summary.failed | join(", ")) |\n\n</details>\n"' >> "$GITHUB_STEP_SUMMARY"
+      - name: Summarize Results by Repository
+        run: |
+          grep '^{' "$GITHUB_WORKSPACE/allstar.log" |
+            jq --slurp '[.[] | select(.enabled == true and .message == "Policy run result.") ] |
+              group_by(.repo) | map({
+                repository: .[0].repo,
+                summary: {
+                  pass_count: map(select(.result == true)) | length,
+                  fail_count: map(select(.result == false)) | length,
+                  passed: map(select(.result == true)| .area),
+                  failed: map(select(.result == false)| .area)
+                }
+              })' |
+            tee "$ARTIFACT_DIR/scan_results_by_repo.json"
+      - name: Output Scan Results by Repository to Step summary
+        run: |
+          echo '## Scan Results by Repository' >> "$GITHUB_STEP_SUMMARY"
+          SCAN_RESULTS_REPO=$(cat "$ARTIFACT_DIR/scan_results_by_repo.json")
+          echo "$SCAN_RESULTS_REPO" | jq -r '.[] | "\n<details>\n<summary>\(.repository) - Pass: \(.summary.pass_count), Fail: \(.summary.fail_count)</summary>\n\n| Pass Count | Fail Count | Passed | Failed |\n| --- | --- | --- | --- |\n| \(.summary.pass_count) | \(.summary.fail_count) | \(.summary.passed | join(", ")) | \(.summary.failed | join(", ")) |\n\n</details>\n"' >> "$GITHUB_STEP_SUMMARY"
+      - name: Archive Allstar Results
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: allstar-results
+          path: ${{ env.ARTIFACT_DIR }}

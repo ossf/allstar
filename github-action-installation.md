@@ -126,51 +126,10 @@ parses Allstar output and generates a helpful overview. To see the summary:
 If you need to run an unreleased version of Allstar (e.g., a feature branch),
 you can build from source instead of using the published container image.
 
-Replace the `scan` job's container and steps with:
-
-~~~yaml
-  scan:
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    environment: prod
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout Allstar source
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          repository: ossf/allstar
-          ref: main  # or a specific branch/tag
-          persist-credentials: false
-      - name: Setup Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
-        with:
-          go-version-file: go.mod
-      - name: Build Allstar
-        run: go build -o allstar-bin ./cmd/allstar/
-      - name: Create artifact directory
-        run: mkdir "$ARTIFACT_DIR"
-      - name: Run Allstar policy check
-        env:
-          NOTICE_PING_DURATION_HOURS: '168'
-          DO_NOTHING_ON_OPT_OUT: 'true'
-          ALLSTAR_LOG_LEVEL: info
-          KEY_SECRET: direct
-          APP_ID: ${{ vars.APP_ID }}
-          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
-        run: |
-          ./allstar-bin -once 2> "$ARTIFACT_DIR/allstar.log" | tee "$ARTIFACT_DIR/allstar.out"
-          if [ -s "$ARTIFACT_DIR/allstar.log" ]; then
-            echo "==== Errors ===="
-            cat "$ARTIFACT_DIR/allstar.log"
-          fi
-      - name: Archive Allstar results
-        if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
-        with:
-          name: allstar-scan
-          path: ${{ env.ARTIFACT_DIR }}
-~~~
+Use [`.github/workflows/allstar-from-ref.yml`](https://github.com/ossf/allstar/blob/main/.github/workflows/allstar-from-ref.yml)
+instead of `allstar.yml`. This workflow checks out the Allstar source, builds
+it with Go, and runs the binary directly. Edit the `ref:` field to point at
+the branch or tag you want to build from.
 
 ## Maintenance
 
