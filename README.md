@@ -238,7 +238,7 @@ This installation option runs Allstar as a scheduled job using GitHub Actions.
 
 Effort: high
 
-Follow the [GitHub Actions installation directions](github-actions-install.md) to:
+Follow the [GitHub Actions installation directions](github-action-installation.md) to:
 1. Create a new GitHub app for Allstar use.
 1. Create an organization level `.allstar` control repo as described in
    [quickstart installation](#quickstart-installation) or
