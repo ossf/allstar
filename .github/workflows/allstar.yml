@@ -18,6 +18,11 @@ on:
 # Deny all permissions by default; grant per-job below.
 permissions: {}
 
+# Prevent overlapping runs from racing on issues or artifacts.
+concurrency:
+  group: allstar-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   ARTIFACT_DIR: /tmp/artifacts
 
@@ -59,6 +64,7 @@ jobs:
           path: ${{ env.ARTIFACT_DIR }}
 
   analyze:
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: scan
