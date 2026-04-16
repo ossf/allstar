@@ -11,6 +11,7 @@ securing, maintaining, and troubleshooting this solution.
     * [Create your organization .allstar control repository](#create-your-organization-allstar-control-repository)
     * [Setup a recurring GitHub Action to run Allstar](#setup-a-recurring-github-action-to-run-allstar)
     * [Create the prod deployment environment](#create-the-prod-deployment-environment)
+* [Security hardening](#security-hardening)
 * [Monitoring](#monitoring)
 * [Maintenance](#maintenance)
     * [Update the version of Allstar image used](#update-the-version-of-allstar-image-used)
@@ -44,12 +45,12 @@ the OpenSSF managed Allstar app into your organization!**
    into `.github/workflows/allstar.yml` in your new `.allstar` control
    repository.
 1. Edit `.github/workflows/allstar.yml`:
-  1. Uncomment the `push` and `schedule` triggers.
+  1. Uncomment the `push`, `schedule`, and `workflow_dispatch` triggers.
   1. You can update when the job runs by modifying its `schedule`:
      ~~~
      schedule:
-       # M-F at 6:00am UTC
-       - cron: '0 6 * * 1-5'
+       # Daily at midnight UTC
+       - cron: '0 0 * * *'
      ~~~
   1. You should check the version of Allstar container image used and update it
      if needed following [Update the version of Allstar image used](#update-the-version-of-allstar-image-used)
@@ -77,13 +78,41 @@ Actions.
   * Click "Add secret" to complete
 * From this point, future Allstar GitHub Action runs on `main` should function.
 
+## Security hardening
+
+The example workflow applies several GitHub Actions security best practices.
+If you customize it, preserve these properties:
+
+* **Least-privilege permissions** — The workflow sets `permissions: {}` at the
+  top level and grants only what each job needs at the job level. Never widen
+  permissions beyond what is required.
+* **SHA-pinned actions** — All third-party actions are pinned to full-length
+  commit SHAs (not mutable tags or branches). Update SHAs when you update
+  action versions.
+* **SHA-pinned container image** — The Allstar container image is referenced by
+  digest (`@sha256:...`), not by tag. Tags are mutable and can be overwritten.
+* **Deployment environment for secrets** — The `prod` environment restricts
+  secret access to the `main` branch and prevents administrator bypass. Only
+  jobs that need secrets should reference this environment.
+* **`persist-credentials: false`** — When checking out code (build-from-source
+  path), credentials are not persisted to limit exposure if a later step is
+  compromised.
+* **`workflow_dispatch`** — When uncommented, allows manual triggering for
+  debugging without requiring a push to `main`.
+
+For further reading, see the
+[Astral open source security post](https://astral.sh/blog/open-source-security-at-astral)
+and GitHub's
+[security hardening for GitHub Actions](https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions)
+documentation.
+
 ## Monitoring
 
 The example GitHub Action includes a post-processing stage named `analyze` that
 parses Allstar output and generates a helpful overview. To see the summary:
 
 * Under your `.allstar` control repo navigate to the Actions tab
-* Under the Actions menu on the left, select "Allstar Enforcement Action"
+* Under the Actions menu on the left, select "Allstar GitHub Action"
 * A list of enforcement actions will be shown - Click the run you would like to
   inspect
 * Under the standard GitHub action pipeline display the "analyze summary" should
@@ -102,18 +131,19 @@ Replace the `scan` job's container and steps with:
 ~~~yaml
   scan:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     environment: prod
     permissions:
       contents: read
     steps:
       - name: Checkout Allstar source
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: ossf/allstar
           ref: main  # or a specific branch/tag
           persist-credentials: false
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version-file: go.mod
       - name: Build Allstar
@@ -136,14 +166,11 @@ Replace the `scan` job's container and steps with:
           fi
       - name: Archive Allstar results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
         with:
           name: allstar-scan
           path: ${{ env.ARTIFACT_DIR }}
 ~~~
-
-> **Note:** Pin actions to commit SHAs (not tags) in production workflows.
-> The example above uses tags for readability.
 
 ## Maintenance
 
