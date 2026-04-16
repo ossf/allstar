@@ -1,4 +1,4 @@
-# Copy this file into your organization .allstar repo as `.github/workflows/allstar-run.yml`
+# Copy this file into your organization .allstar repo as `.github/workflows/allstar.yml`
 # to run Allstar as a scheduled GitHub action.
 # See https://github.com/ossf/allstar/blob/main/github-action-installation.md for more information.
 #
@@ -12,12 +12,15 @@
 name: Allstar Enforcement Action
 
 on:
-  push:
-    branches:
-      - main
-  schedule:
-    # M-F at 6:00am UTC
-    - cron: '0 6 * * 1-5'
+  # Uncomment these triggers when deploying to your organization's .allstar repo:
+  #
+  # push:
+  #   branches:
+  #     - main
+  # schedule:
+  #   # M-F at 6:00am UTC
+  #   - cron: '0 6 * * 1-5'
+  workflow_dispatch: {}
 
 env:
   ARTIFACT_DIR: /tmp/artifacts

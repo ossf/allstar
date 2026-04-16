@@ -40,10 +40,11 @@ the OpenSSF managed Allstar app into your organization!**
 
 ### Setup a recurring GitHub Action to run Allstar
 
-1. Copy [`examples/gha-allstar-run.yml`](https://github.com/ossf/allstar/blob/main/examples/gha-allstar-run.yml)
-   into `.github/workflows/allstar-run.yml` in your new `.allstar` control
+1. Copy [`.github/workflows/allstar.yml`](https://github.com/ossf/allstar/blob/main/.github/workflows/allstar.yml)
+   into `.github/workflows/allstar.yml` in your new `.allstar` control
    repository.
-1. Edit `.github/workflows/allstar-run.yml`:
+1. Edit `.github/workflows/allstar.yml`:
+  1. Uncomment the `push` and `schedule` triggers.
   1. You can update when the job runs by modifying its `schedule`:
      ~~~
      schedule:
@@ -153,12 +154,12 @@ These are available from the [allstar container repository](https://github.com/o
 
 To update:
 
-* Open a PR to update [.github/workflows/allstar-run.yml](.github/workflows/allstar-run.yml)
+* Open a PR to update your `.github/workflows/allstar.yml`
   with the new SHA256 fingerprint of the image you wish to use.
   * To find the fingerprint, go to the [Allstar containers page](https://github.com/ossf/allstar/pkgs/container/allstar)
     and find the most recent tag ending in `-gha` then click on `Digest ...`.
     Copy the SHA256 fingerprint.
-  * Find the lines below in `allstar-run.yml` and update value after the `@`.
+  * Find the lines below in `allstar.yml` and update value after the `@`.
     For example:
 
   ~~~yaml
