@@ -35,6 +35,14 @@ import (
 	sc "github.com/ossf/scorecard/v5/pkg/scorecard"
 )
 
+// clearSARIFHashes resets the change detection state.
+// This is a test helper to isolate tests that rely on sarifHashMap.
+func clearSARIFHashes() {
+	sarifHashMu.Lock()
+	sarifHashMap = make(map[string]string)
+	sarifHashMu.Unlock()
+}
+
 func TestCompressAndEncode(t *testing.T) {
 	input := []byte(`{"version":"2.1.0","runs":[]}`)
 

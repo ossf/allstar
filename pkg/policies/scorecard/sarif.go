@@ -226,13 +226,6 @@ func uploadSARIF(
 	return nil
 }
 
-// clearSARIFHashes resets the change detection state.
-func clearSARIFHashes() {
-	sarifHashMu.Lock()
-	sarifHashMap = make(map[string]string)
-	sarifHashMu.Unlock()
-}
-
 // collectResult stores a Scorecard result for later export via WriteResults.
 func collectResult(result *sc.Result) {
 	checkDocs, err := docs.Read()
