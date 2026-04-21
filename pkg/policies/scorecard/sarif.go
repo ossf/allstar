@@ -28,7 +28,6 @@ import (
 	"github.com/google/go-github/v84/github"
 	"github.com/rs/zerolog/log"
 
-	"github.com/ossf/scorecard/v5/clients"
 	docs "github.com/ossf/scorecard/v5/docs/checks"
 	sclog "github.com/ossf/scorecard/v5/log"
 	"github.com/ossf/scorecard/v5/options"
@@ -53,36 +52,6 @@ var (
 	resultsMu      sync.Mutex
 	resultsEntries []sc.JSONScorecardResultV2
 )
-
-// generateSARIF runs all configured checks at once and writes the results
-// as SARIF to the provided writer.
-//
-// This is the "dual execution" path: the main Check() method runs checks
-// individually for issue text, while this function runs them together to
-// produce a complete SARIF document.
-func generateSARIF(
-	ctx context.Context,
-	repo clients.Repo,
-	repoClient clients.RepoClient,
-	checkNames []string,
-	threshold int,
-	writer io.Writer,
-) error {
-	// Run all checks at once to get a complete Result.
-	runOpts := []sc.Option{
-		sc.WithChecks(checkNames),
-	}
-	if repoClient != nil {
-		runOpts = append(runOpts, sc.WithRepoClient(repoClient))
-	}
-
-	result, err := scRun(ctx, repo, runOpts...)
-	if err != nil {
-		return fmt.Errorf("scorecard run for SARIF: %w", err)
-	}
-
-	return resultToSARIF(&result, checkNames, threshold, writer)
-}
 
 // resultToSARIF converts a scorecard Result to SARIF and writes it
 // to the provided writer.
@@ -119,22 +88,6 @@ func buildPolicy(checkNames []string, threshold int) *spol.ScorecardPolicy {
 		}
 	}
 	return policy
-}
-
-// uploadToCodeScanning uploads SARIF content to GitHub's Code Scanning API
-// for the given repository.
-func uploadToCodeScanning(
-	ctx context.Context,
-	c *github.Client,
-	owner, repo string,
-	sarifContent []byte,
-) error {
-	ref, sha, err := getDefaultBranchRefFunc(ctx, c, owner, repo)
-	if err != nil {
-		return fmt.Errorf("getting branch info: %w", err)
-	}
-
-	return uploadToCodeScanningWithRef(ctx, c, owner, repo, ref, sha, sarifContent)
 }
 
 // uploadToCodeScanningWithRef uploads SARIF content to GitHub's Code Scanning
@@ -337,11 +290,4 @@ func WriteResults(path string) error {
 		Msg("Scorecard results written to file.")
 
 	return nil
-}
-
-// ClearResults resets the results collector.
-func ClearResults() {
-	resultsMu.Lock()
-	resultsEntries = nil
-	resultsMu.Unlock()
 }
