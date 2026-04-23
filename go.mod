@@ -11,7 +11,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-github/v84 v84.0.0
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79
-	github.com/ossf/scorecard/v5 v5.4.1-0.20260416042454-4b8e9d1b5db8
+	github.com/ossf/scorecard/v5 v5.5.0
 	github.com/rhysd/actionlint v1.7.12
 	github.com/rs/zerolog v1.35.0
 	github.com/shurcooL/githubv4 v0.0.0-20210725200734-83ba7b4c9228
