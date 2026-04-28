@@ -191,15 +191,21 @@ func runPoliciesOnInstRepos(ctx context.Context, repos []*github.Repository, ghc
 	EnforceAllResults, error,
 ) {
 	instResults := make(EnforceAllResults)
-	var repoLoopErr error
+	var repoLoopErrs []error
 	var owner string
 	for _, r := range repos {
 		enabled := configIsBotEnabled(ctx, ghclient, *r.Owner.Login, *r.Name)
 		enforceResults, err := runPolicies(ctx, ghclient, *r.Owner.Login, *r.Name, enabled, specificPolicyArg)
 		if err != nil {
-			// scope of err doesn't extend outside the for loop
-			repoLoopErr = err
-			break
+			// record per-repo error and continue processing other repos
+			log.Error().
+				Err(err).
+				Str("org", *r.Owner.Login).
+				Str("repo", *r.Name).
+				Msg("Error running policies for repo; recording and continuing.")
+			repoLoopErrs = append(repoLoopErrs, fmt.Errorf("%s/%s: %w", *r.Owner.Login, *r.Name, err))
+			// continue to next repo instead of breaking so other repos are processed
+			continue
 		}
 		if owner == "" {
 			owner = *r.Owner.Login
@@ -214,7 +220,11 @@ func runPoliciesOnInstRepos(ctx context.Context, repos []*github.Repository, ghc
 		}
 	}
 	config.ClearInstLoc(owner)
-	return instResults, repoLoopErr
+	if len(repoLoopErrs) > 0 {
+		// aggregate errors into a single error return to surface to callers if desired
+		return instResults, fmt.Errorf("encountered errors running policies on %d repos; see logs for details", len(repoLoopErrs))
+	}
+	return instResults, nil
 }
 
 func listInstallationsReal(ctx context.Context, ac *github.Client) ([]*github.Installation, error) {
