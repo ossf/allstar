@@ -221,6 +221,10 @@ func runPoliciesOnInstRepos(ctx context.Context, repos []*github.Repository, ghc
 	}
 	config.ClearInstLoc(owner)
 	if len(repoLoopErrs) > 0 {
+		if len(repoLoopErrs) == 1 {
+			// return the single original error to preserve previous behavior
+			return instResults, repoLoopErrs[0]
+		}
 		// aggregate errors into a single error return to surface to callers if desired
 		return instResults, fmt.Errorf("encountered errors running policies on %d repos; see logs for details", len(repoLoopErrs))
 	}
