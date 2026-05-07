@@ -648,10 +648,11 @@ func (s sortableRules) Len() int {
 // Less returns i < j, determined by Priority and Method so that priority tiers
 // are honored and allow/require is evaluated before deny.
 func (s sortableRules) Less(i, j int) bool {
-	if s[i].priorityInt < s[j].priorityInt {
-		return true
+	if s[i].priorityInt != s[j].priorityInt {
+		return s[i].priorityInt < s[j].priorityInt
 	}
-	if s[i].Method != "deny" {
+	// Same priority: allow/require before deny
+	if s[i].Method != ruleMethodDeny && s[j].Method == ruleMethodDeny {
 		return true
 	}
 	return false
