@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 
 	"github.com/gobwas/glob"
@@ -27,6 +28,57 @@ import (
 
 	"github.com/ossf/allstar/pkg/config"
 )
+
+func TestSortableRules(t *testing.T) {
+	makeRule := func(method, priority string, priorityInt int) *internalRule {
+		return &internalRule{
+			Rule: &Rule{
+				Method:   method,
+				Priority: priority,
+			},
+			priorityInt: priorityInt,
+		}
+	}
+
+	t.Run("higher priority sorts before lower priority regardless of method", func(t *testing.T) {
+		// Start with the high-priority deny rule already first.
+		// The buggy Less() will incorrectly move the low-priority allow
+		// rule ahead of it because it returns true when Method != "deny",
+		// ignoring that priorityInt is worse (higher number).
+		rules := sortableRules{
+			makeRule("deny", "high", 1),
+			makeRule("allow", "low", 3),
+		}
+		sort.Sort(rules)
+
+		if rules[0].priorityInt != 1 || rules[1].priorityInt != 3 {
+			t.Errorf("expected order [high(1), low(3)], got [%s(%d), %s(%d)]",
+				rules[0].Priority, rules[0].priorityInt,
+				rules[1].Priority, rules[1].priorityInt)
+		}
+	})
+
+	t.Run("priority ordering preserved across mixed methods", func(t *testing.T) {
+		// Three rules at different priorities with mixed methods.
+		// The buggy Less() can reorder these incorrectly because a
+		// low-priority non-deny rule claims to be "less than" a
+		// higher-priority deny rule.
+		rules := sortableRules{
+			makeRule("deny", "high", 1),
+			makeRule("allow", "low", 3),
+			makeRule("require", "medium", 2),
+		}
+		sort.Sort(rules)
+
+		for i := 1; i < len(rules); i++ {
+			if rules[i].priorityInt < rules[i-1].priorityInt {
+				t.Errorf("priority ordering violated at index %d: %s(%d) came after %s(%d)",
+					i, rules[i].Priority, rules[i].priorityInt,
+					rules[i-1].Priority, rules[i-1].priorityInt)
+			}
+		}
+	})
+}
 
 func TestCheck(t *testing.T) {
 	createWorkflowRun := func(sha string, complete bool, passing *bool) *github.WorkflowRun {
@@ -903,6 +955,73 @@ func TestCheck(t *testing.T) {
 			},
 			ExpectPass:    false,
 			ExpectMessage: []string{"denied by deny rule \"Deny all\""},
+		},
+		{
+			Name: "Critical deny overrides low allow, deny rule listed first",
+			Org: OrgConfig{
+				Action: "issue",
+				Groups: []*RuleGroup{
+					{
+						Rules: []*Rule{
+							// Deny is listed first in config. The buggy
+							// Less() will incorrectly swap the low-priority
+							// allow ahead of this critical deny.
+							{
+								Name:     "Critical deny",
+								Method:   "deny",
+								Priority: "critical",
+							},
+							{
+								Name:     "Low allow",
+								Method:   "allow",
+								Priority: "low",
+							},
+						},
+					},
+				},
+			},
+			Workflows: []testingWorkflowMetadata{
+				{
+					File: "basic.yaml",
+				},
+			},
+			ExpectPass:    false,
+			ExpectMessage: []string{"denied by deny rule \"Critical deny\""},
+		},
+		{
+			Name: "High deny in first group overrides low allow in second group",
+			Org: OrgConfig{
+				Action: "issue",
+				Groups: []*RuleGroup{
+					{
+						Name: "Security",
+						Rules: []*Rule{
+							{
+								Name:     "Deny untrusted",
+								Method:   "deny",
+								Priority: "high",
+							},
+						},
+					},
+					{
+						Name: "Convenience",
+						Rules: []*Rule{
+							{
+								Name:     "Allow known",
+								Method:   "allow",
+								Priority: "low",
+							},
+						},
+					},
+				},
+			},
+			Workflows: []testingWorkflowMetadata{
+				{
+					File: "basic.yaml",
+				},
+			},
+			ExpectPass:    false,
+			ExpectMessage: []string{"denied by deny rule \"Deny untrusted\""},
 		},
 		{
 			Name: "Deny same priority as allow",
