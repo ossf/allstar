@@ -37,6 +37,9 @@ var listBranches func(context.Context, string, string,
 var getBranchProtection func(context.Context, string, string, string) (
 	*github.Protection, *github.Response, error)
 
+var getRulesForBranch func(context.Context, string, string, string, *github.ListOptions) (
+	*github.BranchRules, *github.Response, error)
+
 var updateBranchProtection func(context.Context, string, string, string,
 	*github.ProtectionRequest) (*github.Protection, *github.Response, error)
 
@@ -64,6 +67,12 @@ func (m mockRepos) GetBranchProtection(ctx context.Context, o string, r string,
 	b string,
 ) (*github.Protection, *github.Response, error) {
 	return getBranchProtection(ctx, o, r, b)
+}
+
+func (m mockRepos) GetRulesForBranch(ctx context.Context, o string, r string,
+	b string, opts *github.ListOptions,
+) (*github.BranchRules, *github.Response, error) {
+	return getRulesForBranch(ctx, o, r, b, opts)
 }
 
 func (m mockRepos) UpdateBranchProtection(ctx context.Context, owner, repo,
@@ -316,6 +325,7 @@ func TestCheck(t *testing.T) {
 		Org           OrgConfig
 		Repo          RepoConfig
 		Prot          map[string]github.Protection
+		Rules         map[string]github.BranchRules
 		SigProtection map[string]github.SignaturesProtectedBranch
 		cofigEnabled  bool
 		Exp           policydef.Result
@@ -985,6 +995,243 @@ func TestCheck(t *testing.T) {
 			},
 		},
 		{
+			Name: "RulesetSatisfiesNoClassicProtection",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:          true,
+				RequireApproval:         true,
+				ApprovalCount:           2,
+				DismissStale:            true,
+				BlockForce:              true,
+				RequireCodeOwnerReviews: true,
+				RequireUpToDateBranch:   true,
+				RequireStatusChecks: []StatusCheck{
+					{"mycheck", nil},
+				},
+				RequireSignedCommits: true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{},
+			Rules: map[string]github.BranchRules{
+				"main": {
+					PullRequest: []*github.PullRequestBranchRule{
+						{
+							Parameters: github.PullRequestRuleParameters{
+								DismissStaleReviewsOnPush:    true,
+								RequireCodeOwnerReview:       true,
+								RequiredApprovingReviewCount: 2,
+							},
+						},
+					},
+					RequiredStatusChecks: []*github.RequiredStatusChecksBranchRule{
+						{
+							Parameters: github.RequiredStatusChecksRuleParameters{
+								StrictRequiredStatusChecksPolicy: true,
+								RequiredStatusChecks: []*github.RuleStatusCheck{
+									{Context: "mycheck"},
+								},
+							},
+						},
+					},
+					NonFastForward:     []*github.BranchRuleMetadata{{}},
+					RequiredSignatures: []*github.BranchRuleMetadata{{}},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": {
+					Enabled: github.Ptr(false),
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: map[string]details{
+					"main": {
+						PRReviews:               true,
+						NumReviews:              2,
+						DismissStale:            true,
+						BlockForce:              true,
+						RequireUpToDateBranch:   true,
+						RequireStatusChecks:     []StatusCheck{{"mycheck", nil}},
+						RequireSignedCommits:    true,
+						RequireCodeOwnerReviews: true,
+					},
+				},
+			},
+		},
+		{
+			Name: "RulesetCompletesIncompleteClassicProtection",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   2,
+				DismissStale:    true,
+				BlockForce:      true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": {
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						DismissStaleReviews:          true,
+						RequiredApprovingReviewCount: 1,
+					},
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: true,
+					},
+				},
+			},
+			Rules: map[string]github.BranchRules{
+				"main": {
+					PullRequest: []*github.PullRequestBranchRule{
+						{
+							Parameters: github.PullRequestRuleParameters{
+								DismissStaleReviewsOnPush:    true,
+								RequiredApprovingReviewCount: 2,
+							},
+						},
+					},
+					NonFastForward: []*github.BranchRuleMetadata{{}},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": {
+					Enabled: github.Ptr(false),
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: map[string]details{
+					"main": {
+						PRReviews:    true,
+						NumReviews:   2,
+						DismissStale: true,
+						BlockForce:   true,
+					},
+				},
+			},
+		},
+		{
+			Name: "RulesetDoesNotSatisfyMissingStatusCheck",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:        true,
+				RequireApproval:       true,
+				ApprovalCount:         1,
+				DismissStale:          true,
+				BlockForce:            true,
+				RequireUpToDateBranch: true,
+				RequireStatusChecks: []StatusCheck{
+					{"mycheck", nil}, {"theothercheck", nil},
+				},
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{},
+			Rules: map[string]github.BranchRules{
+				"main": {
+					PullRequest: []*github.PullRequestBranchRule{
+						{
+							Parameters: github.PullRequestRuleParameters{
+								DismissStaleReviewsOnPush:    true,
+								RequiredApprovingReviewCount: 1,
+							},
+						},
+					},
+					RequiredStatusChecks: []*github.RequiredStatusChecksBranchRule{
+						{
+							Parameters: github.RequiredStatusChecksRuleParameters{
+								StrictRequiredStatusChecksPolicy: true,
+								RequiredStatusChecks: []*github.RuleStatusCheck{
+									{Context: "mycheck"},
+								},
+							},
+						},
+					},
+					NonFastForward: []*github.BranchRuleMetadata{{}},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": {
+					Enabled: github.Ptr(false),
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Status check theothercheck (any app) not found for branch main\n",
+				Details: map[string]details{
+					"main": {
+						PRReviews:             true,
+						NumReviews:            1,
+						DismissStale:          true,
+						BlockForce:            true,
+						RequireUpToDateBranch: true,
+						RequireStatusChecks:   []StatusCheck{{"mycheck", nil}},
+					},
+				},
+			},
+		},
+		{
+			Name: "RulesetDoesNotSatisfyEnforceOnAdmins",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   1,
+				DismissStale:    true,
+				BlockForce:      true,
+				EnforceOnAdmins: true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{},
+			Rules: map[string]github.BranchRules{
+				"main": {
+					PullRequest: []*github.PullRequestBranchRule{
+						{
+							Parameters: github.PullRequestRuleParameters{
+								DismissStaleReviewsOnPush:    true,
+								RequiredApprovingReviewCount: 1,
+							},
+						},
+					},
+					NonFastForward: []*github.BranchRuleMetadata{{}},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": {
+					Enabled: github.Ptr(false),
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Enforce status checks on admins not configured for branch main\n",
+				Details: map[string]details{
+					"main": {
+						PRReviews:    true,
+						NumReviews:   1,
+						DismissStale: true,
+						BlockForce:   true,
+					},
+				},
+			},
+		},
+		{
 			Name: "SignedCommitsRequiredNotEnabled",
 			Org: OrgConfig{
 				OptConfig: config.OrgOptConfig{
@@ -1313,6 +1560,19 @@ func TestCheck(t *testing.T) {
 						},
 					}, errors.New("404")
 				}
+			}
+			getRulesForBranch = func(ctx context.Context, o string, r string,
+				b string, opts *github.ListOptions,
+			) (*github.BranchRules, *github.Response, error) {
+				rules, ok := test.Rules[b]
+				if ok {
+					return &rules, nil, nil
+				}
+				return nil, &github.Response{
+					Response: &http.Response{
+						StatusCode: http.StatusNotFound,
+					},
+				}, errors.New("404")
 			}
 			getSignaturesProtectedBranch = func(ctx context.Context, o string, r string, b string) (
 				*github.SignaturesProtectedBranch, *github.Response, error,

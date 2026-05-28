@@ -321,12 +321,19 @@ here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/branch#OrgConfig).
 
 The branch protection policy checks that GitHub's [branch protection
 settings](https://docs.github.com/en/github/administering-a-repository/defining-the-mergeability-of-pull-requests/about-protected-branches)
-are setup correctly according to the specified configuration. The issue text
-will describe which setting is incorrect. See [GitHub's
+or active repository rulesets are setup correctly according to the specified
+configuration. The issue text will describe which setting is incorrect. See
+[GitHub's
 documentation](https://docs.github.com/en/github/administering-a-repository/defining-the-mergeability-of-pull-requests/about-protected-branches)
 for correcting settings.
 
-The `fix` action will change the branch protection settings to be in compliance with the specified policy configuration.
+Rulesets are checked for requirements that directly map to branch protection
+configuration, such as pull request reviews, required status checks, signed
+commits, and non-fast-forward protection. Rulesets are not used to satisfy
+`enforceOnAdmins`, because rulesets model bypass differently than classic
+branch protection. The `fix` action changes classic branch protection settings
+to be in compliance with the specified policy configuration; it does not create
+or update rulesets.
 
 ### Binary Artifacts
 
