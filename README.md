@@ -372,6 +372,22 @@ the [GitHub
 tab](https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository)
 that helps you commit a security policy to your repository.
 
+### Secret Scanning
+
+This policy's config file is named `secret_scanning.yaml`, and the [config
+definitions are
+here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/secretscanning#OrgConfig).
+
+This policy checks whether GitHub
+[secret scanning](https://docs.github.com/en/code-security/secret-scanning/about-secret-scanning)
+is enabled for a repository. Secret scanning helps detect accidentally committed
+tokens and credentials. If GitHub does not return the repository's secret
+scanning setting, Allstar records the status as unavailable rather than treating
+it as a disabled setting.
+
+The `fix` action will enable secret scanning for repositories where GitHub
+reports the setting as disabled.
+
 ### Dangerous Workflow
 
 This policy's config file is named `dangerous_workflow.yaml`, and the [config
