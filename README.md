@@ -272,6 +272,10 @@ detects a repository to be out of compliance.
   (not currently user configurable). If the policy result changes, a new comment
   will be left on the issue and linked in the issue body. Once the violation is
   addressed, the issue will be automatically closed by Allstar within 5-10 minutes.
+- `vulnerability_report`: This action creates a GitHub private vulnerability
+  report for the repository. It is intended for policy failures that may be
+  exploitable and should not be opened as public issues. Allstar checks for an
+  existing report with the same policy summary before creating a new one.
 - `fix`: This action is policy specific. The policy will make the changes to the
   GitHub settings to correct the policy violation. Not all policies will be able
   to support this (see below).

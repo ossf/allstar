@@ -23,6 +23,11 @@ to create a new app.
 > repository permission set to **Read & write**. This is required for uploading
 > SARIF results to the Code Scanning API.
 
+> **Note:** If you plan to use the `vulnerability_report` action, your GitHub
+> App also needs the **Repository security advisories** repository permission set
+> to **Read & write**, and target repositories must support private vulnerability
+> reporting.
+
 > **Note:** As Allstar is developed, it may evolve the permissions needed or start
 > listening for webhooks, please follow along development in this repo.
 
