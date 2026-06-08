@@ -105,6 +105,11 @@ func TestRunPolicies(t *testing.T) {
 		ensureCalled = true
 		return nil
 	}
+	reportCalled := false
+	vulnerabilityReportEnsure = func(ctx context.Context, c *github.Client, owner, repo, policy, text string) error {
+		reportCalled = true
+		return nil
+	}
 	closeCalled := false
 	issueClose = func(ctx context.Context, c *github.Client, owner, repo, policy string) error {
 		closeCalled = true
@@ -117,6 +122,7 @@ func TestRunPolicies(t *testing.T) {
 		Action            string
 		ShouldFix         bool
 		ShouldEnsure      bool
+		ShouldReport      bool
 		ShouldClose       bool
 		ExpEnforceResults EnforceRepoResults
 	}{
@@ -141,6 +147,21 @@ func TestRunPolicies(t *testing.T) {
 			Action:       "issue",
 			ShouldFix:    false,
 			ShouldEnsure: true,
+			ShouldReport: false,
+			ShouldClose:  false,
+			ExpEnforceResults: EnforceRepoResults{
+				"Test policy": false,
+			},
+		},
+		{
+			Name: "OpenVulnerabilityReport",
+			Res: policyRepoResults{
+				"fake-repo": policydef.Result{Enabled: true, Pass: false},
+			},
+			Action:       "vulnerability_report",
+			ShouldFix:    false,
+			ShouldEnsure: false,
+			ShouldReport: true,
 			ShouldClose:  false,
 			ExpEnforceResults: EnforceRepoResults{
 				"Test policy": false,
@@ -201,6 +222,7 @@ func TestRunPolicies(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			fixCalled = false
 			ensureCalled = false
+			reportCalled = false
 			closeCalled = false
 			policy1Results = test.Res
 			action = test.Action
@@ -221,6 +243,13 @@ func TestRunPolicies(t *testing.T) {
 					t.Error("Expected Ensure to be called")
 				} else {
 					t.Error("Ensure called unexpectedly.")
+				}
+			}
+			if test.ShouldReport != reportCalled {
+				if test.ShouldReport {
+					t.Error("Expected vulnerability report Ensure to be called")
+				} else {
+					t.Error("Vulnerability report Ensure called unexpectedly.")
 				}
 			}
 			if test.ShouldClose != closeCalled {

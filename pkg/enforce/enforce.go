@@ -34,6 +34,7 @@ import (
 	"github.com/ossf/allstar/pkg/policies"
 	"github.com/ossf/allstar/pkg/policydef"
 	"github.com/ossf/allstar/pkg/scorecard"
+	"github.com/ossf/allstar/pkg/vulnerabilityreport"
 )
 
 type (
@@ -42,22 +43,24 @@ type (
 )
 
 var (
-	doNothingOnOptOut       = operator.DoNothingOnOptOut
-	policiesGetPolicies     func() []policydef.Policy
-	issueEnsure             func(context.Context, *github.Client, string, string, string, string) error
-	issueClose              func(context.Context, *github.Client, string, string, string) error
-	configIsBotEnabled      func(context.Context, *github.Client, string, string) bool
-	getAppInstallations     func(context.Context, *github.Client) ([]*github.Installation, error)
-	getAppInstallationRepos func(context.Context, *github.Client) ([]*github.Repository, *github.Response, error)
-	runPolicies             func(context.Context, *github.Client, string, string, bool, string) (EnforceRepoResults, error)
-	deleteInstallation      func(context.Context, *github.Client, int64) (*github.Response, error)
-	listInstallations       func(context.Context, *github.Client) ([]*github.Installation, error)
+	doNothingOnOptOut         = operator.DoNothingOnOptOut
+	policiesGetPolicies       func() []policydef.Policy
+	issueEnsure               func(context.Context, *github.Client, string, string, string, string) error
+	issueClose                func(context.Context, *github.Client, string, string, string) error
+	vulnerabilityReportEnsure func(context.Context, *github.Client, string, string, string, string) error
+	configIsBotEnabled        func(context.Context, *github.Client, string, string) bool
+	getAppInstallations       func(context.Context, *github.Client) ([]*github.Installation, error)
+	getAppInstallationRepos   func(context.Context, *github.Client) ([]*github.Repository, *github.Response, error)
+	runPolicies               func(context.Context, *github.Client, string, string, bool, string) (EnforceRepoResults, error)
+	deleteInstallation        func(context.Context, *github.Client, int64) (*github.Response, error)
+	listInstallations         func(context.Context, *github.Client) ([]*github.Installation, error)
 )
 
 func init() {
 	policiesGetPolicies = policies.GetPolicies
 	issueEnsure = issue.Ensure
 	issueClose = issue.Close
+	vulnerabilityReportEnsure = vulnerabilityreport.Ensure
 	configIsBotEnabled = config.IsBotEnabled
 	getAppInstallations = getAppInstallationsReal
 	getAppInstallationRepos = getAppInstallationReposReal
@@ -382,6 +385,11 @@ func runPoliciesReal(ctx context.Context, c *github.Client, owner, repo string, 
 			case "log":
 			case "issue":
 				err := issueEnsure(ctx, c, owner, repo, p.Name(), r.NotifyText)
+				if err != nil {
+					return nil, err
+				}
+			case "vulnerability_report":
+				err := vulnerabilityReportEnsure(ctx, c, owner, repo, p.Name(), r.NotifyText)
 				if err != nil {
 					return nil, err
 				}

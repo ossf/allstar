@@ -5,6 +5,9 @@ Major features and changes added to Allstar.
 ## Added since last release
 
 - Dangerous Workflow policy will now be run for all branches. [Link](https://github.com/ossf/allstar/issues/569)
+- Policies can now use the `vulnerability_report` action to create GitHub
+  private vulnerability reports for repository security policy failures.
+  [Link](https://github.com/ossf/allstar/issues/498)
 
 ## Release v3.0
 
