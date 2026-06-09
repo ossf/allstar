@@ -5,6 +5,8 @@ Major features and changes added to Allstar.
 ## Added since last release
 
 - Dangerous Workflow policy will now be run for all branches. [Link](https://github.com/ossf/allstar/issues/569)
+- Branch Protection policy can now recognize equivalent active repository
+  rulesets when checking branch requirements. [Link](https://github.com/ossf/allstar/issues/475)
 
 ## Release v3.0
 
