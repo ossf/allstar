@@ -89,6 +89,15 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificP
 		Int("count", len(insts)).
 		Msg("Enforcing policies on installations.")
 
+	if len(insts) == 0 {
+		log.Warn().
+			Str("area", "bot").
+			Msg("App authentication succeeded but no installations were found. " +
+				"Allstar will not enforce any policies. The app is likely not " +
+				"installed on any organization. Install it on the relevant org(s) " +
+				"via the app's Settings page -> Install App tab.")
+	}
+
 	g, ctx := errgroup.WithContext(ctx)
 	g.SetLimit(operator.NumWorkers)
 	var mu sync.Mutex
