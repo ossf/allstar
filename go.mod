@@ -16,7 +16,7 @@ require (
 	github.com/rs/zerolog v1.35.1
 	github.com/shurcooL/githubv4 v0.0.0-20210725200734-83ba7b4c9228
 	gocloud.dev v0.46.0
-	golang.org/x/sync v0.20.0
+	golang.org/x/sync v0.21.0
 	sigs.k8s.io/yaml v1.6.0
 )
 
