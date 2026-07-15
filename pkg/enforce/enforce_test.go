@@ -15,6 +15,7 @@
 package enforce
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
@@ -25,6 +26,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v84/github"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 
 	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/policydef"
@@ -560,6 +563,52 @@ func TestEnforceAll(t *testing.T) {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestEnforceAllNoInstallations(t *testing.T) {
+	// Regression test for https://github.com/ossf/allstar/issues/294: when the
+	// app is authenticated but installed in zero orgs, EnforceAll used to exit
+	// silently. It should now emit a warning pointing the operator at the
+	// missing installation step.
+	getAppInstallations = func(ctx context.Context, ac *github.Client) ([]*github.Installation, error) {
+		return []*github.Installation{}, nil
+	}
+	gaicalled := false
+	getAppInstallationRepos = func(ctx context.Context, ic *github.Client) ([]*github.Repository, *github.Response, error) {
+		gaicalled = true
+		return nil, nil, nil
+	}
+
+	// Capture the zerolog global logger output and make sure the warn level is
+	// not filtered out, restoring both when the test finishes.
+	var buf bytes.Buffer
+	savedLogger := log.Logger
+	savedLevel := zerolog.GlobalLevel()
+	log.Logger = zerolog.New(&buf)
+	zerolog.SetGlobalLevel(zerolog.WarnLevel)
+	defer func() {
+		log.Logger = savedLogger
+		zerolog.SetGlobalLevel(savedLevel)
+	}()
+
+	enforceAllResults, err := EnforceAll(context.Background(), &MockGhClients{}, "", "")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if gaicalled {
+		t.Errorf("Expected getAppInstallationRepos() to not be called with no installations, but was")
+	}
+	if len(enforceAllResults) != 0 {
+		t.Errorf("Expected empty results with no installations, got: %+v", enforceAllResults)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "\"level\":\"warn\"") {
+		t.Errorf("Expected a warn-level log entry, got: %s", out)
+	}
+	if !strings.Contains(out, "no installations were found") {
+		t.Errorf("Expected log to mention that no installations were found, got: %s", out)
 	}
 }
 
