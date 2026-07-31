@@ -51,6 +51,9 @@ func TestSortableRules(t *testing.T) {
 		}
 		sort.Sort(rules)
 
+		if len(rules) != 2 {
+			t.Fatalf("expected 2 rules after sort, got %d", len(rules))
+		}
 		if rules[0].priorityInt != 1 || rules[1].priorityInt != 3 {
 			t.Errorf("expected order [high(1), low(3)], got [%s(%d), %s(%d)]",
 				rules[0].Priority, rules[0].priorityInt,
