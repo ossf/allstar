@@ -121,7 +121,7 @@ func (g *GHClients) Get(i int64) (*github.Client, error) {
 		tr = ghiTransport
 	}
 
-	c := github.NewClient(&http.Client{Transport: tr})
+	c := github.NewClient(&http.Client{Transport: newRetryRoundTripper(tr)})
 	if operator.GitHubEnterpriseUrl != "" {
 		newC, err := c.WithEnterpriseURLs(operator.GitHubEnterpriseUrl, operator.GitHubEnterpriseUrl)
 		if err != nil {
