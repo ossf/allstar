@@ -15,6 +15,7 @@
 package enforce
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"errors"
@@ -25,6 +26,8 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v84/github"
+	"github.com/rs/zerolog"
+	zlog "github.com/rs/zerolog/log"
 
 	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/policydef"
@@ -363,6 +366,36 @@ func TestDoNothingOnOptOut(t *testing.T) {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestEnforceAllNoInstallations(t *testing.T) {
+	var buf bytes.Buffer
+
+	previousLogger := zlog.Logger
+	zlog.Logger = zerolog.New(&buf)
+	defer func() {
+		zlog.Logger = previousLogger
+	}()
+
+	previousGetAppInstallations := getAppInstallations
+	getAppInstallations = func(ctx context.Context, ac *github.Client) ([]*github.Installation, error) {
+		return []*github.Installation{}, nil
+	}
+	defer func() {
+		getAppInstallations = previousGetAppInstallations
+	}()
+
+	results, err := EnforceAll(context.Background(), &MockGhClients{}, "", "")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if len(results) != 0 {
+		t.Fatalf("Expected no results, got %v", results)
+	}
+
+	if !strings.Contains(buf.String(), "no installations were found") {
+		t.Errorf("Expected a diagnostic when no GitHub App installations were found, got: %s", buf.String())
 	}
 }
 

@@ -26,6 +26,16 @@ to create a new app.
 > **Note:** As Allstar is developed, it may evolve the permissions needed or start
 > listening for webhooks, please follow along development in this repo.
 
+## Install the GitHub App
+
+After creating the GitHub App, install it into each organization where you
+want Allstar to enforce policies. From the GitHub App settings page, select
+**Install App**, choose the organization, and complete the installation.
+
+Creating the app and configuring its credentials is not sufficient on its own.
+Allstar can authenticate successfully without any installations, but it will
+not have repositories on which to enforce policies until the app is installed.
+
 ## Get ID and key.
 
 See [the
