@@ -16,11 +16,101 @@
 package operator
 
 import (
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
 )
+
+// TestDefaults pins the built-in defaults. Allstar previously shipped with the
+// OpenSSF-operated instance's App ID and Secret Manager path baked in; those
+// are gone, so an operator who configures nothing must get an unusable config
+// that Validate rejects, not someone else's app.
+func TestDefaults(t *testing.T) {
+	if setAppID != 0 {
+		t.Errorf("setAppID default = %d, want 0 (no app configured)", setAppID)
+	}
+	if setKeySecret != "direct" {
+		t.Errorf("setKeySecret default = %q, want %q", setKeySecret, "direct")
+	}
+}
+
+func TestValidate(t *testing.T) {
+	tests := []struct {
+		Name       string
+		AppID      int64
+		KeySecret  string
+		PrivateKey string
+		WantErr    bool
+		// WantErrContains is the env var name the message must name, so the
+		// operator knows what to set.
+		WantErrContains string
+	}{
+		{
+			Name:            "NothingConfigured",
+			AppID:           0,
+			KeySecret:       "direct",
+			WantErr:         true,
+			WantErrContains: "APP_ID",
+		},
+		{
+			Name:            "MissingAppID",
+			AppID:           0,
+			KeySecret:       "awssecretsmanager://allstar-private-key",
+			WantErr:         true,
+			WantErrContains: "APP_ID",
+		},
+		{
+			Name:            "DirectWithoutPrivateKey",
+			AppID:           123,
+			KeySecret:       "direct",
+			WantErr:         true,
+			WantErrContains: "PRIVATE_KEY",
+		},
+		{
+			Name:       "DirectWithPrivateKey",
+			AppID:      123,
+			KeySecret:  "direct",
+			PrivateKey: "fake-private-key",
+			WantErr:    false,
+		},
+		{
+			Name:      "RuntimevarSecret",
+			AppID:     123,
+			KeySecret: "awssecretsmanager://allstar-private-key",
+			WantErr:   false,
+		},
+		{
+			Name:      "GCPRuntimevarSecretStillSupported",
+			AppID:     123,
+			KeySecret: "gcpsecretmanager://projects/my-project/secrets/allstar-private-key?decoder=bytes",
+			WantErr:   false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.Name, func(t *testing.T) {
+			AppID = test.AppID
+			KeySecret = test.KeySecret
+			PrivateKey = test.PrivateKey
+
+			err := Validate()
+			if test.WantErr {
+				if err == nil {
+					t.Fatal("Validate() = nil, want error")
+				}
+				if !strings.Contains(err.Error(), test.WantErrContains) {
+					t.Errorf("Validate() error = %q, want it to name %q",
+						err.Error(), test.WantErrContains)
+				}
+				return
+			}
+			if err != nil {
+				t.Errorf("Validate() = %v, want nil", err)
+			}
+		})
+	}
+}
 
 func TestSetVars(t *testing.T) {
 	tests := []struct {
