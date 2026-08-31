@@ -56,6 +56,21 @@ configuration needed. Only outgoing calls to GitHub are made. Allstar is
 currently stateless. It is best to only run one instance to avoid potential race
 conditions on enforcement actions, ex: pinging an issue twice at the same time.
 
+### Reference deployment
+
+The now-retired OpenSSF-operated instance ran as a single container provisioned
+with 2 CPUs, 12 GB of memory, and 100 GB of disk. Treat that as a starting
+point rather than a requirement, and scale based on how many repositories your
+installations cover.
+
+It set two non-default options:
+
+* `ALLSTAR_NUM_WORKERS=1`, limiting Allstar to one organization or installation
+  at a time (the default is 5).
+* `DO_NOTHING_ON_OPT_OUT=true`, so that opted-out repositories are skipped
+  before any policy check runs, rather than being checked and having their
+  existing Allstar issues closed.
+
 ### Quick start for local testing
 
 To validate your setup before deploying, build and run Allstar locally:
