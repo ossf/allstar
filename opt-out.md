@@ -1,6 +1,11 @@
 # How to disable Allstar
 
-If you are receiving unwanted issues created by Allstar, follow the instructions on this page to disable the app on your project.
+If you are receiving unwanted issues created by Allstar, follow the instructions on this page to disable it on your project.
+
+Allstar is run by your own organization, on infrastructure it controls — there
+is no external service to opt out of. Everything below is a change to
+configuration files in your organization's repositories, which is the only
+thing that determines where Allstar acts.
 
 Allstar is highly configurable, so to disable it you need to know:
 
@@ -16,12 +21,13 @@ follow the instructions for the appropriate configuration:
 [Disable Allstar, org-level opt-in strategy](#disable-allstar-org-level-opt-in-strategy)
 [Disable Allstar, repository level](#disable-allstar-repository-level)
 
-If you did not install Allstar yourself and do not know which instructions to
-follow, you should contact your administrator to find out how Allstar is
-configured on your organization.
+If you did not set up Allstar yourself and do not know which instructions to
+follow, contact the administrator who runs it for your organization. Because
+Allstar runs on your organization's own infrastructure, someone there operates
+it and can tell you how it is configured — or turn it off for you.
 
-If you are unable to contact the administrator, you can still disable of
-Allstar, but it will take a little more work. Follow [these instructions
+If you are unable to reach them, you can still disable Allstar yourself, but it
+will take a little more work. Follow [these instructions
 ](#determine-how-allstar-is-configured)to figure out how Allstar is configured on your project.
 
 ## Determine how Allstar is configured
@@ -138,7 +144,7 @@ optConfig:
 
 Submit a pull request to the `.allstar` repo that removes your repo name from that list.
 
-When the pull request is merged, Allstar should be disabled on your repository. If you still continue to receive issues, though, it means your project was also opted-in at the repository level. You must also follow the [repository-level instructions](disable-allstar-repository-level).
+When the pull request is merged, Allstar should be disabled on your repository. If you still continue to receive issues, though, it means your project was also opted-in at the repository level. You must also follow the [repository-level instructions](#disable-allstar-repository-level).
 
 ## Disable Allstar, repository level
 
