@@ -5,14 +5,14 @@
 # **Allstar**
 
 > [!IMPORTANT]
-> **The OpenSSF-hosted Allstar app has been retired.** It ran on Google Cloud
-> Platform infrastructure whose funding has ended, and installing
-> `github.com/apps/allstar-app` no longer does anything. Allstar itself is
-> unaffected and continues to be maintained — you now run it yourself, either
+> **The OpenSSF-hosted Allstar GitHub App has been retired.** 
+> Allstar, the OpenSSF Scorecard subproject, itself continues to be
+> maintained — you must now run it yourself, either
 > [as a GitHub Action](#running-allstar-as-a-github-action) or
-> [as a service daemon](#running-allstar-as-a-service-daemon). See
-> [ossf/scorecard#5208](https://github.com/ossf/scorecard/issues/5208) for
-> background on the infrastructure migration.
+> [as a service daemon](#running-allstar-as-a-service-daemon).
+>
+> See [ossf/allstar#881](https://github.com/ossf/allstar/issues/881) for
+> more details.
 >
 > If your organization was relying on the hosted app, see
 > [Migrating off the hosted app](#migrating-off-the-hosted-app).
