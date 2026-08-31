@@ -1,10 +1,14 @@
 # GitHub Action installation
 
-These directions will help you run Allstar via GitHub Actions. If at all
-possible, use the OpenSSF managed Allstar app instead (either using
-[quickstart](README.md#quickstart-installation) or
-[manual](README.md#manual-installation) methods) to avoid the burden of setup,
-securing, maintaining, and troubleshooting this solution.
+These directions will help you run Allstar via GitHub Actions, as a scheduled
+job in your organization's `.allstar` control repository. Of the two ways to
+run Allstar this is the lower-overhead one, since there is no infrastructure to
+operate beyond GitHub itself; the alternative is running it as a [service
+daemon](operator.md).
+
+You are responsible for setting up, securing, maintaining, and troubleshooting
+this deployment. The [Security hardening](#security-hardening) section below
+describes the properties the example workflow relies on.
 
 * [Create a GitHub App for Allstar](#create-a-github-app-for-allstar)
 * [Setup the Allstar GitHub Action](#setup-the-allstar-github-action)
@@ -34,10 +38,10 @@ organization.
 You must create a `.allstar` control repo to hold your Allstar configuration
 as well as the GitHub Actions job to run Allstar.
 
-The steps in [quickstart installation](README.md#quickstart-installation) or
-[manual installation](README.md#manual-installation) can be used to create the
-`.allstar` control repository. **Ignore the steps to install
-the OpenSSF managed Allstar app into your organization!**
+Follow [Create your `.allstar` control
+repository](README.md#create-your-allstar-control-repository) to create it from
+the sample, or the [manual installation directions](manual-install.md) to write
+the configuration yourself.
 
 ### Setup a recurring GitHub Action to run Allstar
 
@@ -74,7 +78,8 @@ Actions.
   * Click "Add variable" to complete
 * Under "Environment secrets" click "Add secret"
   * Name: `PRIVATE_KEY`
-  * Value: Paste the contents of the private key PEM downloaded in [Private key](#private-key)
+  * Value: Paste the contents of the private key PEM downloaded in [Get ID and
+    key](operator.md#get-id-and-key)
   * Click "Add secret" to complete
 * From this point, future Allstar GitHub Action runs on `main` should function.
 

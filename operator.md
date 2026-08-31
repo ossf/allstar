@@ -1,9 +1,21 @@
 # Operator Instructions
 
-You don't need to run an instance of Allstar to use it. The OpenSSF runs an
-instance that anyone can [install and use
-here](https://github.com/apps/allstar-app). However, you may wish to create and
-run your own instance of Allstar for security or customization reasons.
+Every Allstar deployment is operated by whoever uses it: you create a GitHub
+App for your organization and run the process that authenticates as it. This
+document covers both, plus the configuration available to you.
+
+> [!NOTE]
+> The OpenSSF previously ran a hosted Allstar app that anyone could install.
+> It has been retired along with the infrastructure it ran on; see
+> [ossf/scorecard#5208](https://github.com/ossf/scorecard/issues/5208).
+> If you are moving off it, see [Migrating off the hosted
+> app](README.md#migrating-off-the-hosted-app) — your existing configuration
+> carries over unchanged.
+
+The instructions below run Allstar as a persistent service. To run it as a
+scheduled GitHub Action instead, create the app as described in [Create a
+GitHub App](#create-a-github-app) and then follow the [GitHub Actions
+installation directions](github-action-installation.md).
 
 ## Create a GitHub App
 
@@ -33,20 +45,39 @@ instructions](https://docs.github.com/en/developers/apps/building-github-apps/au
 to create and download a private key. Also note down the App ID in the General /
 About section of your new app.
 
-Upload the private key contents to a supported service by [Go CDK Runtime
-Configuration](https://gocloud.dev/howto/runtimevar/). Also note, the Runtime
-Configuration library will support a local file as well.
+Set the App ID in the `APP_ID` environment variable. Allstar has no default
+here and will refuse to start without it.
 
-Edit `pkg/config/operator/operator.go` and set the AppID and KeySecret
-link. Alternatively, you can provide the AppID and KeySecret as environment
-variables `APP_ID` and `KEY_SECRET`. You may need to edit
-`pkg/ghclients/ghclients.go` and add a new import line for your secret service,
-ex: `_ "gocloud.dev/runtimevar/gcpsecretmanager"`.
+For the private key, you have two options.
 
-> **Warning, this is not a recommended practice for security.** If you are
-  not using a supported runtime you may provide the contents of the private key
-  directly in the environment variable `PRIVATE_KEY`. Allstar will only use this
-  if the contents of `KEY_SECRET` is set exactly to `direct`.
+**A secret store.** Upload the private key contents to any service supported by
+[Go CDK Runtime Configuration](https://gocloud.dev/howto/runtimevar/) — which
+includes a local file — and set `KEY_SECRET` to the corresponding runtimevar
+URL. For example:
+
+```shell
+export KEY_SECRET="gcpsecretmanager://projects/my-project/secrets/allstar-private-key?decoder=bytes"
+```
+
+Allstar registers the GCP Secret Manager driver by default. For any other
+backend, add the matching import to `pkg/ghclients/ghclients.go`, ex:
+`_ "gocloud.dev/runtimevar/awssecretsmanager"`.
+
+**The environment directly.** Set `KEY_SECRET` to exactly `direct` and put the
+key contents in `PRIVATE_KEY`. This is the default, because it is the only
+option that needs no external infrastructure, and it is what the [GitHub
+Action](github-action-installation.md) deployment uses with an encrypted
+environment secret.
+
+> **Warning:** supplying the key through `PRIVATE_KEY` puts it in the process
+  environment, where it is visible to anything that can read the process or a
+  crash dump. Prefer a secret store where you have one, and where you don't,
+  make sure the surrounding platform protects the variable — as GitHub Actions
+  environment secrets do.
+
+Both values may also be changed in `pkg/config/operator/operator.go` if you are
+building your own image, but the environment variables take precedence and are
+the supported path.
 
 ## Run Allstar.
 
@@ -100,9 +131,9 @@ Allstar supports various operator configuration options which can be set via env
 
 | Name                       | Description                                                                                                                                      | Default |
 |----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------|---------|
-| APP_ID                     | The application ID of the created GitHub App.                                                                                                    ||
-| PRIVATE_KEY                | The raw value of the private key for the GitHub App. KEY_SECRET must be set to "direct".                                                         ||
-| KEY_SECRET                 | The name of a secret containing a private key.                                                                                                   ||
+| APP_ID                     | The application ID of the created GitHub App. Required; Allstar exits at startup if it is unset.                                                 ||
+| PRIVATE_KEY                | The raw value of the private key for the GitHub App. Required when KEY_SECRET is "direct".                                                       ||
+| KEY_SECRET                 | A gocloud.dev runtimevar URL for a secret containing the private key, or "direct" to read the key from PRIVATE_KEY.                              | direct  |
 | ALLSTAR_GHE_URL            | The URL of the GitHub Enterprise instance to use. Leave empty to use github.com                                                                  ||
 | DO_NOTHING_ON_OPT_OUT      | Boolean flag which defines if allstar should do nothing and skip the corresponding checks when a repository is opted out.                        | false   |
 | ALLSTAR_LOG_LEVEL          | The minimum logging level that allstar should use when emitting logs. Acceptable values are: panic ; fatal ; error ; warn ; info ; debug ; trace | info    |

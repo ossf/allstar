@@ -4,6 +4,19 @@
 
 # **Allstar**
 
+> [!IMPORTANT]
+> **The OpenSSF-hosted Allstar app has been retired.** It ran on Google Cloud
+> Platform infrastructure whose funding has ended, and installing
+> `github.com/apps/allstar-app` no longer does anything. Allstar itself is
+> unaffected and continues to be maintained — you now run it yourself, either
+> [as a GitHub Action](#running-allstar-as-a-github-action) or
+> [as a service daemon](#running-allstar-as-a-service-daemon). See
+> [ossf/scorecard#5208](https://github.com/ossf/scorecard/issues/5208) for
+> background on the infrastructure migration.
+>
+> If your organization was relying on the hosted app, see
+> [Migrating off the hosted app](#migrating-off-the-hosted-app).
+
 ## Overview
 
 -  [What Is Allstar?](#what-is-allstar)
@@ -21,12 +34,11 @@
 -  [Background](#background)
 -  [Org-Level Options](#org-level-options)
 -  [Installation Options](#installation-options)
-    - [Using the public Allstar app](#using-the-allstar-app)
-        - [Quickstart Installation](#quickstart-installation)
-        - [Manual Installation](#manual-installation)
-    - [Self-hosting Allstar](#self-hosting-allstar)
-        - [Running Allstar as a GitHub Action](#running-allstar-as-a-github-action)
-        - [Running Allstar as a service daemon](#running-allstar-as-a-service-daemon)
+    - [Create your GitHub App](#create-your-github-app)
+    - [Create your `.allstar` control repository](#create-your-allstar-control-repository)
+    - [Running Allstar as a GitHub Action](#running-allstar-as-a-github-action)
+    - [Running Allstar as a service daemon](#running-allstar-as-a-service-daemon)
+-  [Migrating off the hosted app](#migrating-off-the-hosted-app)
 
 ## Policies and Actions
 - [Actions](#actions)
@@ -169,92 +181,93 @@ configured at the org level. </td>
 
 ### Installation Options
 
-Both the [Quickstart](#quickstart-installation) and [Manual Installation](#manual-installation) options involve installing the [Allstar app](https://github.com/apps/allstar-app) into your GitHub Organization. The Allstar app is operated by [OpenSSF](https://openssf.org/) and is a good choice for most open source repositories. You may review the permissions requested. The app asks for read access to most settings and file contents to detect security compliance. It requests write access to issues and checks so that it can create issues and allow the `block` action.
+Allstar acts on your organization as a GitHub App: you create the app, and you
+run the process that authenticates as it. Setup is therefore two steps that are
+common to every deployment — [create the app](#create-your-github-app) and
+[create the control repository](#create-your-allstar-control-repository) — and
+then a choice of how to run it:
 
-If you do not want to use the OpenSSF operated Allstar app you may [self-host Allstar](#self-hosting-allstar), creating your own Allstar app. This provides direct control of the app with a trade off of needing to configure, secure, monitor, and maintain the app.
+| | [GitHub Action](#running-allstar-as-a-github-action) | [Service daemon](#running-allstar-as-a-service-daemon) |
+|---|---|---|
+| **How it runs** | Scheduled job in your `.allstar` repo | Persistent process you host |
+| **You provide** | Nothing beyond GitHub | A server or container orchestrator |
+| **Cadence** | Whatever you set the `cron` to | Continuous, with results in 5-10 minutes |
+| **Setup effort** | Moderate | High |
+| **Best when** | You want the lowest-infrastructure option | You want the most control, or already run services |
 
-#### Using the Allstar app
+The Action is the lower-overhead of the two and is where most organizations
+should start; you can move to a daemon later without changing any policy
+configuration.
 
-Quickstart or Manual installation are recommended unless you have specific security or compliance constraints that prevent you from using the OpenSSF managed Allstar app.
+#### Create your GitHub App
 
-##### Quickstart Installation
-This installation option will enable Allstar using the
-Opt Out strategy on all repositories in your  organization. All current policies
-will be enabled, and Allstar will alert you of
-policy violations by filing an issue. This is the quickest and easiest way to start using Allstar, and you can still change any configurations later.
+An App is a user-like identity with a set of permissions in your organization.
+Allstar needs read access to most settings and file contents in order to detect
+compliance, and write access to issues and checks in order to file issues and
+support the `block` action.
 
-Effort: very easy
+Follow [Operator instructions - Create a GitHub
+App](operator.md#create-a-github-app), and record the App ID and private key.
+Both run modes need them.
 
-Steps:
+#### Create your `.allstar` control repository
 
-1.  Install the Allstar app
-    1.  [Open the installation
-        page](https://github.com/apps/allstar-app) and click Configure
-    1.  If you have multiple organizations, select the one you want to
-        install Allstar on
-    1.  Select "All Repositories" under Repository Access, even if you
-        plan to disable Allstar on some repositories later
-1.  Fork the sample repository
-    1.  [Open the sample repository](https://github.com/ossf/dot-allstar-quickstart)
-        and click the "Use this template" button
-    1.  In the field for Repository Name, type `.allstar`
-    1.  Click "Create repository from template"
+Allstar reads its configuration from a repository named `.allstar` in your
+organization.
 
-That's it! All current Allstar [policies](#policies) are now enabled on all
-your repositories. Allstar will create an issue if a policy is violated.
+The fastest way to create one is from the sample:
 
-To change any configurations, see the [manual installation directions](manual-install.md).
+1.  [Open the sample repository](https://github.com/ossf/dot-allstar-quickstart)
+    and click the "Use this template" button
+1.  In the field for Repository Name, type `.allstar`
+1.  Click "Create repository from template"
 
-##### Manual Installation
-This installation option will walk you through creating
-configuration files according to either the Opt In or Opt Out strategy. This
-option provides more granular control over configurations right from the start.
+This enables all current Allstar [policies](#policies) on all repositories
+using the Opt Out strategy, with the `issue` action. You can change any of it
+later.
 
-Effort: moderate
+For granular control from the start — choosing the Opt In or Opt Out strategy
+and writing individual policy files yourself — follow the [manual installation
+directions](manual-install.md) instead.
 
-Steps:
-1) Install the [Allstar app](https://github.com/apps/allstar-app) (choose "All
-Repositories" under Repository Access,  even if you don't plan to use Allstar on
-all your repositories)
-2) Follow the [manual installation directions](manual-install.md) to create org-level or
-repository-level Allstar config files and individual policy files.
+#### Running Allstar as a GitHub Action
 
-#### Self-hosting Allstar
+This option runs Allstar as a scheduled job using GitHub Actions, so there is
+no infrastructure to operate beyond GitHub itself.
 
-Only self-host if you must! The Allstar app requires configuration, securing,
-and ongoing maintenance. When a new Allstar version is released you will need
-to upgrade your self-hosted solution.
+Follow the [GitHub Actions installation
+directions](github-action-installation.md) to set up a recurring Action in your
+`.allstar` repository, harden it, and monitor its results.
 
-Two self-hosting approaches are described:
-- [Running Allstar as a GitHub Action](#running-allstar-as-a-github-action) -
-  This option is relatively lightweight and leverages GitHub Actions to run
-  Allstar checks.
-- [Running Allstar as a service daemon](#running-allstar-as-a-service-daemon) -
-  This option has the highest level of control and assumes you are able to run
-  a persistent service on a reliable server or container orchestrator.
+#### Running Allstar as a service daemon
 
-##### Running Allstar as a GitHub Action
-This installation option runs Allstar as a scheduled job using GitHub Actions.
+This option runs Allstar as a persistent process, which detects and resolves
+violations continuously rather than on a schedule.
 
-Effort: high
+See [Operator instructions](operator.md) for running the process, managing
+secrets, sizing, and the available environment variables.
 
-Follow the [GitHub Actions installation directions](github-action-installation.md) to:
-1. Create a new GitHub app for Allstar use.
-1. Create an organization level `.allstar` control repo as described in
-   [quickstart installation](#quickstart-installation) or
-   [manual installation](#manual-installation). (**Ignore the steps to install
-   the OpenSSF managed Allstar app into your organization.**)
-1. Setup a recurring GitHub Action in `.allstar` to run Allstar in batch mode.
-1. Monitor job activity and results.
+### Migrating off the hosted app
 
-##### Running Allstar as a service daemon
-This installation option runs Allstar as a persistent process.
+If your organization used the OpenSSF-hosted app, **your configuration carries
+over as-is**. The `.allstar` control repository, `allstar.yaml`, and every
+policy file keep working unchanged; what you are replacing is only the process
+that reads them.
 
-Effort: very high
+To migrate:
 
-See [Operator instructions](#operator-instructions) for more information
-including creating an Allstar app, managing secrets, and available environment
-variables.
+1. [Create your own GitHub App](#create-your-github-app) and install it on your
+   organization with the same repository access the hosted app had.
+1. Keep your existing `.allstar` repository exactly as it is.
+1. Run Allstar [as an Action](#running-allstar-as-a-github-action) or
+   [as a daemon](#running-allstar-as-a-service-daemon).
+1. Uninstall `allstar-app` from your organization, if it still appears under
+   Settings -> GitHub Apps.
+
+Issues previously filed by the hosted app remain in your repositories. Your own
+instance identifies its issues by the same `allstar` label (or your configured
+`issueLabel`), so it will adopt and close them as violations are resolved,
+rather than filing duplicates.
 
 ## Policies and Actions
 
@@ -422,16 +435,16 @@ upload:
 
 **Requirements:**
 - The Allstar GitHub App must have the **Code scanning alerts** repository
-  permission set to **Read & write** (API scope: `security_events`).
-  Self-hosted operators need to add this permission to their GitHub App. The
-  public Allstar App operated by OpenSSF does not yet include this permission.
+  permission set to **Read & write** (API scope: `security_events`). This is
+  not among the permissions Allstar otherwise needs, so add it to your app
+  before enabling SARIF upload.
 - SARIF upload is non-blocking: if the upload fails (e.g., due to missing
   permissions), the policy check continues normally.
 - Change detection compares the repository HEAD commit SHA and skips the scan
   and upload when the repo has not been pushed to since the last upload.
 
-SARIF upload works with both [self-hosted deployment
-modes](operator.md): running as a service daemon or as a [GitHub
+SARIF upload works with both ways of running Allstar: as a [service
+daemon](operator.md) or as a [GitHub
 Action](github-action-installation.md).
 
 ### GitHub Actions
