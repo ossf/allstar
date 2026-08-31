@@ -48,7 +48,9 @@ jobs:
         env:
           # Ping open issues every week (168 hours)
           NOTICE_PING_DURATION_HOURS: 168
-          DO_NOTHING_ON_OPT_OUT: true # consistent with https://github.com/ossf/allstar/blob/main/app-prod.yaml
+          # Skip opted-out repos entirely instead of closing their issues.
+          # See https://github.com/ossf/allstar/blob/main/operator.md#reference-deployment
+          DO_NOTHING_ON_OPT_OUT: true
           ALLSTAR_LOG_LEVEL: info
           KEY_SECRET: direct
           APP_ID: ${{ vars.APP_ID }}
