@@ -16,6 +16,7 @@
 package operator
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
@@ -26,7 +27,9 @@ import (
 
 // AppID should be set to the application ID of the created GitHub App. See:
 // https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps#authenticating-as-a-github-app
-const setAppID = 119816
+// There is no meaningful default: every operator runs their own app, so an
+// unset App ID is a configuration error caught by Validate.
+const setAppID = 0
 
 var AppID int64
 
@@ -37,8 +40,11 @@ var PrivateKey string
 // KeySecret should be set to the name of a secret containing a private key for
 // the App. See:
 // https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps#generating-a-private-key
-// The secret is retrieved with gocloud.dev/runtimevar.
-const setKeySecret = "gcpsecretmanager://projects/allstar-ossf/secrets/allstar-private-key?decoder=bytes"
+// The secret is retrieved with gocloud.dev/runtimevar, unless it is set to the
+// literal "direct", in which case the key is read from the PRIVATE_KEY
+// environment variable. "direct" is the default because it is the only backend
+// that works without the operator first provisioning external infrastructure.
+const setKeySecret = "direct"
 
 var KeySecret string
 
@@ -166,4 +172,32 @@ func setVars() {
 	} else {
 		NumWorkers = setNumWorkers
 	}
+}
+
+// docsURL points at the instructions for creating and configuring a GitHub App
+// to run Allstar as. Error messages reference it because a misconfigured
+// operator is almost always someone part-way through that document.
+const docsURL = "https://github.com/ossf/allstar/blob/main/operator.md"
+
+// Validate reports whether the operator configuration is usable, returning an
+// error naming the environment variable to set if it is not. Allstar has no
+// usable defaults for the GitHub App identity: every operator runs their own
+// app, so failing at startup is preferable to authenticating as nothing and
+// reporting confusing GitHub API errors on every repository.
+func Validate() error {
+	if AppID == 0 {
+		return fmt.Errorf(
+			"no GitHub App configured: set APP_ID to the application ID of "+
+				"the GitHub App Allstar should authenticate as; see %s",
+			docsURL)
+	}
+	if KeySecret == "direct" && PrivateKey == "" {
+		return fmt.Errorf(
+			"no private key available: KEY_SECRET is %q, so the App private "+
+				"key must be supplied in PRIVATE_KEY; alternatively set "+
+				"KEY_SECRET to a gocloud.dev runtimevar URL for your secret "+
+				"store; see %s",
+			KeySecret, docsURL)
+	}
+	return nil
 }

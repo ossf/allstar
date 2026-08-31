@@ -28,6 +28,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ossf/allstar/pkg/config/operator"
 	"github.com/ossf/allstar/pkg/enforce"
 	"github.com/ossf/allstar/pkg/ghclients"
 	"github.com/ossf/allstar/pkg/policies"
@@ -36,6 +37,13 @@ import (
 
 func main() {
 	setupLog()
+
+	if err := operator.Validate(); err != nil {
+		log.Fatal().
+			Err(err).
+			Msg("Invalid operator configuration, shutting down")
+	}
+
 	ctx, cf := context.WithCancel(context.Background())
 
 	ghc, err := ghclients.NewGHClients(ctx, http.DefaultTransport)
@@ -118,7 +126,11 @@ func main() {
 }
 
 func setupLog() {
-	// Match expected values in GCP
+	// Emit the severity field name and values that Google Cloud Logging
+	// expects. These were chosen when Allstar was hosted on GCP; they are kept
+	// because changing them would break log parsing for existing deployments,
+	// and most log aggregators either understand this convention or can be
+	// configured to.
 	zerolog.LevelFieldName = "severity"
 	zerolog.LevelTraceValue = "DEFAULT"
 	zerolog.LevelDebugValue = "DEBUG"
