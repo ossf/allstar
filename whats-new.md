@@ -4,6 +4,22 @@ Major features and changes added to Allstar.
 
 ## Added since last release
 
+- **The OpenSSF-hosted Allstar app has been retired.** It ran on Google Cloud
+  Platform infrastructure whose funding has ended. Allstar continues to be
+  maintained; run it yourself as a GitHub Action or a service daemon. Existing
+  `.allstar` configuration carries over unchanged. [Migration
+  guide](README.md#migrating-off-the-hosted-app) /
+  [Background](https://github.com/ossf/scorecard/issues/5208)
+
+- Allstar no longer defaults to the OpenSSF instance's App ID and private key
+  location, and now exits at startup with an actionable error when `APP_ID` or
+  the private key is missing, rather than attempting to authenticate as an app
+  the operator does not own. [Docs](operator.md#get-id-and-key)
+
+- The GCP App Engine deployment files have been removed. The sizing and
+  settings the hosted instance ran with are recorded in [Operator
+  instructions](operator.md#reference-deployment).
+
 - Dangerous Workflow policy will now be run for all branches. [Link](https://github.com/ossf/allstar/issues/569)
 
 ## Release v3.0
