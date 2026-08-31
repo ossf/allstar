@@ -1,11 +1,21 @@
 # **Manual Installation**
 
-These directions walk you through manually installing Allstar on your organization or repository.
-For a faster setup that installs Allstar on all your repositories, see the [Quickstart Installation](README.md#quickstart-installation).
+These directions walk you through manually creating Allstar's configuration for your organization or repository.
+For a faster setup that enables Allstar on all your repositories, see [Create your `.allstar` control repository](README.md#create-your-allstar-control-repository).
+
+These directions cover configuration only. You also need a GitHub App and a way
+to run Allstar — see [Installation Options](README.md#installation-options).
 
 To choose the installation strategy that's best for your situation, consult the decision tree and then follow the appropriate link below:
 
-![Installation Decision Tree](install-decision.jpg)
+```mermaid
+flowchart TD
+    owner{Are you the org owner?}
+    owner -->|No| repo[Install on Individual Repos<br/>Repo Level]
+    owner -->|Yes| most{Install Allstar on most<br/>or all repos in your org?}
+    most -->|Yes| optout[Opt Out Strategy<br/>Org Level]
+    most -->|No| optin[Opt In Strategy<br/>Org Level]
+```
 
 [Opt Out Strategy Installation Directions](#opt-out-strategy-installation-directions)
 
