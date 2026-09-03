@@ -88,6 +88,11 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificP
 		Str("area", "bot").
 		Int("count", len(insts)).
 		Msg("Enforcing policies on installations.")
+	if len(insts) == 0 {
+		log.Warn().
+			Str("area", "bot").
+			Msg("App authentication succeeded but no installations were found. Install the GitHub App into an organization before running Allstar.")
+	}
 
 	g, ctx := errgroup.WithContext(ctx)
 	g.SetLimit(operator.NumWorkers)
