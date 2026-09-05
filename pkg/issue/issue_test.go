@@ -336,6 +336,48 @@ func TestEnsure(t *testing.T) {
 			t.Error("Expected comment to be left")
 		}
 	})
+	t.Run("OpenIssueWithCustomPingDuration", func(t *testing.T) {
+		oldConfigGetAppConfigs := configGetAppConfigs
+		oldScheduleShouldPerform := scheduleShouldPerform
+		defer func() {
+			configGetAppConfigs = oldConfigGetAppConfigs
+			scheduleShouldPerform = oldScheduleShouldPerform
+		}()
+		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+			return &config.OrgConfig{NoticePingDurationHours: 1}, &config.RepoConfig{}, &config.RepoConfig{}
+		}
+		setShouldPerform(true)
+		stale := github.Timestamp{Time: time.Now().Add(-2 * time.Hour)}
+		listByRepo = func(ctx context.Context, owner string, repo string,
+			opts *github.IssueListByRepoOptions,
+		) ([]*github.Issue, *github.Response, error) {
+			return []*github.Issue{
+				{
+					Title:     &issueTitle,
+					State:     &open,
+					UpdatedAt: &stale,
+				},
+			}, &github.Response{NextPage: 0}, nil
+		}
+		commentCalled := false
+		createComment = func(ctx context.Context, owner string, repo string,
+			number int, comment *github.IssueComment,
+		) (*github.IssueComment, *github.Response, error) {
+			if !strings.HasPrefix(comment.GetBody(), "Updating issue") {
+				t.Errorf("Unexpected comment: %v", comment.GetBody())
+			}
+			commentCalled = true
+			return nil, nil, nil
+		}
+		create = nil
+		edit = nil
+		if err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text"); err != nil {
+			t.Fatalf("Unexpected error: %v", err)
+		}
+		if !commentCalled {
+			t.Error("Expected issue to be pinged after the custom interval")
+		}
+	})
 	t.Run("NoIssueScheduleBlocksCreate", func(t *testing.T) {
 		setShouldPerform(false)
 		listByRepo = func(ctx context.Context, owner string, repo string,

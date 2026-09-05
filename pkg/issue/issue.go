@@ -220,7 +220,11 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		_, _, err := issues.CreateComment(ctx, owner, issueRepo, issue.GetNumber(), comment)
 		return err
 	}
-	if issue.GetUpdatedAt().Before(time.Now().Add(-1 * operator.NoticePingDuration)) {
+	noticePingDuration := operator.NoticePingDuration
+	if oc.NoticePingDurationHours > 0 {
+		noticePingDuration = time.Duration(oc.NoticePingDurationHours) * time.Hour
+	}
+	if issue.GetUpdatedAt().Before(time.Now().Add(-1 * noticePingDuration)) {
 		body := fmt.Sprintf("Updating issue after ping interval. See its status below.\n\n---\n\n%s", text)
 		comment := &github.IssueComment{
 			Body: &body,
