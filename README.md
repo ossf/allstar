@@ -482,8 +482,14 @@ organization.
 
 ### Configuration Definitions
 
+- [Organization-level Allstar configuration](https://pkg.go.dev/github.com/ossf/allstar/pkg/config#OrgConfig)
 - [Organization level enable configuration](https://pkg.go.dev/github.com/ossf/allstar/pkg/config#OrgOptConfig)
 - [Repository Override enable configuration]( https://pkg.go.dev/github.com/ossf/allstar/pkg/config#RepoOptConfig)
+
+Set `noticePingDurationHours` in the organization-level `allstar.yaml` to
+control how long Allstar waits before adding a reminder comment to an unresolved
+issue. For example, `noticePingDurationHours: 168` waits one week. If omitted or
+less than one, the app operator's configured interval is used.
 
 ### Secondary Org-Level configuration location
 

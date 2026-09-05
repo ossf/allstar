@@ -167,6 +167,16 @@ issueDetails: test Issue Detail
 			},
 			Got: &OrgConfig{},
 		},
+		{
+			Name: "NoticePingDurationHours",
+			Input: `
+noticePingDurationHours: 168
+`,
+			Expect: &OrgConfig{
+				NoticePingDurationHours: 168,
+			},
+			Got: &OrgConfig{},
+		},
 	}
 
 	for _, test := range tests {
