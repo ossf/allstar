@@ -494,6 +494,15 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 						// no sense to continue, just return
 						return nil
 					}
+					if rsp != nil && rsp.StatusCode == http.StatusNotFound {
+						log.Warn().
+							Str("org", owner).
+							Str("repo", repo).
+							Str("area", polName).
+							Msg("Fix action selected, but branch protection has been disabled on this repository.")
+						// no sense to continue, just return
+						return nil
+					}
 					return err
 				}
 				continue
@@ -634,6 +643,14 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 						Str("repo", repo).
 						Str("area", polName).
 						Msg("Action set to fix, but did not accept admin:write permissions update.")
+					return nil
+				}
+				if rsp != nil && rsp.StatusCode == http.StatusNotFound {
+					log.Warn().
+						Str("org", owner).
+						Str("repo", repo).
+						Str("area", polName).
+						Msg("Fix action selected, but branch protection has been disabled on this repository.")
 					return nil
 				}
 				return err

@@ -1371,6 +1371,7 @@ func TestFix(t *testing.T) {
 		Prot                 map[string]github.Protection
 		SignatureProt        map[string]github.SignaturesProtectedBranch
 		cofigEnabled         bool
+		FailUpdateWith       int
 		Exp                  map[string]github.ProtectionRequest
 		ExpSignatureRequests map[string]bool
 	}{
@@ -1486,6 +1487,60 @@ func TestFix(t *testing.T) {
 						DismissStaleReviews:          true,
 						RequiredApprovingReviewCount: 2,
 					},
+				},
+			},
+			ExpSignatureRequests: map[string]bool{},
+		},
+		{
+			// Regression test for https://github.com/ossf/allstar/issues/562:
+			// GitHub returns 404 when creating branch protection on a repo
+			// that has protection disabled via rulesets migration. Fix
+			// should warn and return nil, not error out.
+			Name: "AddProtectionFromScratchDisabled",
+			Org: OrgConfig{
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   2,
+				DismissStale:    true,
+				BlockForce:      true,
+				EnforceOnAdmins: true,
+			},
+			Repo:                 RepoConfig{},
+			Prot:                 map[string]github.Protection{},
+			cofigEnabled:         true,
+			FailUpdateWith:       http.StatusNotFound,
+			Exp:                  map[string]github.ProtectionRequest{},
+			SignatureProt:        map[string]github.SignaturesProtectedBranch{},
+			ExpSignatureRequests: map[string]bool{},
+		},
+		{
+			// Same regression, but on the path that updates existing
+			// protection rather than creating it from scratch.
+			Name: "EnforceAdminsDisabled",
+			Org: OrgConfig{
+				EnforceDefault:  true,
+				EnforceOnAdmins: true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{
+				"main": {
+					AllowForcePushes: &github.AllowForcePushes{
+						Enabled: false,
+					},
+					EnforceAdmins: &github.AdminEnforcement{
+						Enabled: false,
+					},
+					RequiredPullRequestReviews: &github.PullRequestReviewsEnforcement{
+						RequiredApprovingReviewCount: 0,
+					},
+				},
+			},
+			cofigEnabled:   true,
+			FailUpdateWith: http.StatusNotFound,
+			Exp:            map[string]github.ProtectionRequest{},
+			SignatureProt: map[string]github.SignaturesProtectedBranch{
+				"main": {
+					Enabled: github.Ptr(false),
 				},
 			},
 			ExpSignatureRequests: map[string]bool{},
@@ -2065,6 +2120,13 @@ func TestFix(t *testing.T) {
 				branch string, preq *github.ProtectionRequest) (*github.Protection,
 				*github.Response, error,
 			) {
+				if test.FailUpdateWith != 0 {
+					return nil, &github.Response{
+						Response: &http.Response{
+							StatusCode: test.FailUpdateWith,
+						},
+					}, errors.New("update failed")
+				}
 				got[branch] = *preq
 				return nil, nil, nil
 			}
