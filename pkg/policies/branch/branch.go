@@ -362,48 +362,63 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 		allBranches = append(allBranches, r.GetDefaultBranch())
 	}
 	for _, b := range allBranches {
-		p, rsp, err := rep.GetBranchProtection(ctx, owner, repo, b)
-		if err != nil {
-			if rsp != nil && rsp.StatusCode == http.StatusNotFound {
-				// No existing protection, create from config.
-				pr := newProtectionRequest(mc)
-				ok, err := applyBranchProtection(ctx, rep, owner, repo, b, pr)
-				if err != nil || !ok {
-					return err
-				}
-				continue
-			}
-			if rsp != nil && rsp.StatusCode == http.StatusForbidden {
-				log.Warn().
-					Str("org", owner).
-					Str("repo", repo).
-					Str("area", polName).
-					Msg("Fix action selected, but repo does not support Branch Protection.")
-				// no sense to continue, just return
-				return nil
-			}
-			return fmt.Errorf("getting protection for branch %s in %s/%s: %w", b, owner, repo, err)
-		}
-		// Got existing protection, modify from existing
-		pr, update := updatedProtectionRequest(p, mc)
-		if update {
-			ok, err := applyBranchProtection(ctx, rep, owner, repo, b, pr)
-			if err != nil || !ok {
-				return err
-			}
-			log.Info().
-				Str("org", owner).
-				Str("repo", repo).
-				Str("area", polName).
-				Msg("Updated with Fix action.")
-		}
-
-		ok, err := ensureSignedCommits(ctx, rep, owner, repo, b, mc.RequireSignedCommits)
+		ok, err := fixBranch(ctx, rep, owner, repo, b, mc)
 		if err != nil || !ok {
 			return err
 		}
 	}
 	return nil
+}
+
+// fixBranch reports whether enforcement can continue for the next branch.
+func fixBranch(ctx context.Context, rep repositories, owner, repo, b string, mc *mergedConfig) (bool, error) {
+	p, rsp, err := rep.GetBranchProtection(ctx, owner, repo, b)
+	if err != nil {
+		if rsp != nil && rsp.StatusCode == http.StatusNotFound {
+			// No existing protection, create from config.
+			pr := newProtectionRequest(mc)
+			ok, _, err := applyBranchProtection(ctx, rep, owner, repo, b, pr)
+			return ok, err
+		}
+		if rsp != nil && rsp.StatusCode == http.StatusForbidden {
+			log.Warn().
+				Str("org", owner).
+				Str("repo", repo).
+				Str("area", polName).
+				Msg("Fix action selected, but repo does not support Branch Protection.")
+			return false, nil
+		}
+		return false, fmt.Errorf("getting protection for branch %s in %s/%s: %w", b, owner, repo, err)
+	}
+	// Got existing protection, modify from existing
+	pr, update := updatedProtectionRequest(p, mc)
+	if update {
+		ok, unavailable, err := applyBranchProtection(ctx, rep, owner, repo, b, pr)
+		if err != nil || !ok {
+			return ok, err
+		}
+		if unavailable {
+			return true, nil
+		}
+		log.Info().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("area", polName).
+			Msg("Updated with Fix action.")
+	}
+
+	return ensureSignedCommits(ctx, rep, owner, repo, b, mc.RequireSignedCommits)
+}
+
+// branchProtectionUnavailable reports whether a branch protection call failed because
+// the setting is not there to be written: GitHub answers 404 both when the branch does
+// not exist and when classic branch protection is unavailable for the repository, which
+// is what a repository whose protection has been migrated to rulesets looks like. That
+// is a fact about one branch rather than a failure of the run, so the caller moves on to
+// the next branch instead of returning an error that would abort enforcement for every
+// repository behind this one in the installation.
+func branchProtectionUnavailable(rsp *github.Response) bool {
+	return rsp != nil && rsp.StatusCode == http.StatusNotFound
 }
 
 func getSignatureProtectionEnabled(ctx context.Context, rep repositories, owner, repo, branch string) (
@@ -841,17 +856,23 @@ func checkBranchProtection(ctx context.Context, rep repositories, owner, repo, b
 // applyBranchProtection reports whether enforcement can continue after the update.
 func applyBranchProtection(ctx context.Context, rep repositories, owner, repo, branch string,
 	pr *github.ProtectionRequest,
-) (bool, error) {
+) (bool, bool, error) {
 	_, rsp, err := rep.UpdateBranchProtection(ctx, owner, repo, branch, pr)
 	if err != nil && rsp != nil && rsp.StatusCode == http.StatusForbidden {
 		log.Warn().Str("org", owner).Str("repo", repo).Str("area", polName).
 			Msg("Action set to fix, but did not accept admin:write permissions update.")
-		return false, nil
+		return false, false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("updating protection for branch %s in %s/%s: %w", branch, owner, repo, err)
+		if branchProtectionUnavailable(rsp) {
+			log.Warn().Str("org", owner).Str("repo", repo).Str("area", polName).
+				Str("branch", branch).
+				Msg("Action set to fix, but branch protection is not available for this branch.")
+			return true, true, nil
+		}
+		return false, false, fmt.Errorf("updating protection for branch %s in %s/%s: %w", branch, owner, repo, err)
 	}
-	return true, nil
+	return true, false, nil
 }
 
 // ensureSignedCommits reports whether enforcement can continue for the next branch.
@@ -860,26 +881,37 @@ func ensureSignedCommits(ctx context.Context, rep repositories, owner, repo, b s
 	if err != nil {
 		return false, err
 	}
-	if required && !signatureProtectionEnabled {
-		_, rsp, err := rep.RequireSignaturesOnProtectedBranch(ctx, owner, repo, b)
-		if err != nil {
-			if rsp != nil && rsp.StatusCode == http.StatusForbidden {
-				log.Warn().
-					Str("org", owner).
-					Str("repo", repo).
-					Str("area", polName).
-					Str("branch", b).
-					Msg("Action set to fix, but did not accept admin:write update to make signed commits required.")
-				return false, nil
-			}
-			return false, fmt.Errorf("requiring signed commits on branch %s in %s/%s: %w", b, owner, repo, err)
-		}
-		log.Info().
-			Str("org", owner).
-			Str("repo", repo).
-			Str("area", polName).
-			Str("branch", b).
-			Msg("Updated to make signed commits required with Fix action.")
+	if !required || signatureProtectionEnabled {
+		return true, nil
 	}
+	_, rsp, err := rep.RequireSignaturesOnProtectedBranch(ctx, owner, repo, b)
+	if err != nil {
+		if rsp != nil && rsp.StatusCode == http.StatusForbidden {
+			log.Warn().
+				Str("org", owner).
+				Str("repo", repo).
+				Str("area", polName).
+				Str("branch", b).
+				Msg("Action set to fix, but did not accept admin:write update to make signed commits required.")
+			return false, nil
+		}
+		if branchProtectionUnavailable(rsp) {
+			log.Warn().
+				Str("org", owner).
+				Str("repo", repo).
+				Str("area", polName).
+				Str("branch", b).
+				Msg("Action set to fix, but branch protection is not available for this branch, " +
+					"so signed commits cannot be required on it.")
+			return true, nil
+		}
+		return false, fmt.Errorf("requiring signed commits on branch %s in %s/%s: %w", b, owner, repo, err)
+	}
+	log.Info().
+		Str("org", owner).
+		Str("repo", repo).
+		Str("area", polName).
+		Str("branch", b).
+		Msg("Updated to make signed commits required with Fix action.")
 	return true, nil
 }
