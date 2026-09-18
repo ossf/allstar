@@ -494,6 +494,15 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 						// no sense to continue, just return
 						return nil
 					}
+					if branchProtectionUnavailable(rsp) {
+						log.Warn().
+							Str("org", owner).
+							Str("repo", repo).
+							Str("area", polName).
+							Str("branch", b).
+							Msg("Action set to fix, but branch protection is not available for this branch.")
+						continue
+					}
 					return err
 				}
 				continue
@@ -636,6 +645,15 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 						Msg("Action set to fix, but did not accept admin:write permissions update.")
 					return nil
 				}
+				if branchProtectionUnavailable(rsp) {
+					log.Warn().
+						Str("org", owner).
+						Str("repo", repo).
+						Str("area", polName).
+						Str("branch", b).
+						Msg("Action set to fix, but branch protection is not available for this branch.")
+					continue
+				}
 				return err
 			}
 			log.Info().
@@ -661,6 +679,15 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 						Msg("Action set to fix, but did not accept admin:write update to make signed commits required.")
 					return nil
 				}
+				if branchProtectionUnavailable(rsp) {
+					log.Warn().
+						Str("org", owner).
+						Str("repo", repo).
+						Str("area", polName).
+						Str("branch", b).
+						Msg("Action set to fix, but branch protection is not available for this branch, so signed commits cannot be required on it.")
+					continue
+				}
 				return err
 			}
 			log.Info().
@@ -672,6 +699,17 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 		}
 	}
 	return nil
+}
+
+// branchProtectionUnavailable reports whether a branch protection call failed because
+// the setting is not there to be written: GitHub answers 404 both when the branch does
+// not exist and when classic branch protection is unavailable for the repository, which
+// is what a repository whose protection has been migrated to rulesets looks like. That
+// is a fact about one branch rather than a failure of the run, so the caller moves on to
+// the next branch instead of returning an error that would abort enforcement for every
+// repository behind this one in the installation.
+func branchProtectionUnavailable(rsp *github.Response) bool {
+	return rsp != nil && rsp.StatusCode == http.StatusNotFound
 }
 
 func getSignatureProtectionEnabled(ctx context.Context, rep repositories, owner string, repo string, branch string) (
