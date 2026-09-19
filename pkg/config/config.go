@@ -67,6 +67,11 @@ type OrgConfig struct {
 	// a specific configuration
 	IssueDetails string `json:"issueDetails"`
 
+	// NoticePingDurationHours is the number of hours Allstar waits before adding a
+	// reminder comment to an unresolved issue. Values less than one use the
+	// operator-configured default.
+	NoticePingDurationHours int64 `json:"noticePingDurationHours"`
+
 	// Schedule specifies whether to perform certain actions on specific days.
 	Schedule *ScheduleConfig `json:"schedule"`
 }
