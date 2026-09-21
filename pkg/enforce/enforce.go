@@ -203,7 +203,7 @@ func runPoliciesOnInstRepos(ctx context.Context, repos []*github.Repository, ghc
 				Str("org", *r.Owner.Login).
 				Str("repo", *r.Name).
 				Msg("Error running policies for repo; recording and continuing.")
-			repoLoopErrs = append(repoLoopErrs, fmt.Errorf("%s/%s: %w", *r.Owner.Login, *r.Name, err))
+			repoLoopErrs = append(repoLoopErrs, err)
 			// continue to next repo instead of breaking so other repos are processed
 			continue
 		}
