@@ -24,6 +24,7 @@ import (
 	"github.com/ossf/allstar/pkg/policies/codeowners"
 	"github.com/ossf/allstar/pkg/policies/outside"
 	"github.com/ossf/allstar/pkg/policies/scorecard"
+	"github.com/ossf/allstar/pkg/policies/secretscanning"
 	"github.com/ossf/allstar/pkg/policies/security"
 	"github.com/ossf/allstar/pkg/policies/workflow"
 	"github.com/ossf/allstar/pkg/policydef"
@@ -38,6 +39,7 @@ func GetPolicies() []policydef.Policy {
 		outside.NewOutside(),
 		scorecard.NewScorecard(),
 		security.NewSecurity(),
+		secretscanning.NewSecretScanning(),
 		workflow.NewWorkflow(),
 		action.NewAction(),
 		admin.NewAdmin(),
