@@ -313,6 +313,79 @@ func TestRunPoliciesOnInstRepos(t *testing.T) {
 	}
 }
 
+// TestRunPoliciesOnInstReposContinuesAfterError verifies that an error on one
+// repo does not prevent subsequent repos in the same installation from being
+// processed (regression test for https://github.com/ossf/allstar/issues/503).
+func TestRunPoliciesOnInstReposContinuesAfterError(t *testing.T) {
+	configIsBotEnabled = func(ctx context.Context, c *github.Client, owner, repo string) bool {
+		return true
+	}
+	client := github.NewClient(&http.Client{})
+	fakeOwner := "fake-owner"
+	failErr := errors.New("fail")
+
+	repo1Name := "repo1"
+	repo2Name := "repo2"
+	repos := []*github.Repository{
+		{Name: &repo1Name, Owner: &github.User{Login: &fakeOwner}},
+		{Name: &repo2Name, Owner: &github.User{Login: &fakeOwner}},
+	}
+
+	var processedRepos []string
+	runPolicies = func(ctx context.Context, c *github.Client, owner, repo string, enabled bool, specificPolicyArg string) (EnforceRepoResults, error) {
+		processedRepos = append(processedRepos, repo)
+		if repo == repo1Name {
+			return nil, failErr
+		}
+		return EnforceRepoResults{"Test policy": false}, nil
+	}
+
+	instResults, err := runPoliciesOnInstRepos(context.Background(), repos, client, "")
+	if !errors.Is(err, failErr) {
+		t.Fatalf("Error %v does not match expected error %v", err, failErr)
+	}
+	if diff := cmp.Diff([]string{repo1Name, repo2Name}, processedRepos); diff != "" {
+		t.Errorf("Unexpected processed repos. (-want +got):\n%s", diff)
+	}
+	expResults := EnforceAllResults{
+		"Test policy": {"totalFailed": 1},
+	}
+	if diff := cmp.Diff(expResults, instResults); diff != "" {
+		t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+	}
+}
+
+// TestRunPoliciesOnInstReposAggregatesMultipleErrors verifies that errors from
+// more than one repo are aggregated into a single summary error rather than
+// only surfacing the first repo's error.
+func TestRunPoliciesOnInstReposAggregatesMultipleErrors(t *testing.T) {
+	configIsBotEnabled = func(ctx context.Context, c *github.Client, owner, repo string) bool {
+		return true
+	}
+	client := github.NewClient(&http.Client{})
+	fakeOwner := "fake-owner"
+	failErr := errors.New("fail")
+
+	repo1Name := "repo1"
+	repo2Name := "repo2"
+	repos := []*github.Repository{
+		{Name: &repo1Name, Owner: &github.User{Login: &fakeOwner}},
+		{Name: &repo2Name, Owner: &github.User{Login: &fakeOwner}},
+	}
+
+	runPolicies = func(ctx context.Context, c *github.Client, owner, repo string, enabled bool, specificPolicyArg string) (EnforceRepoResults, error) {
+		return nil, failErr
+	}
+
+	_, err := runPoliciesOnInstRepos(context.Background(), repos, client, "")
+	if err == nil {
+		t.Fatal("Expected an aggregated error, got nil")
+	}
+	if !strings.Contains(err.Error(), "2 repos") {
+		t.Errorf("Expected aggregated error to mention repo count, got: %v", err)
+	}
+}
+
 func TestDoNothingOnOptOut(t *testing.T) {
 	policiesGetPolicies = func() []policydef.Policy {
 		return []policydef.Policy{
