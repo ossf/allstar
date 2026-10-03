@@ -21,9 +21,9 @@ import (
 	"github.com/hashicorp/go-retryablehttp"
 )
 
-// newRetryRoundTripper retries the transient gateway errors that GitHub uses
-// when an idempotent API request times out. The retryable client applies
-// exponential backoff and stops when the request context is canceled.
+// newRetryRoundTripper retries HTTP 502 and 504 responses to idempotent API
+// requests. The retryable client applies exponential backoff and stops when the
+// request context is canceled.
 func newRetryRoundTripper(base http.RoundTripper) http.RoundTripper {
 	client := retryablehttp.NewClient()
 	client.HTTPClient.Transport = base
