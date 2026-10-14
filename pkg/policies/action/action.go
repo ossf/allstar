@@ -17,6 +17,7 @@ package action
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -372,12 +373,11 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 
 	// => Next, evaluate require rules
 
-	var wfr *github.WorkflowRuns
 	var headSHA string
 
 	for _, r := range applicableRules {
 		if r.Method == ruleMethodRequire {
-			if r.MustPass && wfr == nil {
+			if r.MustPass && headSHA == "" {
 				var err error
 				hash, err := getLatestCommitHash(ctx, c, owner, repo)
 				if err != nil {
@@ -387,7 +387,7 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 						Str("area", polName).
 						Err(err).
 						Msg("Error getting latest commit hash. Skipping rule evaluation.")
-					break
+					continue
 				}
 				headSHA = hash
 			}
@@ -676,7 +676,7 @@ func getLatestCommitHashReal(ctx context.Context, c *github.Client, owner, repo 
 	if len(commits) > 0 && commits[0].SHA != nil {
 		return *commits[0].SHA, nil
 	}
-	return "", fmt.Errorf("repo has no commits: %w", err)
+	return "", errors.New("repo has no commits")
 }
 
 // listWorkflowRunsByFilenameReal returns workflow runs for a repo by
