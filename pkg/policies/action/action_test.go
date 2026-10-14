@@ -16,6 +16,7 @@ package action
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -145,6 +146,14 @@ func TestCheck(t *testing.T) {
 		Workflows []testingWorkflowMetadata
 
 		LatestCommitHash string
+
+		// LatestCommitHashErr is returned by the getLatestCommitHash stub
+		// instead of LatestCommitHash when set.
+		LatestCommitHashErr error
+
+		// ExpectHashCalls, when non-zero, is the number of times
+		// getLatestCommitHash is expected to be called.
+		ExpectHashCalls int
 
 		Langs map[string]int
 
@@ -557,6 +566,94 @@ func TestCheck(t *testing.T) {
 				},
 			},
 			LatestCommitHash: "sha-latest",
+			ExpectPass:       true,
+		},
+		{
+			Name: "Require passing, commit hash lookup fails",
+			Org: OrgConfig{
+				Action: "issue",
+				Groups: []*RuleGroup{
+					{
+						Rules: []*Rule{
+							{
+								Name:     "Require Gradle Wrapper validation",
+								Method:   "require",
+								MustPass: true,
+								Actions: []*ActionSelector{
+									{
+										Name:    "gradle/wrapper-validation-action",
+										Version: ">= 1.0.4",
+									},
+								},
+							},
+							{
+								Name:   "Require CodeQL",
+								Method: "require",
+								Actions: []*ActionSelector{
+									{
+										Name: "github/codeql-action/analyze",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Workflows: []testingWorkflowMetadata{
+				{
+					File: "gradle-wrapper-validate.yaml",
+					Runs: []*github.WorkflowRun{
+						createWorkflowRun("sha-latest", true, boolptr(true)),
+					},
+				},
+			},
+			LatestCommitHashErr: errors.New("Git Repository is empty"),
+			ExpectMessage:       []string{"Require CodeQL"},
+			ExpectPass:          false,
+		},
+		{
+			Name: "Require passing, commit hash fetched once for several rules",
+			Org: OrgConfig{
+				Action: "issue",
+				Groups: []*RuleGroup{
+					{
+						Rules: []*Rule{
+							{
+								Name:     "Require Gradle Wrapper validation",
+								Method:   "require",
+								MustPass: true,
+								Actions: []*ActionSelector{
+									{
+										Name:    "gradle/wrapper-validation-action",
+										Version: ">= 1.0.4",
+									},
+								},
+							},
+							{
+								Name:     "Require Gradle Wrapper validation again",
+								Method:   "require",
+								MustPass: true,
+								Actions: []*ActionSelector{
+									{
+										Name:    "gradle/wrapper-validation-action",
+										Version: ">= 1.0.4",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			Workflows: []testingWorkflowMetadata{
+				{
+					File: "gradle-wrapper-validate.yaml",
+					Runs: []*github.WorkflowRun{
+						createWorkflowRun("sha-latest", true, boolptr(true)),
+					},
+				},
+			},
+			LatestCommitHash: "sha-latest",
+			ExpectHashCalls:  1,
 			ExpectPass:       true,
 		},
 		{
@@ -1225,7 +1322,12 @@ func TestCheck(t *testing.T) {
 				return nil, fmt.Errorf("could not find testWorkflowMetadata for filename %s", workflowFilename)
 			}
 
+			hashCalls := 0
 			getLatestCommitHash = func(ctx context.Context, c *github.Client, owner, repo string) (string, error) {
+				hashCalls++
+				if test.LatestCommitHashErr != nil {
+					return "", test.LatestCommitHashErr
+				}
 				return test.LatestCommitHash, nil
 			}
 
@@ -1248,6 +1350,11 @@ func TestCheck(t *testing.T) {
 			if res.Pass != test.ExpectPass {
 				t.Errorf("Expect pass = %t, got pass = %t", test.ExpectPass, res.Pass)
 				t.Logf("NotifyText:\n%s", res.NotifyText)
+			}
+
+			if test.ExpectHashCalls != 0 && hashCalls != test.ExpectHashCalls {
+				t.Errorf("Expect getLatestCommitHash calls = %d, got %d",
+					test.ExpectHashCalls, hashCalls)
 			}
 
 			if !res.Pass {
