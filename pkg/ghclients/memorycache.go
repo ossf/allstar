@@ -88,7 +88,7 @@ func (c *memoryCache) Delete(key string) {
 func (c *memoryCache) LogCacheSize() {
 	var total int
 	for _, b := range c.items {
-		total = total + len(b)
+		total += len(b)
 	}
 	log.Info().
 		Str("area", "bot").

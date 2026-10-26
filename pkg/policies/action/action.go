@@ -358,17 +358,17 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 	// Note: deny rules are evaluated Action-wise
 
 	for _, a := range actions {
-		denyResult, errors := evaluateActionDenied(ctx, c, applicableRules, a, gc, sc)
+		denyResult, evalErrors := evaluateActionDenied(ctx, c, applicableRules, a, gc, sc)
 		// errors are often parse errors (user-created) and are reflected in
 		// denyResult steps
 
-		if errors != nil {
+		if evalErrors != nil {
 			log.Warn().
 				Str("org", owner).
 				Str("repo", repo).
 				Str("area", polName).
 				Str("action", a.name).
-				Errs("errors", errors).
+				Errs("errors", evalErrors).
 				Msg("Errors while evaluating deny rule.")
 		}
 
@@ -671,9 +671,7 @@ func (s sortableRules) Less(i, j int) bool {
 
 // Swap swaps the Rules at indices i and j.
 func (s sortableRules) Swap(i, j int) {
-	hold := s[i]
-	s[i] = s[j]
-	s[j] = hold
+	s[i], s[j] = s[j], s[i]
 }
 
 // getLatestCommitHashReal gets the latest commit hash for a repo's default
@@ -694,8 +692,8 @@ func getLatestCommitHashReal(ctx context.Context, c *github.Client, owner, repo 
 // workflow filename.
 // Docs:
 // https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs
-func listWorkflowRunsByFilenameReal(ctx context.Context, c *github.Client, owner, repo string,
-	workflowFilename string,
+func listWorkflowRunsByFilenameReal(ctx context.Context, c *github.Client,
+	owner, repo, workflowFilename string,
 ) ([]*github.WorkflowRun, error) {
 	runs, _, err := c.Actions.ListWorkflowRunsByFileName(ctx, owner, repo, workflowFilename,
 		&github.ListWorkflowRunsOptions{
@@ -775,16 +773,16 @@ func listWorkflowsReal(ctx context.Context, c *github.Client, owner, repo string
 		bc := []byte(sc)
 		wf, errs := actionlint.Parse(bc)
 		if len(errs) > 0 || wf == nil {
-			var errors []error
+			var parseErrors []error
 			for _, err := range errs {
-				errors = append(errors, fmt.Errorf("actionlist.Parse error: %w", err))
+				parseErrors = append(parseErrors, fmt.Errorf("actionlist.Parse error: %w", err))
 			}
 			log.Warn().
 				Str("org", owner).
 				Str("repo", repo).
 				Str("area", polName).
 				Str("path", wfc.GetPath()).
-				Errs("errors", errors).
+				Errs("errors", parseErrors).
 				Msg("Errors while parsing workflow file content.")
 		}
 		if wf == nil {

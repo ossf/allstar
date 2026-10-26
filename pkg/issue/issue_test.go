@@ -72,7 +72,6 @@ func setShouldPerform(b bool) {
 }
 
 func TestEnsure(t *testing.T) {
-	// issueTitle := fmt.Sprintf(sameRepoTitle, "thispolicy")
 	issueTitle := "Security Policy violation thispolicy"
 	issueTitleOtherRepo := "Security Policy violation for repository \"\" thispolicy"
 	closed := "closed"
