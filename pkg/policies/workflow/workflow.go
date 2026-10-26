@@ -77,11 +77,7 @@ type details struct {
 	Findings []string
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
-
-func init() {
-	configFetchConfig = config.FetchConfig
-}
+var configFetchConfig = config.FetchConfig
 
 // Workflow is the Dangerous Workflow policy object, implements
 // policydef.Policy.

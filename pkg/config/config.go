@@ -158,15 +158,9 @@ const (
 	RepoLevel
 )
 
-var walkGC func(context.Context, repositories, string, string, string,
-	*github.RepositoryContentGetOptions) (*github.RepositoryContent,
-	[]*github.RepositoryContent, *github.Response, error)
+var walkGC = walkGetContents
 
 var gc = globCache{}
-
-func init() {
-	walkGC = walkGetContents
-}
 
 type repositories interface {
 	Get(context.Context, string, string) (*github.Repository,

@@ -78,11 +78,7 @@ type details struct {
 	Artifacts []string
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
-
-func init() {
-	configFetchConfig = config.FetchConfig
-}
+var configFetchConfig = config.FetchConfig
 
 // Binary is the Binary Artifacts policy object, implements policydef.Policy.
 type Binary bool

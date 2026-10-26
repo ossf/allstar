@@ -32,28 +32,19 @@ import (
 	"github.com/ossf/allstar/pkg/config/operator"
 )
 
-var ghinstallationNewAppsTransport func(http.RoundTripper, int64,
-	[]byte) (*ghinstallation.AppsTransport, error)
+var ghinstallationNewAppsTransport = ghinstallation.NewAppsTransport
 
-var ghinstallationNew func(http.RoundTripper, int64, int64, []byte) (
-	*ghinstallation.Transport, error)
+var ghinstallationNew = ghinstallation.New
 
 var (
-	getKey           func(context.Context) ([]byte, error)
-	getKeyFromSecret func(context.Context, string) ([]byte, error)
+	getKey           = getKeyReal
+	getKeyFromSecret = getKeyFromSecretReal
 )
 
 var (
 	privateKey = operator.PrivateKey
 	keySecret  = operator.KeySecret
 )
-
-func init() {
-	ghinstallationNewAppsTransport = ghinstallation.NewAppsTransport
-	ghinstallationNew = ghinstallation.New
-	getKey = getKeyReal
-	getKeyFromSecret = getKeyFromSecretReal
-}
 
 type GhClientsInterface interface {
 	Get(i int64) (*github.Client, error)
