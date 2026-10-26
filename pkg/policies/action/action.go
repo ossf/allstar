@@ -722,7 +722,7 @@ func listWorkflowsReal(ctx context.Context, c *github.Client, owner, repo string
 	_, workflowDirContents, resp, err := c.Repositories.GetContents(ctx, owner, repo,
 		".github/workflows", &github.RepositoryContentGetOptions{})
 	if err != nil {
-		if resp.StatusCode == http.StatusNotFound {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			// No workflows dir should yield no workflows
 			return []*workflowMetadata{}, nil
 		}

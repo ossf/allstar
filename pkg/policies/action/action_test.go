@@ -16,6 +16,7 @@ package action
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -28,6 +29,19 @@ import (
 
 	"github.com/ossf/allstar/pkg/config"
 )
+
+func TestListWorkflowsRealCanceledRequest(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	workflows, err := listWorkflowsReal(ctx, github.NewClient(nil), "owner", "repo")
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context cancellation, got %v", err)
+	}
+	if workflows != nil {
+		t.Errorf("expected no workflows, got %v", workflows)
+	}
+}
 
 func TestSortableRules(t *testing.T) {
 	makeRule := func(method, priority string, priorityInt int) *internalRule {
