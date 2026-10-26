@@ -58,16 +58,10 @@ var (
 const defaultGitRef = "HEAD"
 
 var (
-	githubrepoMakeGitHubRepo                      func(string) (clients.Repo, error)
-	githubrepoCreateGitHubRepoClientWithTransport func(context.Context, http.RoundTripper) clients.RepoClient
-	createLocal                                   func(context.Context, string) (*ScClient, error)
-)
-
-func init() {
-	githubrepoMakeGitHubRepo = githubrepo.MakeGithubRepo
+	githubrepoMakeGitHubRepo                      = githubrepo.MakeGithubRepo
 	githubrepoCreateGitHubRepoClientWithTransport = githubrepo.CreateGithubRepoClientWithTransport
-	createLocal = _createLocal
-}
+	createLocal                                   = _createLocal
+)
 
 // Function Get will get the scorecard clients and create them if they don't
 // exist. The github repo is initialized, which means the tarball is
