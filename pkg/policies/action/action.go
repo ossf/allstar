@@ -660,9 +660,7 @@ func (s sortableRules) Less(i, j int) bool {
 
 // Swap swaps the Rules at indices i and j.
 func (s sortableRules) Swap(i, j int) {
-	hold := s[i]
-	s[i] = s[j]
-	s[j] = hold
+	s[i], s[j] = s[j], s[i]
 }
 
 // getLatestCommitHashReal gets the latest commit hash for a repo's default
@@ -683,7 +681,7 @@ func getLatestCommitHashReal(ctx context.Context, c *github.Client, owner, repo 
 // workflow filename.
 // Docs:
 // https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs
-func listWorkflowRunsByFilenameReal(ctx context.Context, c *github.Client, owner, repo string, workflowFilename string) ([]*github.WorkflowRun, error) {
+func listWorkflowRunsByFilenameReal(ctx context.Context, c *github.Client, owner, repo, workflowFilename string) ([]*github.WorkflowRun, error) {
 	runs, _, err := c.Actions.ListWorkflowRunsByFileName(ctx, owner, repo, workflowFilename, &github.ListWorkflowRunsOptions{
 		Event: "push",
 	})

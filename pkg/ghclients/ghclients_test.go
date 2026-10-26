@@ -32,13 +32,13 @@ func TestGet(t *testing.T) {
 	ghinstallationNewAppsTransport = func(http.RoundTripper, int64,
 		[]byte,
 	) (*ghinstallation.AppsTransport, error) {
-		called = called + 1
+		called++
 		return &ghinstallation.AppsTransport{BaseURL: fmt.Sprint(0)}, nil
 	}
 	ghinstallationNew = func(r http.RoundTripper, a int64, i int64,
 		f []byte,
 	) (*ghinstallation.Transport, error) {
-		called = called + 1
+		called++
 		return &ghinstallation.Transport{BaseURL: fmt.Sprint(i)}, nil
 	}
 	getKeyFromSecret = func(ctx context.Context, keySecretVal string) ([]byte, error) {

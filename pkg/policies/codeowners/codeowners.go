@@ -246,7 +246,7 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 	return oc, orc, rc
 }
 
-func mergeConfig(oc *OrgConfig, orc *RepoConfig, rc *RepoConfig, repo string) *mergedConfig {
+func mergeConfig(oc *OrgConfig, orc, rc *RepoConfig, repo string) *mergedConfig {
 	mc := &mergedConfig{
 		Action:            oc.Action,
 		RequireCODEOWNERS: oc.RequireCODEOWNERS,

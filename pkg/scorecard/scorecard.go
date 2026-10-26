@@ -160,7 +160,7 @@ func (scc ScClient) GetDefaultBranchName() (string, error) {
 
 // Checkout a repo into a local directory
 // returns the path to the local repo and a git repo reference.
-func checkoutRepo(fullRepo string, token string) (string, *git.Repository, error) {
+func checkoutRepo(fullRepo, token string) (string, *git.Repository, error) {
 	log.Debug().
 		Str("repo", fullRepo).
 		Msg("Repo checkout")

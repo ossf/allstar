@@ -262,43 +262,43 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	// Test OwnerlessAllowed
 	if (len(d.Admins)+len(d.TeamAdmins)) < 1 && (!mc.OwnerlessAllowed && !isOwnerlessExempt(repo, mc.Exemptions, gc)) {
 		rv.Pass = false
-		rv.NotifyText = rv.NotifyText + ownerlessText
+		rv.NotifyText += ownerlessText
 	}
 
 	// Test UserAdminsAllowed
 	if len(d.Admins) > 0 && (!mc.UserAdminsAllowed && !isUserAdminsExempt(repo, d.Admins, mc.Exemptions, gc)) {
 		rv.Pass = false
-		rv.NotifyText = rv.NotifyText + userAdminsText
+		rv.NotifyText += userAdminsText
 	}
 
 	// Test MaxNumberUserAdmins exemption if it's defined
 	if !isMaxNumberUserAdminsExempt(repo, len(d.Admins), mc.Exemptions, gc, true) {
 		rv.Pass = false
-		rv.NotifyText = rv.NotifyText + maxNumberUserAdminsText
+		rv.NotifyText += maxNumberUserAdminsText
 	}
 
 	// Test MaxNumberUserAdmins
 	if mc.MaxNumberUserAdmins > 0 && len(d.Admins) > mc.MaxNumberUserAdmins && !isMaxNumberUserAdminsExempt(repo, len(d.Admins), mc.Exemptions, gc, false) {
 		rv.Pass = false
-		rv.NotifyText = rv.NotifyText + maxNumberUserAdminsText
+		rv.NotifyText += maxNumberUserAdminsText
 	}
 
 	// Test TeamAdminsAllowed
 	if len(d.TeamAdmins) > 0 && (!mc.TeamAdminsAllowed && !isTeamAdminsExempt(repo, d.TeamAdmins, mc.Exemptions, gc)) {
 		rv.Pass = false
-		rv.NotifyText = rv.NotifyText + teamAdminsText
+		rv.NotifyText += teamAdminsText
 	}
 
 	// Test MaxNumberAdminTeams exemption if it's defined
 	if !isMaxNumberAdminTeamsExempt(repo, len(d.TeamAdmins), mc.Exemptions, gc, true) {
 		rv.Pass = false
-		rv.NotifyText = rv.NotifyText + maxNumberAdminTeamsText
+		rv.NotifyText += maxNumberAdminTeamsText
 	}
 
 	// Test MaxNumberAdminTeams
 	if mc.MaxNumberAdminTeams > 0 && len(d.TeamAdmins) > mc.MaxNumberAdminTeams && !isMaxNumberAdminTeamsExempt(repo, len(d.TeamAdmins), mc.Exemptions, gc, false) {
 		rv.Pass = false
-		rv.NotifyText = rv.NotifyText + maxNumberAdminTeamsText
+		rv.NotifyText += maxNumberAdminTeamsText
 	}
 
 	return rv, nil
@@ -383,7 +383,7 @@ func isTeamAdminsExempt(repo string, teamAdmins []string, ee []*AdministratorExe
 	return false
 }
 
-func in(admins []string, list []string) bool {
+func in(admins, list []string) bool {
 	for _, admin := range admins {
 		found := false
 		for _, l := range list {
@@ -495,7 +495,7 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 	return oc, orc, rc
 }
 
-func mergeConfig(oc *OrgConfig, orc *RepoConfig, rc *RepoConfig, repo string) *mergedConfig {
+func mergeConfig(oc *OrgConfig, orc, rc *RepoConfig, repo string) *mergedConfig {
 	mc := &mergedConfig{
 		Action:              oc.Action,
 		OwnerlessAllowed:    oc.OwnerlessAllowed,
@@ -537,8 +537,8 @@ func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedCon
 
 // compileGlob returns cached glob if present, otherwise attempts glob.Compile.
 func (g globCache) compileGlob(s string) (glob.Glob, error) {
-	if glob, ok := g[s]; ok {
-		return glob, nil
+	if cached, ok := g[s]; ok {
+		return cached, nil
 	}
 	c, err := glob.Compile(s)
 	if err != nil {

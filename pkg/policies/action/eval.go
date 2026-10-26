@@ -80,9 +80,7 @@ func evaluateActionDenied(ctx context.Context, c *github.Client, rules []*intern
 			continue
 		}
 		switch r.Method {
-		case ruleMethodAllow:
-			fallthrough
-		case ruleMethodRequire:
+		case ruleMethodAllow, ruleMethodRequire:
 			if ruleMatch {
 				stepResult.status = denyRuleStepStatusAllowed
 				break

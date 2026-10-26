@@ -80,17 +80,19 @@ func ClearInstLoc(owner string) {
 
 func createIl(ctx context.Context, r repositories, owner string) (*instLoc, error) {
 	_, rsp, err := r.Get(ctx, owner, operator.OrgConfigRepo)
-	if err == nil {
+	switch {
+	case err == nil:
 		// ".allstar" repo exists
 		return &instLoc{
 			Exists: true,
 			Repo:   operator.OrgConfigRepo,
 			Path:   "",
 		}, nil
-	} else if rsp != nil && rsp.StatusCode == http.StatusNotFound {
+	case rsp != nil && rsp.StatusCode == http.StatusNotFound:
 		// ".allstar" repo does not exist
 		_, rsp, err := r.Get(ctx, owner, githubConfRepo)
-		if err == nil {
+		switch {
+		case err == nil:
 			// ".github" repo exists
 			// ".github/allstar" may not exist but we will walk the path on any
 			// getcontents to avoid a 404 for that
@@ -99,16 +101,16 @@ func createIl(ctx context.Context, r repositories, owner string) (*instLoc, erro
 				Repo:   githubConfRepo,
 				Path:   operator.OrgConfigDir,
 			}, nil
-		} else if rsp != nil && rsp.StatusCode == http.StatusNotFound {
+		case rsp != nil && rsp.StatusCode == http.StatusNotFound:
 			// ".github" repo does not exist
 			return &instLoc{
 				Exists: false,
 			}, nil
-		} else {
+		default:
 			// Unknown error getting ".github" repo
 			return nil, err
 		}
-	} else {
+	default:
 		// Unknown error getting ".allstar" repo
 		return nil, err
 	}
