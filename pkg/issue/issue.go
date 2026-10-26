@@ -59,14 +59,9 @@ type issues interface {
 }
 
 var (
-	configGetAppConfigs   func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig)
-	scheduleShouldPerform func(*config.ScheduleConfig) bool
-)
-
-func init() {
-	configGetAppConfigs = config.GetAppConfigs
+	configGetAppConfigs   = config.GetAppConfigs
 	scheduleShouldPerform = schedule.ShouldPerform
-}
+)
 
 func getPolicyIssue(ctx context.Context, issues issues, owner, repo, policy, title, label string) (*github.Issue, error) {
 	opt := &github.IssueListByRepoOptions{

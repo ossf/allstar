@@ -16,11 +16,14 @@
 package operator
 
 import (
+	"os"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/rs/zerolog"
 )
 
 // TestDefaults pins the built-in defaults. Allstar previously shipped with the
@@ -112,7 +115,63 @@ func TestValidate(t *testing.T) {
 	}
 }
 
-func TestSetVars(t *testing.T) {
+func TestInitialConfigEnvironment(t *testing.T) {
+	if os.Getenv("ALLSTAR_TEST_OPERATOR_STARTUP") == "1" {
+		want := operatorConfig{
+			AppID:                123,
+			PrivateKey:           "test-private-key",
+			KeySecret:            "direct",
+			GitHubEnterpriseUrl:  "https://github.example.test",
+			DoNothingOnOptOut:    true,
+			LogLevel:             zerolog.DebugLevel,
+			AllowedOrganizations: []string{"org-a", "org-b"},
+			NoticePingDuration:   12 * time.Hour,
+			NumWorkers:           3,
+		}
+		got := operatorConfig{
+			AppID:                AppID,
+			PrivateKey:           PrivateKey,
+			KeySecret:            KeySecret,
+			GitHubEnterpriseUrl:  GitHubEnterpriseUrl,
+			DoNothingOnOptOut:    DoNothingOnOptOut,
+			LogLevel:             LogLevel,
+			AllowedOrganizations: AllowedOrganizations,
+			NoticePingDuration:   NoticePingDuration,
+			NumWorkers:           NumWorkers,
+		}
+		if diff := cmp.Diff(want, got); diff != "" {
+			t.Errorf("Unexpected startup configuration. (-want +got):\n%s", diff)
+		}
+		if got := zerolog.GlobalLevel(); got != zerolog.DebugLevel {
+			t.Errorf("Global log level = %v, want debug", got)
+		}
+		return
+	}
+
+	// A new process is required to exercise package initialization from the environment.
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.CommandContext(t.Context(), executable, "-test.run=^TestInitialConfigEnvironment$")
+	cmd.Env = append(os.Environ(),
+		"ALLSTAR_TEST_OPERATOR_STARTUP=1",
+		"APP_ID=123",
+		"PRIVATE_KEY=test-private-key",
+		"KEY_SECRET=direct",
+		"ALLSTAR_GHE_URL=https://github.example.test",
+		"DO_NOTHING_ON_OPT_OUT=true",
+		"ALLSTAR_LOG_LEVEL=debug",
+		"GITHUB_ALLOWED_ORGS=org-a,org-b",
+		"NOTICE_PING_DURATION_HOURS=12",
+		"ALLSTAR_NUM_WORKERS=3",
+	)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("Startup configuration test failed: %v\n%s", err, output)
+	}
+}
+
+func TestReadConfig(t *testing.T) {
 	tests := []struct {
 		Name                  string
 		AppID                 string
@@ -255,7 +314,7 @@ func TestSetVars(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			osGetenv = func(in string) string {
+			getenv := func(in string) string {
 				if in == "APP_ID" {
 					return test.AppID
 				}
@@ -279,26 +338,26 @@ func TestSetVars(t *testing.T) {
 				}
 				return ""
 			}
-			setVars()
-			if diff := cmp.Diff(test.ExpAppID, AppID); diff != "" {
+			cfg := readConfig(getenv)
+			if diff := cmp.Diff(test.ExpAppID, cfg.AppID); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
-			if diff := cmp.Diff(test.ExpKeySecret, KeySecret); diff != "" {
+			if diff := cmp.Diff(test.ExpKeySecret, cfg.KeySecret); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
-			if diff := cmp.Diff(test.GitHubEnterpriseUrl, GitHubEnterpriseUrl); diff != "" {
+			if diff := cmp.Diff(test.GitHubEnterpriseUrl, cfg.GitHubEnterpriseUrl); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
-			if diff := cmp.Diff(test.ExpDoNothingOnOptOut, DoNothingOnOptOut); diff != "" {
+			if diff := cmp.Diff(test.ExpDoNothingOnOptOut, cfg.DoNothingOnOptOut); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
-			if diff := cmp.Diff(test.ExpNoticePingDuration, NoticePingDuration); diff != "" {
+			if diff := cmp.Diff(test.ExpNoticePingDuration, cfg.NoticePingDuration); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
-			if diff := cmp.Diff(test.PrivateKey, PrivateKey); diff != "" {
+			if diff := cmp.Diff(test.PrivateKey, cfg.PrivateKey); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
-			if diff := cmp.Diff(test.ExpOperatorAllowlist, AllowedOrganizations); diff != "" {
+			if diff := cmp.Diff(test.ExpOperatorAllowlist, cfg.AllowedOrganizations); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 		})

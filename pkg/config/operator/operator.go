@@ -31,11 +31,11 @@ import (
 // unset App ID is a configuration error caught by Validate.
 const setAppID = 0
 
-var AppID int64
+var AppID = initialConfig.AppID
 
 // Raw value of the private key for the App. See:
 // https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps#generating-a-private-key
-var PrivateKey string
+var PrivateKey = initialConfig.PrivateKey
 
 // KeySecret should be set to the name of a secret containing a private key for
 // the App. See:
@@ -46,10 +46,10 @@ var PrivateKey string
 // that works without the operator first provisioning external infrastructure.
 const setKeySecret = "direct"
 
-var KeySecret string
+var KeySecret = initialConfig.KeySecret
 
 // GitHubEnterpriseUrl allows to configure the usage a GitHub enterprise instance.
-var GitHubEnterpriseUrl string
+var GitHubEnterpriseUrl = initialConfig.GitHubEnterpriseUrl
 
 // OrgConfigRepo is the name of the expected org-level repo to contain config.
 const OrgConfigRepo = ".allstar"
@@ -72,7 +72,7 @@ const AppConfigFile = "allstar.yaml"
 // strconv.ParseBool.
 const setDoNothingOnOptOut = false
 
-var DoNothingOnOptOut bool
+var DoNothingOnOptOut = initialConfig.DoNothingOnOptOut
 
 // LogLevel is a configuration flag indicating the minimum logging level that
 // allstar should use when emitting logs. Can be configured with the environment
@@ -82,7 +82,7 @@ var DoNothingOnOptOut bool
 // to info level.
 const setLogLevel = zerolog.InfoLevel
 
-var LogLevel zerolog.Level
+var LogLevel = initialConfig.LogLevel
 
 // GitHubIssueLabel is the label used to tag, search, and identify GitHub
 // Issues created by the bot.
@@ -96,82 +96,92 @@ Issue created by Allstar. See https://github.com/ossf/allstar/ for more informat
 // AllowedOrganizations is the set of GitHub repositories on which this Allstar instance
 // is allowed to be installed. This allows a public GitHub app to be shared between GitHub
 // organizations and repos while restricting installation of the app.
-var AllowedOrganizations []string
+var AllowedOrganizations = initialConfig.AllowedOrganizations
 
 // NoticePingDuration is the duration (in hours) to wait between pinging notice actions,
 // such as updating a GitHub issue.
 const setNoticePingDurationHrs = (24 * time.Hour)
 
-var NoticePingDuration time.Duration
+var NoticePingDuration = initialConfig.NoticePingDuration
 
 // NumWorkers is the number of concurrent organizations/installations the
 // Allstar binary will scan concurrently.
 const setNumWorkers = 5
 
-var NumWorkers int
+var NumWorkers = initialConfig.NumWorkers
 
-var osGetenv func(string) string
+// Load operator settings before dependent packages copy their values.
+var initialConfig = readConfig(os.Getenv)
 
-func init() {
-	osGetenv = os.Getenv
-	setVars()
+type operatorConfig struct {
+	AppID                int64
+	PrivateKey           string
+	KeySecret            string
+	GitHubEnterpriseUrl  string
+	DoNothingOnOptOut    bool
+	LogLevel             zerolog.Level
+	AllowedOrganizations []string
+	NoticePingDuration   time.Duration
+	NumWorkers           int
 }
 
-func setVars() {
-	appIDs := osGetenv("APP_ID")
+func readConfig(getenv func(string) string) operatorConfig {
+	var cfg operatorConfig
+	appIDs := getenv("APP_ID")
 	appID, err := strconv.ParseInt(appIDs, 10, 64)
 	if err == nil {
-		AppID = appID
+		cfg.AppID = appID
 	} else {
-		AppID = setAppID
+		cfg.AppID = setAppID
 	}
 
-	PrivateKey = osGetenv("PRIVATE_KEY")
+	cfg.PrivateKey = getenv("PRIVATE_KEY")
 
-	keySecret := osGetenv("KEY_SECRET")
+	keySecret := getenv("KEY_SECRET")
 	if keySecret != "" {
-		KeySecret = keySecret
+		cfg.KeySecret = keySecret
 	} else {
-		KeySecret = setKeySecret
+		cfg.KeySecret = setKeySecret
 	}
 
-	GitHubEnterpriseUrl = osGetenv("ALLSTAR_GHE_URL")
+	cfg.GitHubEnterpriseUrl = getenv("ALLSTAR_GHE_URL")
 
-	doNothingOnOptOutStr := osGetenv("DO_NOTHING_ON_OPT_OUT")
+	doNothingOnOptOutStr := getenv("DO_NOTHING_ON_OPT_OUT")
 	doNothingOnOptOut, err := strconv.ParseBool(doNothingOnOptOutStr)
 	if err == nil {
-		DoNothingOnOptOut = doNothingOnOptOut
+		cfg.DoNothingOnOptOut = doNothingOnOptOut
 	} else {
-		DoNothingOnOptOut = setDoNothingOnOptOut
+		cfg.DoNothingOnOptOut = setDoNothingOnOptOut
 	}
 
-	logLevelStr := osGetenv("ALLSTAR_LOG_LEVEL")
+	logLevelStr := getenv("ALLSTAR_LOG_LEVEL")
 	logLevel, err := zerolog.ParseLevel(logLevelStr)
 	if err != nil || logLevel == zerolog.NoLevel {
-		LogLevel = setLogLevel
+		cfg.LogLevel = setLogLevel
 	} else {
-		LogLevel = logLevel
+		cfg.LogLevel = logLevel
 	}
-	zerolog.SetGlobalLevel(LogLevel)
+	zerolog.SetGlobalLevel(cfg.LogLevel)
 
-	noticePingDurationRaw := osGetenv("NOTICE_PING_DURATION_HOURS")
+	noticePingDurationRaw := getenv("NOTICE_PING_DURATION_HOURS")
 	noticePingDuration, err := strconv.ParseInt(noticePingDurationRaw, 10, 64)
 	if err == nil {
-		NoticePingDuration = (time.Duration(noticePingDuration) * time.Hour)
+		cfg.NoticePingDuration = (time.Duration(noticePingDuration) * time.Hour)
 	} else {
-		NoticePingDuration = setNoticePingDurationHrs
+		cfg.NoticePingDuration = setNoticePingDurationHrs
 	}
 
-	allowedOrgs := osGetenv("GITHUB_ALLOWED_ORGS")
-	AllowedOrganizations = strings.Split(allowedOrgs, ",")
+	allowedOrgs := getenv("GITHUB_ALLOWED_ORGS")
+	cfg.AllowedOrganizations = strings.Split(allowedOrgs, ",")
 
-	nws := osGetenv("ALLSTAR_NUM_WORKERS")
+	nws := getenv("ALLSTAR_NUM_WORKERS")
 	nw, err := strconv.Atoi(nws)
 	if err == nil {
-		NumWorkers = nw
+		cfg.NumWorkers = nw
 	} else {
-		NumWorkers = setNumWorkers
+		cfg.NumWorkers = setNumWorkers
 	}
+	return cfg
 }
 
 // docsURL points at the instructions for creating and configuring a GitHub App

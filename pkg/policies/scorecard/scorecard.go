@@ -18,7 +18,6 @@ package scorecard
 import (
 	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/google/go-github/v84/github"
 	"github.com/rs/zerolog/log"
@@ -29,7 +28,6 @@ import (
 
 	"github.com/ossf/scorecard/v5/checker"
 	"github.com/ossf/scorecard/v5/checks"
-	"github.com/ossf/scorecard/v5/clients"
 	sc "github.com/ossf/scorecard/v5/pkg/scorecard"
 )
 
@@ -103,20 +101,12 @@ type details struct {
 }
 
 var (
-	configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
-	configIsEnabled   func(context.Context, config.OrgOptConfig, config.RepoOptConfig, config.RepoOptConfig, *github.Client, string, string) (bool, error)
-	scorecardGet      func(context.Context, string, bool, http.RoundTripper) (*scorecard.ScClient, error)
-	checksAllChecks   checker.CheckNameToFnMap
-	scRun             func(context.Context, clients.Repo, ...sc.Option) (sc.Result, error)
-)
-
-func init() {
 	configFetchConfig = config.FetchConfig
-	configIsEnabled = config.IsEnabled
-	checksAllChecks = checks.GetAll()
-	scorecardGet = scorecard.Get
-	scRun = sc.Run
-}
+	configIsEnabled   = config.IsEnabled
+	scorecardGet      = scorecard.Get
+	checksAllChecks   = checks.GetAll()
+	scRun             = sc.Run
+)
 
 // Scorecard is the Security Scorecard policy object, implements
 // policydef.Policy.

@@ -179,24 +179,15 @@ type internalOrgConfig struct {
 	Groups []*internalRuleGroup `json:"groups"`
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
+var configFetchConfig = config.FetchConfig
 
 var (
-	listWorkflows              func(ctx context.Context, c *github.Client, owner, repo string) ([]*workflowMetadata, error)
-	listLanguages              func(ctx context.Context, c *github.Client, owner, repo string) (map[string]int, error)
-	listWorkflowRunsByFilename func(ctx context.Context, c *github.Client, owner, repo string, workflowFilename string) ([]*github.WorkflowRun, error)
-	getLatestCommitHash        func(ctx context.Context, c *github.Client, owner, repo string) (string, error)
-	listTags                   func(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryTag, error)
-)
-
-func init() {
-	configFetchConfig = config.FetchConfig
-	listWorkflows = listWorkflowsReal
-	listLanguages = listLanguagesReal
+	listWorkflows              = listWorkflowsReal
+	listLanguages              = listLanguagesReal
 	listWorkflowRunsByFilename = listWorkflowRunsByFilenameReal
-	getLatestCommitHash = getLatestCommitHashReal
-	listTags = listTagsReal
-}
+	getLatestCommitHash        = getLatestCommitHashReal
+	listTags                   = listTagsReal
+)
 
 // sortableRules is a sortable list of *Rule.
 type sortableRules []*internalRule

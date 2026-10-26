@@ -69,14 +69,9 @@ type details struct {
 	URL     string
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
+var configFetchConfig = config.FetchConfig
 
-var configIsEnabled func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig, c *github.Client, owner, repo string) (bool, error)
-
-func init() {
-	configFetchConfig = config.FetchConfig
-	configIsEnabled = config.IsEnabled
-}
+var configIsEnabled = config.IsEnabled
 
 type v4client interface {
 	Query(context.Context, interface{}, map[string]interface{}) error
