@@ -48,7 +48,7 @@ var requireSignaturesProtectedBranch func(context.Context, string, string, strin
 
 type mockRepos struct{}
 
-func (m mockRepos) Get(ctx context.Context, o string, r string) (
+func (m mockRepos) Get(ctx context.Context, o, r string) (
 	*github.Repository, *github.Response, error,
 ) {
 	return get(ctx, o, r)
@@ -2126,22 +2126,23 @@ func TestFix(t *testing.T) {
 
 			// Sort required status checks by context to ensure comparison is consistent.
 			for _, pr := range got {
-				if pr.RequiredStatusChecks != nil {
-					sc := make([]*github.RequiredStatusCheck, 0)
-					cm := make(map[string][]*github.RequiredStatusCheck)
-					for _, check := range pr.RequiredStatusChecks.GetChecks() {
-						cm[check.Context] = append(cm[check.Context], check)
-					}
-					ctx := make([]string, 0)
-					for c := range cm {
-						ctx = append(ctx, c)
-					}
-					sort.Strings(ctx)
-					for _, c := range ctx {
-						sc = append(sc, cm[c]...)
-					}
-					pr.RequiredStatusChecks.Checks = github.Ptr(sc)
+				if pr.RequiredStatusChecks == nil {
+					continue
 				}
+				sc := make([]*github.RequiredStatusCheck, 0)
+				cm := make(map[string][]*github.RequiredStatusCheck)
+				for _, check := range pr.RequiredStatusChecks.GetChecks() {
+					cm[check.Context] = append(cm[check.Context], check)
+				}
+				ctx := make([]string, 0)
+				for c := range cm {
+					ctx = append(ctx, c)
+				}
+				sort.Strings(ctx)
+				for _, c := range ctx {
+					sc = append(sc, cm[c]...)
+				}
+				pr.RequiredStatusChecks.Checks = github.Ptr(sc)
 			}
 
 			if diff := cmp.Diff(test.Exp, got); diff != "" {

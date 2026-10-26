@@ -354,7 +354,7 @@ func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedCon
 	return mc
 }
 
-func configParseBranches(oc string, orc string, rc string) []string {
+func configParseBranches(oc, orc, rc string) []string {
 	var ret []string
 	if oc != "" {
 		ret = append(ret, strings.Split(oc, ",")...)
