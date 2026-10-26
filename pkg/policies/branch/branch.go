@@ -179,8 +179,9 @@ type details struct {
 }
 
 var (
-	configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
-	configIsEnabled   func(ctx context.Context, o config.OrgOptConfig,
+	configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel,
+		interface{}) error
+	configIsEnabled func(ctx context.Context, o config.OrgOptConfig,
 		orc, r config.RepoOptConfig, c *github.Client, owner, repo string) (bool, error)
 )
 
@@ -309,9 +310,14 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 			if rsp != nil && rsp.StatusCode == http.StatusForbidden {
 				// Protection not available
 				pass = false
-				text = text + "Branch Protection enforcement is configured in Allstar, however Branch Protection is not available on this repository. Upgrade to GitHub Pro or make this repository public to enable this feature.\n" +
-					"See: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/defining-the-mergeability-of-pull-requests/about-protected-branches for more information.\n" +
-					"If this is not feasible, then disable Branch Protection policy enforcement for this repository in Allstar configuration."
+				text = text + "Branch Protection enforcement is configured in Allstar, however Branch Protection is not " +
+					"available on this repository. Upgrade to GitHub Pro or make this repository public to " +
+					"enable this feature.\n" +
+					"See: https://docs.github.com/en/repositories/" +
+					"configuring-branches-and-merges-in-your-repository/" +
+					"defining-the-mergeability-of-pull-requests/about-protected-branches for more information.\n" +
+					"If this is not feasible, then disable Branch Protection policy enforcement for this " +
+					"repository in Allstar configuration."
 				ds[b] = details{}
 				break
 			}
@@ -674,7 +680,8 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 	return nil
 }
 
-func getSignatureProtectionEnabled(ctx context.Context, rep repositories, owner string, repo string, branch string) (
+func getSignatureProtectionEnabled(ctx context.Context, rep repositories, owner string, repo string,
+	branch string) (
 	bool, error,
 ) {
 	sp, rsp, err := rep.GetSignaturesProtectedBranch(ctx, owner, repo, branch)

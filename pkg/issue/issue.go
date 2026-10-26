@@ -43,8 +43,9 @@ const (
 const (
 	issueSectionHeaderFormat    = "<!-- Edit section #%s -->"
 	resultTextHashCommentFormat = "<!-- Current result text hash: %s -->"
-	updateWarningFormat         = "\n%s\n:warning: There is an updated version of this policy result! [Click here to see the latest update](%s)\n\n---\n\n"
-	updateSectionName           = "updates"
+	updateWarningFormat         = "\n%s\n:warning: There is an updated version of this policy result! " +
+		"[Click here to see the latest update](%s)\n\n---\n\n"
+	updateSectionName = "updates"
 )
 
 type issues interface {
@@ -59,7 +60,8 @@ type issues interface {
 }
 
 var (
-	configGetAppConfigs   func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig)
+	configGetAppConfigs func(context.Context, *github.Client, string, string) (*config.OrgConfig,
+		*config.RepoConfig, *config.RepoConfig)
 	scheduleShouldPerform func(*config.ScheduleConfig) bool
 )
 
@@ -68,7 +70,9 @@ func init() {
 	scheduleShouldPerform = schedule.ShouldPerform
 }
 
-func getPolicyIssue(ctx context.Context, issues issues, owner, repo, policy, title, label string) (*github.Issue, error) {
+func getPolicyIssue(ctx context.Context, issues issues, owner, repo, policy, title,
+	label string,
+) (*github.Issue, error) {
 	opt := &github.IssueListByRepoOptions{
 		State:  "all",
 		Labels: []string{label},
@@ -167,7 +171,8 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		if err != nil {
 			return fmt.Errorf("while updating issue: creating comment: %w", err)
 		}
-		updateWarning := fmt.Sprintf(updateWarningFormat, fmt.Sprintf(resultTextHashCommentFormat, hash), comment.GetHTMLURL())
+		updateWarning := fmt.Sprintf(updateWarningFormat,
+			fmt.Sprintf(resultTextHashCommentFormat, hash), comment.GetHTMLURL())
 		newBody, ok := updateIssueSection(issue.GetBody(), updateSectionName, updateWarning)
 		if !ok {
 			// This shouldn't occur because hasIssueSection was true
@@ -309,7 +314,8 @@ func createIssueBody(owner, repo, text, hash, issueDetails, footer string, isIss
 		refersTo = fmt.Sprintf(" and refers to [%s](https://github.com/%s)", ownerRepo, ownerRepo)
 	}
 	editHeader := issueSectionHeader(updateSectionName)
-	return fmt.Sprintf("_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)%s._\n\n**Security Policy Violation**\n"+
+	return fmt.Sprintf("_This issue was automatically created by "+
+		"[Allstar](https://github.com/ossf/allstar/)%s._\n\n**Security Policy Violation**\n"+
 		"%v\n\n---\n\n%s%s%s\n%s\n\n%v",
 		refersTo, text, editHeader, fmt.Sprintf(resultTextHashCommentFormat, hash), editHeader, issueDetails, footer)
 }

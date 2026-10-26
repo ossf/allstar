@@ -156,7 +156,8 @@ func getKeyFromSecretReal(ctx context.Context, keySecretVal string) ([]byte, err
 	if err != nil {
 		return nil, err
 	}
-	return s.Value.([]byte), nil //nolint:errcheck // TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
+	// TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
+	return s.Value.([]byte), nil //nolint:errcheck
 }
 
 func getKeyReal(ctx context.Context) ([]byte, error) {

@@ -202,7 +202,8 @@ func evaluateRequireRule(ctx context.Context, c *github.Client, owner, repo stri
 //     selector, the returned fix will be requireRuleEvaluationFixMethodAdd.
 //   - on error, the match bool is false AND fix method will not be usable.
 //   - on match true, the fix method is not to be used.
-func requireActionDetermineFix(ctx context.Context, c *github.Client, owner, repo string, ra *ActionSelector, a *actionMetadata,
+func requireActionDetermineFix(ctx context.Context, c *github.Client, owner, repo string,
+	ra *ActionSelector, a *actionMetadata,
 	mustPass bool, headSHA string, gc globCache, sc semverCache,
 ) (match bool, fix requireRuleEvaluationFixMethod, err error) {
 	match, matchName, _, err := ra.match(ctx, c, a, gc, sc)
