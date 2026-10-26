@@ -74,7 +74,7 @@ func ShouldPerform(sch *config.ScheduleConfig) bool {
 }
 
 // MergeSchedules gets the preferred ScheduleConfig from the ScheduleConfigs provided.
-func MergeSchedules(oc *config.ScheduleConfig, orc, rc *config.ScheduleConfig) *config.ScheduleConfig {
+func MergeSchedules(oc, orc, rc *config.ScheduleConfig) *config.ScheduleConfig {
 	var mc *config.ScheduleConfig
 
 	for _, cc := range []*config.ScheduleConfig{oc, orc, rc} {

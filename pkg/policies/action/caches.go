@@ -29,8 +29,8 @@ func newGlobCache() globCache {
 
 // compileGlob returns cached glob if present, otherwise attempts glob.Compile.
 func (g globCache) compileGlob(s string) (glob.Glob, error) {
-	if glob, ok := g[s]; ok {
-		return glob, nil
+	if cached, ok := g[s]; ok {
+		return cached, nil
 	}
 	c, err := glob.Compile(s)
 	if err != nil {

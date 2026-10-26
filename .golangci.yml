@@ -25,8 +25,7 @@ linters:
     # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
     #- gocognit
     - goconst
-    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
-    #- gocritic
+    - gocritic
     # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
     #- gocyclo
     - godot
