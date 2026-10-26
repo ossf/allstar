@@ -78,7 +78,8 @@ type details struct {
 	Artifacts []string
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
+var configFetchConfig func(context.Context, *github.Client, string, string, string,
+	config.ConfigLevel, interface{}) error
 
 func init() {
 	configFetchConfig = config.FetchConfig
@@ -191,7 +192,11 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		notify = fmt.Sprintf(`Project is out of compliance with Binary Artifacts policy: %v
 
 **Rule Description**
-Binary artifacts are an increased security risk in your repository. Binary artifacts cannot be reviewed, allowing the introduction of possibly obsolete or maliciously subverted executables. For more information, see the [OpenSSF Scorecard documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md#binary-artifacts) on binary artifacts.
+Binary artifacts are an increased security risk in your repository. Binary artifacts `+
+			`cannot be reviewed, allowing the introduction of possibly obsolete or maliciously `+
+			`subverted executables. For more information, see the [OpenSSF Scorecard `+
+			`documentation](https://github.com/ossf/scorecard/blob/main/docs/`+
+			`checks.md#binary-artifacts) on binary artifacts.
 
 **Remediation Steps**
 To remediate, remove the generated executable artifacts from the repository.
@@ -207,7 +212,8 @@ To remediate, remove the generated executable artifacts from the repository.
 			notify += fmt.Sprintf("**Artifacts Found**\n\n%v\n", listJoin(logs))
 		}
 		notify += `**Additional Information**
-This policy uses [OpenSSF Scorecard](https://github.com/ossf/scorecard/). You may wish to run a Scorecard scan directly on this repository for more details.`
+This policy uses [OpenSSF Scorecard](https://github.com/ossf/scorecard/). You may wish to ` +
+			`run a Scorecard scan directly on this repository for more details.`
 	}
 
 	return &policydef.Result{

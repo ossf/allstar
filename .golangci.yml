@@ -39,8 +39,7 @@ linters:
     - goprintffuncname
     - gosec
     - gosmopolitan
-    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
-    #- lll
+    - lll
     - loggercheck
     - makezero
     - mirror

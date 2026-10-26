@@ -32,10 +32,14 @@ const (
 )
 
 const ownerlessText = `Did not find any owners of this repository
-This policy requires all repositories to have a user or team assigned as an administrator.  A responsible party is required by organization policy to respond to security events and organization requests.
+This policy requires all repositories to have a user or team assigned as an ` +
+	`administrator.  A responsible party is required by organization policy to respond to ` +
+	`security events and organization requests.
 
-To add an administrator From the main page of the repository, go to Settings -> Manage Access.
-(For more information, see https://docs.github.com/en/organizations/managing-access-to-your-organizations-repositories)
+To add an administrator From the main page of the repository, go to Settings -> Manage ` +
+	`Access.
+(For more information, see https://docs.github.com/en/organizations/` +
+	`managing-access-to-your-organizations-repositories)
 
 Alternately, if this repository does not have any maintainers, archive or delete it.
 `
@@ -43,21 +47,27 @@ Alternately, if this repository does not have any maintainers, archive or delete
 const userAdminsText = `Users are not allowed to be administrators of this repository.
 Instead a team should be added as administrator. 
 
-To add a team as administrator From the main page of the repository, go to Settings -> Manage Access.
-(For more information, see https://docs.github.com/en/organizations/managing-access-to-your-organizations-repositories)
+To add a team as administrator From the main page of the repository, go to Settings -> ` +
+	`Manage Access.
+(For more information, see https://docs.github.com/en/organizations/` +
+	`managing-access-to-your-organizations-repositories)
 `
 
-const maxNumberUserAdminsText = `The number of users with admin permission on this repository is greater than the allowed maximum value.
+const maxNumberUserAdminsText = `The number of users with admin permission on this repository ` +
+	`is greater than the allowed maximum value.
 `
 
 const teamAdminsText = `Teams are not allowed to be administrators of this repository.
 Instead a user should be added as administrator. 
 
-To add a user as administrator From the main page of the repository, go to Settings -> Manage Access.
-(For more information, see https://docs.github.com/en/organizations/managing-access-to-your-organizations-repositories)
+To add a user as administrator From the main page of the repository, go to Settings -> ` +
+	`Manage Access.
+(For more information, see https://docs.github.com/en/organizations/` +
+	`managing-access-to-your-organizations-repositories)
 `
 
-const maxNumberAdminTeamsText = `The number of teams with admin permission on this repository is greater than the allowed maximum value.
+const maxNumberAdminTeamsText = `The number of teams with admin permission on this repository ` +
+	`is greater than the allowed maximum value.
 `
 
 // OrgConfig is the org-level config definition for Repository Administrators
@@ -78,14 +88,16 @@ type OrgConfig struct {
 	UserAdminsAllowed bool `json:"userAdminsAllowed"`
 
 	// The maximum number of users with admin permissions on a repo that are allowed.
-	// It only takes effect if a value > 0 is specified. If you wish to disallow user admins in general, please use the userAdminsAllowed bool instead.
+	// It only takes effect if a value > 0 is specified. If you wish to disallow user admins in general,
+	// please use the userAdminsAllowed bool instead.
 	MaxNumberUserAdmins int `json:"maxNumberUserAdmins"`
 
 	// Whether to allow teams to be admins on a repo. If false then only users can be admins. Default true.
 	TeamAdminsAllowed bool `json:"teamAdminsAllowed"`
 
 	// The maximum number of teams with admin permissions on a repo that are allowed.
-	// It only takes effect if a value > 0 is specified. If you wish to disallow admin teams in general, please use the teamAdminsAllowed bool instead.
+	// It only takes effect if a value > 0 is specified. If you wish to disallow admin teams in general,
+	// please use the teamAdminsAllowed bool instead.
 	MaxNumberAdminTeams int `json:"maxNumberAdminTeams"`
 
 	// Exemptions is a list of repo-bool pairings to exempt.
@@ -146,8 +158,10 @@ type AdministratorExemption struct {
 	// Allow specific users to be admins on this repository. It overrides the boolean value UserAdminsAllowed.
 	UserAdmins []string `json:"userAdmins"`
 
-	// The maximum number of users with admin permissions on this repo that are allowed.  It overrides the int value MaxNumberUserAdmins.
-	// It only takes effect if a value > 0 is specified. If you wish to disallow user admins in general, please use the userAdminsAllowed bool instead.
+	// The maximum number of users with admin permissions on this repo that are allowed.  It overrides the
+	// int value MaxNumberUserAdmins.
+	// It only takes effect if a value > 0 is specified. If you wish to disallow user admins in general,
+	// please use the userAdminsAllowed bool instead.
 	MaxNumberUserAdmins int `json:"maxNumberUserAdmins"`
 
 	// Whether to allow teams to be admins on a repo. If false then only users can be admins. Default true.
@@ -156,8 +170,10 @@ type AdministratorExemption struct {
 	// Allow specific teams to be admins on this repository. It overrides the boolean value TeamAdminsAllowed.
 	TeamAdmins []string `json:"teamAdmins"`
 
-	// The maximum number of teams with admin permissions on this repo that are allowed. It overrides the int value MaxNumberAdminTeams.
-	// It only takes effect if a value > 0 is specified. If you wish to disallow admin teams in general, please use the teamAdminsAllowed bool instead.
+	// The maximum number of teams with admin permissions on this repo that are allowed. It overrides the
+	// int value MaxNumberAdminTeams.
+	// It only takes effect if a value > 0 is specified. If you wish to disallow admin teams in general,
+	// please use the teamAdminsAllowed bool instead.
 	MaxNumberAdminTeams int `json:"maxNumberAdminTeams"`
 }
 
@@ -166,9 +182,11 @@ type details struct {
 	TeamAdmins []string
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
+var configFetchConfig func(context.Context, *github.Client, string, string, string,
+	config.ConfigLevel, interface{}) error
 
-var configIsEnabled func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig, c *github.Client, owner, repo string) (bool, error)
+var configIsEnabled func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig,
+	c *github.Client, owner, repo string) (bool, error)
 
 func init() {
 	configFetchConfig = config.FetchConfig
@@ -278,7 +296,8 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	}
 
 	// Test MaxNumberUserAdmins
-	if mc.MaxNumberUserAdmins > 0 && len(d.Admins) > mc.MaxNumberUserAdmins && !isMaxNumberUserAdminsExempt(repo, len(d.Admins), mc.Exemptions, gc, false) {
+	if mc.MaxNumberUserAdmins > 0 && len(d.Admins) > mc.MaxNumberUserAdmins &&
+		!isMaxNumberUserAdminsExempt(repo, len(d.Admins), mc.Exemptions, gc, false) {
 		rv.Pass = false
 		rv.NotifyText = rv.NotifyText + maxNumberUserAdminsText
 	}
@@ -296,7 +315,8 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	}
 
 	// Test MaxNumberAdminTeams
-	if mc.MaxNumberAdminTeams > 0 && len(d.TeamAdmins) > mc.MaxNumberAdminTeams && !isMaxNumberAdminTeamsExempt(repo, len(d.TeamAdmins), mc.Exemptions, gc, false) {
+	if mc.MaxNumberAdminTeams > 0 && len(d.TeamAdmins) > mc.MaxNumberAdminTeams &&
+		!isMaxNumberAdminTeamsExempt(repo, len(d.TeamAdmins), mc.Exemptions, gc, false) {
 		rv.Pass = false
 		rv.NotifyText = rv.NotifyText + maxNumberAdminTeamsText
 	}
@@ -399,7 +419,9 @@ func in(admins []string, list []string) bool {
 	return true
 }
 
-func isMaxNumberUserAdminsExempt(repo string, adminsCount int, ee []*AdministratorExemption, gc globCache, def bool) bool {
+func isMaxNumberUserAdminsExempt(repo string, adminsCount int, ee []*AdministratorExemption,
+	gc globCache, def bool,
+) bool {
 	for _, e := range ee {
 		g, err := gc.compileGlob(e.Repo)
 		if err != nil {
@@ -415,7 +437,9 @@ func isMaxNumberUserAdminsExempt(repo string, adminsCount int, ee []*Administrat
 	return def
 }
 
-func isMaxNumberAdminTeamsExempt(repo string, teamAdminsCount int, ee []*AdministratorExemption, gc globCache, def bool) bool {
+func isMaxNumberAdminTeamsExempt(repo string, teamAdminsCount int, ee []*AdministratorExemption,
+	gc globCache, def bool,
+) bool {
 	for _, e := range ee {
 		g, err := gc.compileGlob(e.Repo)
 		if err != nil {

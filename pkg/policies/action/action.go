@@ -35,7 +35,9 @@ const (
 	configFile = "actions.yaml"
 	polName    = "GitHub Actions"
 
-	failText = "This policy, specified at the organization level, sets requirements for Action use by repos within the organization. This repo is failing to fully comply with organization policies, as explained below.\n\n```\n%s```\n\nSee the org-level %s policy configuration for details."
+	failText = "This policy, specified at the organization level, sets requirements for Action use by " +
+		"repos within the organization. This repo is failing to fully comply with organization " +
+		"policies, as explained below.\n\n```\n%s```\n\nSee the org-level %s policy configuration for details."
 
 	maxWorkflows                  = 50
 	repoSelectorExcludeDepthLimit = 3
@@ -179,14 +181,16 @@ type internalOrgConfig struct {
 	Groups []*internalRuleGroup `json:"groups"`
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
+var configFetchConfig func(context.Context, *github.Client, string, string, string,
+	config.ConfigLevel, interface{}) error
 
 var (
 	listWorkflows              func(ctx context.Context, c *github.Client, owner, repo string) ([]*workflowMetadata, error)
 	listLanguages              func(ctx context.Context, c *github.Client, owner, repo string) (map[string]int, error)
-	listWorkflowRunsByFilename func(ctx context.Context, c *github.Client, owner, repo string, workflowFilename string) ([]*github.WorkflowRun, error)
-	getLatestCommitHash        func(ctx context.Context, c *github.Client, owner, repo string) (string, error)
-	listTags                   func(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryTag, error)
+	listWorkflowRunsByFilename func(ctx context.Context, c *github.Client, owner, repo string,
+		workflowFilename string) ([]*github.WorkflowRun, error)
+	getLatestCommitHash func(ctx context.Context, c *github.Client, owner, repo string) (string, error)
+	listTags            func(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryTag, error)
 )
 
 func init() {
@@ -507,7 +511,9 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) *inter
 
 // resolveVersion gets a *semver.Version given an actionMetadata.
 // It will use tags of the Action repo if necessary.
-func resolveVersion(ctx context.Context, c *github.Client, m *actionMetadata, gc globCache, sc semverCache) (*semver.Version, error) {
+func resolveVersion(ctx context.Context, c *github.Client, m *actionMetadata, gc globCache,
+	sc semverCache,
+) (*semver.Version, error) {
 	version, err := sc.compileVersion(m.version)
 	if err == nil {
 		return version, nil
@@ -532,7 +538,9 @@ func resolveVersion(ctx context.Context, c *github.Client, m *actionMetadata, gc
 }
 
 // match checks if an ActionSelector matches an actionMetadata.
-func (as *ActionSelector) match(ctx context.Context, c *github.Client, m *actionMetadata, gc globCache, sc semverCache) (match, matchName, matchVersion bool, err error) {
+func (as *ActionSelector) match(ctx context.Context, c *github.Client, m *actionMetadata,
+	gc globCache, sc semverCache,
+) (match, matchName, matchVersion bool, err error) {
 	if as.Name != "" {
 		nameGlob, err := gc.compileGlob(as.Name)
 		if err != nil {
@@ -553,7 +561,8 @@ func (as *ActionSelector) match(ctx context.Context, c *github.Client, m *action
 		if err != nil {
 			// on error, assume this is a ref
 			// (we know it doesn't match because not equal above)
-			return false, true, false, nil //nolint:nilerr // TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
+			// TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
+			return false, true, false, nil //nolint:nilerr
 		}
 		version, err := resolveVersion(ctx, c, m, gc, sc)
 		if err != nil {
@@ -568,7 +577,9 @@ func (as *ActionSelector) match(ctx context.Context, c *github.Client, m *action
 
 // match checks if a repo matches a RepoSelector.
 // Set excludeDepth to > 0 for exclusion depth limit, or < 0 for no depth limit.
-func (rs *RepoSelector) match(ctx context.Context, c *github.Client, owner, repo string, excludeDepth int, gc globCache, sc semverCache) (bool, error) {
+func (rs *RepoSelector) match(ctx context.Context, c *github.Client, owner, repo string,
+	excludeDepth int, gc globCache, sc semverCache,
+) (bool, error) {
 	if rs == nil {
 		return true, nil
 	}
@@ -683,10 +694,13 @@ func getLatestCommitHashReal(ctx context.Context, c *github.Client, owner, repo 
 // workflow filename.
 // Docs:
 // https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs
-func listWorkflowRunsByFilenameReal(ctx context.Context, c *github.Client, owner, repo string, workflowFilename string) ([]*github.WorkflowRun, error) {
-	runs, _, err := c.Actions.ListWorkflowRunsByFileName(ctx, owner, repo, workflowFilename, &github.ListWorkflowRunsOptions{
-		Event: "push",
-	})
+func listWorkflowRunsByFilenameReal(ctx context.Context, c *github.Client, owner, repo string,
+	workflowFilename string,
+) ([]*github.WorkflowRun, error) {
+	runs, _, err := c.Actions.ListWorkflowRunsByFileName(ctx, owner, repo, workflowFilename,
+		&github.ListWorkflowRunsOptions{
+			Event: "push",
+		})
 	return runs.WorkflowRuns, err
 }
 
@@ -705,9 +719,10 @@ func listWorkflowsReal(ctx context.Context, c *github.Client, owner, repo string
 	// See pkg/config/contents.go for similar. The difference here is getting
 	// dir rather than file contents. Could be nice to modify config's
 	// implementation and make it public for use here.
-	_, workflowDirContents, resp, err := c.Repositories.GetContents(ctx, owner, repo, ".github/workflows", &github.RepositoryContentGetOptions{})
+	_, workflowDirContents, resp, err := c.Repositories.GetContents(ctx, owner, repo,
+		".github/workflows", &github.RepositoryContentGetOptions{})
 	if err != nil {
-		if resp.StatusCode == http.StatusNotFound {
+		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			// No workflows dir should yield no workflows
 			return []*workflowMetadata{}, nil
 		}

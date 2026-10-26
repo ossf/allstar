@@ -26,7 +26,7 @@ import (
 )
 
 // AppID should be set to the application ID of the created GitHub App. See:
-// https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps#authenticating-as-a-github-app
+// https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps
 // There is no meaningful default: every operator runs their own app, so an
 // unset App ID is a configuration error caught by Validate.
 const setAppID = 0
@@ -34,12 +34,12 @@ const setAppID = 0
 var AppID int64
 
 // Raw value of the private key for the App. See:
-// https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps#generating-a-private-key
+// https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps
 var PrivateKey string
 
 // KeySecret should be set to the name of a secret containing a private key for
 // the App. See:
-// https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps#generating-a-private-key
+// https://docs.github.com/en/developers/apps/building-github-apps/authenticating-with-github-apps
 // The secret is retrieved with gocloud.dev/runtimevar, unless it is set to the
 // literal "direct", in which case the key is read from the PRIVATE_KEY
 // environment variable. "direct" is the default because it is the only backend
@@ -91,7 +91,8 @@ const GitHubIssueLabel = "allstar"
 // GitHubIssueFooter is added to the end of GitHub issues.
 const GitHubIssueFooter = `This issue will auto resolve when the policy is in compliance.
 
-Issue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer.`
+Issue created by Allstar. See https://github.com/ossf/allstar/ for more information. For ` +
+	`questions specific to the repository, please contact the owner or maintainer.`
 
 // AllowedOrganizations is the set of GitHub repositories on which this Allstar instance
 // is allowed to be installed. This allows a public GitHub app to be shared between GitHub

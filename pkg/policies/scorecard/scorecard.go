@@ -103,11 +103,13 @@ type details struct {
 }
 
 var (
-	configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
-	configIsEnabled   func(context.Context, config.OrgOptConfig, config.RepoOptConfig, config.RepoOptConfig, *github.Client, string, string) (bool, error)
-	scorecardGet      func(context.Context, string, bool, http.RoundTripper) (*scorecard.ScClient, error)
-	checksAllChecks   checker.CheckNameToFnMap
-	scRun             func(context.Context, clients.Repo, ...sc.Option) (sc.Result, error)
+	configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel,
+		interface{}) error
+	configIsEnabled func(context.Context, config.OrgOptConfig, config.RepoOptConfig,
+		config.RepoOptConfig, *github.Client, string, string) (bool, error)
+	scorecardGet    func(context.Context, string, bool, http.RoundTripper) (*scorecard.ScClient, error)
+	checksAllChecks checker.CheckNameToFnMap
+	scRun           func(context.Context, clients.Repo, ...sc.Option) (sc.Result, error)
 )
 
 func init() {
@@ -233,7 +235,10 @@ func (b Scorecard) Check(ctx context.Context, c *github.Client, owner,
 				notify = `Project is out of compliance with OpenSSF Scorecard policy.
 
 **Rule Description**
-This is a generic passthrough policy that runs the configured checks from OpenSSF Scorecard. Please see the [OpenSSF Scorecard documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md) for more information on each check.
+This is a generic passthrough policy that runs the configured checks from OpenSSF ` +
+					`Scorecard. Please see the [OpenSSF Scorecard ` +
+					`documentation](https://github.com/ossf/scorecard/blob/main/docs/checks.md) for more ` +
+					`information on each check.
 The score was %v, and the passing threshold is %v.
 `
 				notify = fmt.Sprintf(notify, res.Score, mc.Threshold)
@@ -284,10 +289,12 @@ func convertLogs(logs []checker.CheckDetail) []string {
 	var s []string
 	for _, l := range logs {
 		if l.Msg.Finding != nil {
-			if l.Msg.Finding.Location == nil || l.Msg.Finding.Location.Snippet == nil || l.Msg.Finding.Location.LineStart == nil {
+			if l.Msg.Finding.Location == nil || l.Msg.Finding.Location.Snippet == nil ||
+				l.Msg.Finding.Location.LineStart == nil {
 				s = append(s, fmt.Sprintf("%v", l.Msg.Finding.Message))
 			} else {
-				s = append(s, fmt.Sprintf("%v[%v]:%v", *l.Msg.Finding.Location.Snippet, *l.Msg.Finding.Location.LineStart, l.Msg.Finding.Message))
+				s = append(s, fmt.Sprintf("%v[%v]:%v",
+					*l.Msg.Finding.Location.Snippet, *l.Msg.Finding.Location.LineStart, l.Msg.Finding.Message))
 			}
 		} else {
 			s = append(s, fmt.Sprintf("%v[%v]:%v", l.Msg.Path, l.Msg.Offset, l.Msg.Text))

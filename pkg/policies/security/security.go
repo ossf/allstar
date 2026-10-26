@@ -33,11 +33,16 @@ const (
 	polName    = "SECURITY.md"
 )
 
-const notifyText = `A SECURITY.md file can give users information about what constitutes a vulnerability and how to report one securely so that information about a bug is not publicly visible. Examples of secure reporting methods include using an issue tracker with private issue support, or encrypted email with a published key.
+const notifyText = `A SECURITY.md file can give users information about what constitutes a vulnerability and ` +
+	`how to report one securely so that information about a bug is not publicly visible. ` +
+	`Examples of secure reporting methods include using an issue tracker with private issue ` +
+	`support, or encrypted email with a published key.
 
-To fix this, add a SECURITY.md file that explains how to handle vulnerabilities found in your repository. Go to https://github.com/%v/%v/security/policy to enable.
+To fix this, add a SECURITY.md file that explains how to handle vulnerabilities found in ` +
+	`your repository. Go to https://github.com/%v/%v/security/policy to enable.
 
-For more information, see https://docs.github.com/en/code-security/getting-started/adding-a-security-policy-to-your-repository.`
+For more information, see https://docs.github.com/en/code-security/getting-started/` +
+	`adding-a-security-policy-to-your-repository.`
 
 // OrgConfig is the org-level config definition for Branch Protection.
 type OrgConfig struct {
@@ -69,9 +74,11 @@ type details struct {
 	URL     string
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
+var configFetchConfig func(context.Context, *github.Client, string, string, string,
+	config.ConfigLevel, interface{}) error
 
-var configIsEnabled func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig, c *github.Client, owner, repo string) (bool, error)
+var configIsEnabled func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig,
+	c *github.Client, owner, repo string) (bool, error)
 
 func init() {
 	configFetchConfig = config.FetchConfig
