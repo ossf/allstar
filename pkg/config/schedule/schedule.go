@@ -35,11 +35,7 @@ var weekdayStrings = map[string]time.Weekday{
 	"saturday":  time.Saturday,
 }
 
-var timeNow func() time.Time
-
-func init() {
-	timeNow = time.Now
-}
+var timeNow = time.Now
 
 // ShouldPerform determines whether an action should be performed based on sch.
 // The error may be ignored for default create behavior.

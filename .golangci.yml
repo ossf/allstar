@@ -19,8 +19,7 @@ linters:
     - exhaustive
     - forbidigo
     - gocheckcompilerdirectives
-    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
-    #- gochecknoinits
+    - gochecknoinits
     - gochecksumtype
     # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
     #- gocognit

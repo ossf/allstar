@@ -43,28 +43,16 @@ type (
 
 var (
 	doNothingOnOptOut       = operator.DoNothingOnOptOut
-	policiesGetPolicies     func() []policydef.Policy
-	issueEnsure             func(context.Context, *github.Client, string, string, string, string) error
-	issueClose              func(context.Context, *github.Client, string, string, string) error
-	configIsBotEnabled      func(context.Context, *github.Client, string, string) bool
-	getAppInstallations     func(context.Context, *github.Client) ([]*github.Installation, error)
-	getAppInstallationRepos func(context.Context, *github.Client) ([]*github.Repository, *github.Response, error)
-	runPolicies             func(context.Context, *github.Client, string, string, bool, string) (EnforceRepoResults, error)
-	deleteInstallation      func(context.Context, *github.Client, int64) (*github.Response, error)
-	listInstallations       func(context.Context, *github.Client) ([]*github.Installation, error)
-)
-
-func init() {
-	policiesGetPolicies = policies.GetPolicies
-	issueEnsure = issue.Ensure
-	issueClose = issue.Close
-	configIsBotEnabled = config.IsBotEnabled
-	getAppInstallations = getAppInstallationsReal
+	policiesGetPolicies     = policies.GetPolicies
+	issueEnsure             = issue.Ensure
+	issueClose              = issue.Close
+	configIsBotEnabled      = config.IsBotEnabled
+	getAppInstallations     = getAppInstallationsReal
 	getAppInstallationRepos = getAppInstallationReposReal
-	runPolicies = runPoliciesReal
-	deleteInstallation = deleteInstallationReal
-	listInstallations = listInstallationsReal
-}
+	runPolicies             = runPoliciesReal
+	deleteInstallation      = deleteInstallationReal
+	listInstallations       = listInstallationsReal
+)
 
 // EnforceAll iterates through all available installations and repos Allstar
 // has access to and runs policies on those repos. It is meant to be a
