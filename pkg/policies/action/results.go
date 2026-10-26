@@ -86,9 +86,11 @@ func (de *denyRuleEvaluationResult) explain() string {
 	}
 	s := ""
 	if de.denied {
-		s = fmt.Sprintf("Action \"%s\" version %s hit %s:\n", de.actionMetadata.name, de.actionMetadata.version, de.denyingRule.string(false))
+		s = fmt.Sprintf("Action \"%s\" version %s hit %s:\n",
+			de.actionMetadata.name, de.actionMetadata.version, de.denyingRule.string(false))
 	} else {
-		s = fmt.Sprintf("Action \"%s\" version %s did not hit a deny rule.\n", de.actionMetadata.name, de.actionMetadata.version)
+		s = fmt.Sprintf("Action \"%s\" version %s did not hit a deny rule.\n",
+			de.actionMetadata.name, de.actionMetadata.version)
 	}
 	// Add step results
 	for _, stepResult := range de.steps {
@@ -105,7 +107,8 @@ func (de *denyRuleEvaluationResult) relevantRule() *internalRule {
 func (des *denyRuleEvaluationStepResult) string() string {
 	switch des.status {
 	case denyRuleStepStatusActionVersionMismatch:
-		return fmt.Sprintf("does not meet version requirement \"%s\" for %s", des.ruleVersionConstraint, des.rule.string(false))
+		return fmt.Sprintf("does not meet version requirement \"%s\" for %s",
+			des.ruleVersionConstraint, des.rule.string(false))
 	case denyRuleStepStatusMissingAction:
 		return fmt.Sprintf("is not listed in %s", des.rule.string(false))
 	case denyRuleStepStatusAllowed:
@@ -189,7 +192,8 @@ func (rf *requireRuleEvaluationFix) string() string {
 	case requireRuleEvaluationFixMethodUpdate:
 		return fmt.Sprintf("Update Action \"%s\" to version satisfying \"%s\"", rf.actionName, rf.actionVersionConstraint)
 	case requireRuleEvaluationFixMethodEnable:
-		return fmt.Sprintf("Enable workflow \"%s\" containing Action \"%s\" to run on %v.", rf.workflowName, rf.actionName, strings.Join(requireWorkflowOnForRequire, " and "))
+		return fmt.Sprintf("Enable workflow \"%s\" containing Action \"%s\" to run on %v.",
+			rf.workflowName, rf.actionName, strings.Join(requireWorkflowOnForRequire, " and "))
 	default:
 		return "unknown require rule eval fix"
 	}

@@ -177,11 +177,15 @@ type repositories interface {
 }
 
 // FetchConfig grabs a yaml config file from github and writes it to out.
-func FetchConfig(ctx context.Context, c *github.Client, owner, repo, name string, cl ConfigLevel, out interface{}) error {
+func FetchConfig(ctx context.Context, c *github.Client, owner, repo, name string, cl ConfigLevel,
+	out interface{},
+) error {
 	return fetchConfig(ctx, c.Repositories, owner, repo, name, cl, out)
 }
 
-func fetchConfig(ctx context.Context, r repositories, owner, repoIn, name string, cl ConfigLevel, out interface{}) error {
+func fetchConfig(ctx context.Context, r repositories, owner, repoIn, name string, cl ConfigLevel,
+	out interface{},
+) error {
 	il, err := getInstLoc(ctx, r, owner)
 	if err != nil {
 		return err
@@ -293,11 +297,15 @@ func checkAndMergeBase(ctx context.Context, r repositories, path string, content
 
 // IsEnabled determines if a repo is enabled by interpreting the provided
 // org-level, org-repo-level, and repo-level OptConfigs.
-func IsEnabled(ctx context.Context, o OrgOptConfig, orc, r RepoOptConfig, c *github.Client, owner, repo string) (bool, error) {
+func IsEnabled(ctx context.Context, o OrgOptConfig, orc, r RepoOptConfig, c *github.Client, owner,
+	repo string,
+) (bool, error) {
 	return isEnabled(ctx, o, orc, r, c.Repositories, owner, repo)
 }
 
-func isEnabled(ctx context.Context, o OrgOptConfig, orc, r RepoOptConfig, rep repositories, owner, repo string) (bool, error) {
+func isEnabled(ctx context.Context, o OrgOptConfig, orc, r RepoOptConfig, rep repositories, owner,
+	repo string,
+) (bool, error) {
 	var enabled bool
 
 	gr, _, err := rep.Get(ctx, owner, repo)

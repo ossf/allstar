@@ -72,7 +72,9 @@ func init() {
 //
 // TBD: determine if this should remain exported, or if it will only be called
 // from EnforceJob.
-func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificPolicyArg string, specificRepoArg string) (EnforceAllResults, error) {
+func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificPolicyArg string,
+	specificRepoArg string,
+) (EnforceAllResults, error) {
 	var repoCount int
 	enforceAllResults := make(EnforceAllResults)
 	ac, err := ghc.Get(0)
@@ -187,7 +189,8 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificP
 	return enforceAllResults, nil
 }
 
-func runPoliciesOnInstRepos(ctx context.Context, repos []*github.Repository, ghclient *github.Client, specificPolicyArg string) (
+func runPoliciesOnInstRepos(ctx context.Context, repos []*github.Repository,
+	ghclient *github.Client, specificPolicyArg string) (
 	EnforceAllResults, error,
 ) {
 	instResults := make(EnforceAllResults)
@@ -286,7 +289,9 @@ func deleteInstallationReal(ctx context.Context, ic *github.Client, instID int64
 	return resp, err
 }
 
-func getAppInstallationReposReal(ctx context.Context, ic *github.Client) ([]*github.Repository, *github.Response, error) {
+func getAppInstallationReposReal(ctx context.Context, ic *github.Client) ([]*github.Repository,
+	*github.Response, error,
+) {
 	var repos []*github.Repository
 	opt := &github.ListOptions{
 		PerPage: 100,
@@ -310,7 +315,9 @@ func getAppInstallationReposReal(ctx context.Context, ic *github.Client) ([]*git
 
 // EnforceJob is a reconciliation job that enforces policies on all repos every
 // d duration. It runs forever until the context is done.
-func EnforceJob(ctx context.Context, ghc *ghclients.GHClients, d time.Duration, specificPolicyArg string, specificRepoArg string) error {
+func EnforceJob(ctx context.Context, ghc *ghclients.GHClients, d time.Duration,
+	specificPolicyArg string, specificRepoArg string,
+) error {
 	for {
 		_, err := EnforceAll(ctx, ghc, specificPolicyArg, specificRepoArg)
 		if err != nil {
@@ -329,7 +336,9 @@ func EnforceJob(ctx context.Context, ghc *ghclients.GHClients, d time.Duration, 
 // runPoliciesReal enforces policies on the provided repo. It is meant to be called
 // from either jobs, webhooks, or delayed checks. TODO: implement concurrency
 // check to only run a single instance per repo at a time.
-func runPoliciesReal(ctx context.Context, c *github.Client, owner, repo string, enabled bool, specificPolicyArg string) (EnforceRepoResults, error) {
+func runPoliciesReal(ctx context.Context, c *github.Client, owner, repo string, enabled bool,
+	specificPolicyArg string,
+) (EnforceRepoResults, error) {
 	enforceResults := make(EnforceRepoResults)
 	ps := policiesGetPolicies()
 	if specificPolicyArg != "" {

@@ -68,9 +68,11 @@ func main() {
 	var runOnce bool
 	flag.BoolVar(&runOnce, "once", false, "Run EnforceAll once, instead of in a continuous loop.")
 
-	specificPolicyArg := flag.String("policy", "", fmt.Sprintf("Run a specific policy check. Supported policies: %s", supportedPoliciesMsg))
+	specificPolicyArg := flag.String("policy", "",
+		fmt.Sprintf("Run a specific policy check. Supported policies: %s", supportedPoliciesMsg))
 	specificRepoArg := flag.String("repo", "", "Run on a specific \"owner/repo\". For example \"ossf/allstar\"")
-	resultsFileArg := flag.String("results-file", "", "Write Scorecard results to this file as JSON (Scorecard JSON v2 format).")
+	resultsFileArg := flag.String("results-file", "",
+		"Write Scorecard results to this file as JSON (Scorecard JSON v2 format).")
 
 	flag.Parse()
 
@@ -80,7 +82,8 @@ func main() {
 				Str("Policy filtering", *specificPolicyArg).
 				Msg(fmt.Sprintf("Allstar will only run on policy %s", v))
 		} else {
-			log.Fatal().Err(fmt.Errorf("unsupported policy flag %s", *specificPolicyArg)).Msg(fmt.Sprintf("Supported policies: %s", supportedPoliciesMsg))
+			log.Fatal().Err(fmt.Errorf("unsupported policy flag %s", *specificPolicyArg)).
+				Msg(fmt.Sprintf("Supported policies: %s", supportedPoliciesMsg))
 		}
 	}
 

@@ -32,10 +32,14 @@ const (
 	polName    = "CODEOWNERS"
 )
 
-const notifyText = `A CODEOWNERS file can give users information about who is responsible for the maintenance of the repository, or specific folders/files. This is different the access control/permissions on a repository.
+const notifyText = `A CODEOWNERS file can give users information about who is responsible for the maintenance ` +
+	`of the repository, or specific folders/files. This is different the access ` +
+	`control/permissions on a repository.
 
-To fix this, add a CODEOWNERS file to your repository, following the official Github documentation and maybe your company's policy.
-https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners`
+To fix this, add a CODEOWNERS file to your repository, following the official Github ` +
+	`documentation and maybe your company's policy.
+https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/` +
+	`customizing-your-repository/about-code-owners`
 
 // OrgConfig is the org-level config definition for CODEOWNERS.
 type OrgConfig struct {
@@ -46,7 +50,8 @@ type OrgConfig struct {
 	// Action defines which action to take, default log, other: issue...
 	Action string `json:"action"`
 
-	// RequireCODEOWNERS : set to true to require presence of a CODEOWNERS on the repositories (creates an issue if not present)
+	// RequireCODEOWNERS : set to true to require presence of a CODEOWNERS on the repositories (creates an
+	// issue if not present)
 	// default false (only checks if existing CODEOWNERS is valid, creates issues if not valid).
 	RequireCODEOWNERS bool `json:"requireCODEOWNERS"`
 }
@@ -59,13 +64,15 @@ type RepoConfig struct {
 	// Action overrides the same setting in org-level, only if present.
 	Action *string `json:"action"`
 
-	// RequireCODEOWNERS : set to true to require presence of a CODEOWNERS on the repositories (creates an issue if not present)
+	// RequireCODEOWNERS : set to true to require presence of a CODEOWNERS on the repositories (creates an
+	// issue if not present)
 	// default false (only checks if existing CODEOWNERS is valid, creates issues if not valid).
 	RequireCODEOWNERS *bool `json:"requireCODEOWNERS"`
 }
 
 type repositories interface {
-	GetCodeownersErrors(ctx context.Context, owner, repo string, op *github.GetCodeownersErrorsOptions) (*github.CodeownersErrors, *github.Response, error)
+	GetCodeownersErrors(ctx context.Context, owner, repo string, op *github.GetCodeownersErrorsOptions) (
+		*github.CodeownersErrors, *github.Response, error)
 }
 
 type mergedConfig struct {
@@ -79,9 +86,11 @@ type details struct {
 	CodeownersErrors github.CodeownersErrors
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
+var configFetchConfig func(context.Context, *github.Client, string, string, string,
+	config.ConfigLevel, interface{}) error
 
-var configIsEnabled func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig, c *github.Client, owner, repo string) (bool, error)
+var configIsEnabled func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig,
+	c *github.Client, owner, repo string) (bool, error)
 
 func init() {
 	configFetchConfig = config.FetchConfig
