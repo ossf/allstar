@@ -250,7 +250,9 @@ The score was %v, and the passing threshold is %v.
 		}
 	}
 
-	if mc.Upload.SARIF && len(validChecks) > 0 && len(allRes.Checks) > 0 {
+	// Uploading writes to the repo, so like the issue and fix actions it
+	// only happens when the repo is enabled for this policy.
+	if enabled && mc.Upload.SARIF && len(validChecks) > 0 && len(allRes.Checks) > 0 {
 		if err := uploadSARIF(ctx, c, owner, repo, &allRes,
 			validChecks, mc.Threshold); err != nil {
 			log.Warn().
