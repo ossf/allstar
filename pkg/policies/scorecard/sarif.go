@@ -47,11 +47,22 @@ var (
 	sarifHashMap = make(map[string]string) // "owner/repo" -> commit SHA
 )
 
-// Results collector: accumulates Scorecard results across repos.
+// Results collector: accumulates Scorecard results across repos. It is off
+// unless EnableResultsCollection is called. Only a -once run writes the
+// results file, and a daemon would otherwise keep every result for the life
+// of the process.
 var (
 	resultsMu      sync.Mutex
+	collectResults bool
 	resultsEntries []sc.JSONScorecardResultV2
 )
+
+// EnableResultsCollection turns on collection of results for WriteResults.
+func EnableResultsCollection() {
+	resultsMu.Lock()
+	collectResults = true
+	resultsMu.Unlock()
+}
 
 // resultToSARIF converts a scorecard Result to SARIF and writes it
 // to the provided writer.
@@ -235,6 +246,13 @@ func uploadSARIF(
 
 // collectResult stores a Scorecard result for later export via WriteResults.
 func collectResult(result *sc.Result) {
+	resultsMu.Lock()
+	enabled := collectResults
+	resultsMu.Unlock()
+	if !enabled {
+		return
+	}
+
 	checkDocs, err := docs.Read()
 	if err != nil {
 		log.Warn().Err(err).Msg("Failed to read check docs for results collection.")
