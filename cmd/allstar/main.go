@@ -91,6 +91,9 @@ func main() {
 	}
 
 	if runOnce {
+		if *resultsFileArg != "" {
+			scorecardPolicy.EnableResultsCollection()
+		}
 		_, err := enforce.EnforceAll(ctx, ghc, *specificPolicyArg, *specificRepoArg)
 		if err != nil {
 			log.Fatal().
