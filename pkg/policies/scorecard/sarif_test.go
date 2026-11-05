@@ -215,11 +215,6 @@ func TestCheckWithSARIFUpload(t *testing.T) {
 	) (ref, sha string, err error) {
 		return "refs/heads/main", "abc123", nil
 	}
-	configIsEnabled = func(_ context.Context, _ config.OrgOptConfig, _,
-		_ config.RepoOptConfig, _ *github.Client, _, _ string,
-	) (bool, error) {
-		return true, nil
-	}
 	scorecardGet = func(_ context.Context, _ string, _ bool,
 		_ http.RoundTripper,
 	) (*scorecard.ScClient, error) {
@@ -236,6 +231,7 @@ func TestCheckWithSARIFUpload(t *testing.T) {
 	tests := []struct {
 		Name         string
 		Upload       UploadConfig
+		Disabled     bool
 		ExpectUpload bool
 	}{
 		{
@@ -248,12 +244,26 @@ func TestCheckWithSARIFUpload(t *testing.T) {
 			Upload:       UploadConfig{SARIF: false},
 			ExpectUpload: false,
 		},
+		{
+			// The repo opted out, or never opted in under the opt-in
+			// strategy. Allstar must not write to it.
+			Name:         "PolicyNotEnabled",
+			Upload:       UploadConfig{SARIF: true},
+			Disabled:     true,
+			ExpectUpload: false,
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
 			uploadCount = 0
 			clearSARIFHashes()
+
+			configIsEnabled = func(_ context.Context, _ config.OrgOptConfig, _,
+				_ config.RepoOptConfig, _ *github.Client, _, _ string,
+			) (bool, error) {
+				return !test.Disabled, nil
+			}
 
 			configFetchConfig = func(_ context.Context, _ *github.Client,
 				_, _, _ string, ol config.ConfigLevel, out interface{},
@@ -274,6 +284,9 @@ func TestCheckWithSARIFUpload(t *testing.T) {
 			res, err := s.Check(context.Background(), github.NewClient(nil), "testorg", "testrepo")
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
+			}
+			if res.Enabled == test.Disabled {
+				t.Fatalf("Expected Enabled %v, got %v", !test.Disabled, res.Enabled)
 			}
 			if !res.Pass {
 				t.Error("Expected pass")
