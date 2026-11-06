@@ -17,6 +17,7 @@ package action
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -181,26 +182,15 @@ type internalOrgConfig struct {
 	Groups []*internalRuleGroup `json:"groups"`
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string,
-	config.ConfigLevel, interface{}) error
+var configFetchConfig = config.FetchConfig
 
 var (
-	listWorkflows              func(ctx context.Context, c *github.Client, owner, repo string) ([]*workflowMetadata, error)
-	listLanguages              func(ctx context.Context, c *github.Client, owner, repo string) (map[string]int, error)
-	listWorkflowRunsByFilename func(ctx context.Context, c *github.Client, owner, repo string,
-		workflowFilename string) ([]*github.WorkflowRun, error)
-	getLatestCommitHash func(ctx context.Context, c *github.Client, owner, repo string) (string, error)
-	listTags            func(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryTag, error)
-)
-
-func init() {
-	configFetchConfig = config.FetchConfig
-	listWorkflows = listWorkflowsReal
-	listLanguages = listLanguagesReal
+	listWorkflows              = listWorkflowsReal
+	listLanguages              = listLanguagesReal
 	listWorkflowRunsByFilename = listWorkflowRunsByFilenameReal
-	getLatestCommitHash = getLatestCommitHashReal
-	listTags = listTagsReal
-}
+	getLatestCommitHash        = getLatestCommitHashReal
+	listTags                   = listTagsReal
+)
 
 // sortableRules is a sortable list of *Rule.
 type sortableRules []*internalRule
@@ -357,17 +347,17 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 	// Note: deny rules are evaluated Action-wise
 
 	for _, a := range actions {
-		denyResult, errors := evaluateActionDenied(ctx, c, applicableRules, a, gc, sc)
+		denyResult, evalErrors := evaluateActionDenied(ctx, c, applicableRules, a, gc, sc)
 		// errors are often parse errors (user-created) and are reflected in
 		// denyResult steps
 
-		if errors != nil {
+		if evalErrors != nil {
 			log.Warn().
 				Str("org", owner).
 				Str("repo", repo).
 				Str("area", polName).
 				Str("action", a.name).
-				Errs("errors", errors).
+				Errs("errors", evalErrors).
 				Msg("Errors while evaluating deny rule.")
 		}
 
@@ -376,12 +366,11 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 
 	// => Next, evaluate require rules
 
-	var wfr *github.WorkflowRuns
 	var headSHA string
 
 	for _, r := range applicableRules {
 		if r.Method == ruleMethodRequire {
-			if r.MustPass && wfr == nil {
+			if r.MustPass && headSHA == "" {
 				var err error
 				hash, err := getLatestCommitHash(ctx, c, owner, repo)
 				if err != nil {
@@ -391,7 +380,7 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 						Str("area", polName).
 						Err(err).
 						Msg("Error getting latest commit hash. Skipping rule evaluation.")
-					break
+					continue
 				}
 				headSHA = hash
 			}
@@ -671,9 +660,7 @@ func (s sortableRules) Less(i, j int) bool {
 
 // Swap swaps the Rules at indices i and j.
 func (s sortableRules) Swap(i, j int) {
-	hold := s[i]
-	s[i] = s[j]
-	s[j] = hold
+	s[i], s[j] = s[j], s[i]
 }
 
 // getLatestCommitHashReal gets the latest commit hash for a repo's default
@@ -687,15 +674,15 @@ func getLatestCommitHashReal(ctx context.Context, c *github.Client, owner, repo 
 	if len(commits) > 0 && commits[0].SHA != nil {
 		return *commits[0].SHA, nil
 	}
-	return "", fmt.Errorf("repo has no commits: %w", err)
+	return "", errors.New("repo has no commits")
 }
 
 // listWorkflowRunsByFilenameReal returns workflow runs for a repo by
 // workflow filename.
 // Docs:
 // https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs
-func listWorkflowRunsByFilenameReal(ctx context.Context, c *github.Client, owner, repo string,
-	workflowFilename string,
+func listWorkflowRunsByFilenameReal(ctx context.Context, c *github.Client,
+	owner, repo, workflowFilename string,
 ) ([]*github.WorkflowRun, error) {
 	runs, _, err := c.Actions.ListWorkflowRunsByFileName(ctx, owner, repo, workflowFilename,
 		&github.ListWorkflowRunsOptions{
@@ -775,16 +762,16 @@ func listWorkflowsReal(ctx context.Context, c *github.Client, owner, repo string
 		bc := []byte(sc)
 		wf, errs := actionlint.Parse(bc)
 		if len(errs) > 0 || wf == nil {
-			var errors []error
+			var parseErrors []error
 			for _, err := range errs {
-				errors = append(errors, fmt.Errorf("actionlist.Parse error: %w", err))
+				parseErrors = append(parseErrors, fmt.Errorf("actionlist.Parse error: %w", err))
 			}
 			log.Warn().
 				Str("org", owner).
 				Str("repo", repo).
 				Str("area", polName).
 				Str("path", wfc.GetPath()).
-				Errs("errors", errors).
+				Errs("errors", parseErrors).
 				Msg("Errors while parsing workflow file content.")
 		}
 		if wf == nil {

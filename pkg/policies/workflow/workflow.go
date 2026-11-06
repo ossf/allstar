@@ -77,12 +77,7 @@ type details struct {
 	Findings []string
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string,
-	config.ConfigLevel, interface{}) error
-
-func init() {
-	configFetchConfig = config.FetchConfig
-}
+var configFetchConfig = config.FetchConfig
 
 // Workflow is the Dangerous Workflow policy object, implements
 // policydef.Policy.
@@ -368,7 +363,7 @@ func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedCon
 	return mc
 }
 
-func configParseBranches(oc string, orc string, rc string) []string {
+func configParseBranches(oc, orc, rc string) []string {
 	var ret []string
 	if oc != "" {
 		ret = append(ret, strings.Split(oc, ",")...)

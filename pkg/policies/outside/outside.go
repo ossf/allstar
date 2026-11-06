@@ -135,16 +135,9 @@ type details struct {
 	TeamAdmins        []string
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string,
-	config.ConfigLevel, interface{}) error
+var configFetchConfig = config.FetchConfig
 
-var configIsEnabled func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig,
-	c *github.Client, owner, repo string) (bool, error)
-
-func init() {
-	configFetchConfig = config.FetchConfig
-	configIsEnabled = config.IsEnabled
-}
+var configIsEnabled = config.IsEnabled
 
 // Outside is the Outside Collaborators policy object, implements policydef.Policy.
 type Outside bool
@@ -218,7 +211,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 			directOrgAdmins = append(directOrgAdmins, a)
 		}
 	}
-	d.OwnerCount = d.OwnerCount + len(directOrgAdmins)
+	d.OwnerCount += len(directOrgAdmins)
 	d.DirectOrgAdmins = directOrgAdmins
 
 	opt := &github.ListOptions{
@@ -242,7 +235,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 			teamAdmins = append(teamAdmins, t.GetSlug())
 		}
 	}
-	d.OwnerCount = d.OwnerCount + len(teamAdmins)
+	d.OwnerCount += len(teamAdmins)
 	d.TeamAdmins = teamAdmins
 
 	rv := &policydef.Result{
@@ -254,18 +247,16 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	exp := false
 	if d.OutsidePushCount > 0 && !mc.PushAllowed {
 		rv.Pass = false
-		rv.NotifyText = rv.NotifyText +
-			fmt.Sprintf(accessText, d.OutsidePushCount, "push")
+		rv.NotifyText += fmt.Sprintf(accessText, d.OutsidePushCount, "push")
 		exp = true
 	}
 	if d.OutsideAdminCount > 0 && !mc.AdminAllowed {
 		rv.Pass = false
-		rv.NotifyText = rv.NotifyText +
-			fmt.Sprintf(accessText, d.OutsideAdminCount, "admin")
+		rv.NotifyText += fmt.Sprintf(accessText, d.OutsideAdminCount, "admin")
 		exp = true
 	}
 	if exp {
-		rv.NotifyText = rv.NotifyText + accessExp
+		rv.NotifyText += accessExp
 	}
 	return rv, nil
 }
@@ -405,7 +396,7 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 	return oc, orc, rc
 }
 
-func mergeConfig(oc *OrgConfig, orc *RepoConfig, rc *RepoConfig, repo string) *mergedConfig {
+func mergeConfig(oc *OrgConfig, orc, rc *RepoConfig, repo string) *mergedConfig {
 	mc := &mergedConfig{
 		Action:       oc.Action,
 		PushAllowed:  oc.PushAllowed,
@@ -435,8 +426,8 @@ func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedCon
 
 // compileGlob returns cached glob if present, otherwise attempts glob.Compile.
 func (g globCache) compileGlob(s string) (glob.Glob, error) {
-	if glob, ok := g[s]; ok {
-		return glob, nil
+	if cached, ok := g[s]; ok {
+		return cached, nil
 	}
 	c, err := glob.Compile(s)
 	if err != nil {

@@ -86,16 +86,9 @@ type details struct {
 	CodeownersErrors github.CodeownersErrors
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string,
-	config.ConfigLevel, interface{}) error
+var configFetchConfig = config.FetchConfig
 
-var configIsEnabled func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig,
-	c *github.Client, owner, repo string) (bool, error)
-
-func init() {
-	configFetchConfig = config.FetchConfig
-	configIsEnabled = config.IsEnabled
-}
+var configIsEnabled = config.IsEnabled
 
 // Codeowners is the CODEOWNERS policy object, implements policydef.Policy.
 type Codeowners bool
@@ -255,7 +248,7 @@ func getConfig(ctx context.Context, c *github.Client, owner, repo string) (*OrgC
 	return oc, orc, rc
 }
 
-func mergeConfig(oc *OrgConfig, orc *RepoConfig, rc *RepoConfig, repo string) *mergedConfig {
+func mergeConfig(oc *OrgConfig, orc, rc *RepoConfig, repo string) *mergedConfig {
 	mc := &mergedConfig{
 		Action:            oc.Action,
 		RequireCODEOWNERS: oc.RequireCODEOWNERS,

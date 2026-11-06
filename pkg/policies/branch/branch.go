@@ -179,16 +179,9 @@ type details struct {
 }
 
 var (
-	configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel,
-		interface{}) error
-	configIsEnabled func(ctx context.Context, o config.OrgOptConfig,
-		orc, r config.RepoOptConfig, c *github.Client, owner, repo string) (bool, error)
-)
-
-func init() {
 	configFetchConfig = config.FetchConfig
-	configIsEnabled = config.IsEnabled
-}
+	configIsEnabled   = config.IsEnabled
+)
 
 // Branch is the Branch Protection policy object, implements policydef.Policy.
 type Branch bool
@@ -284,7 +277,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 
 	allBranches := mc.EnforceBranches
 	if mc.EnforceDefault {
-		allBranches = append(mc.EnforceBranches, r.GetDefaultBranch())
+		allBranches = append(allBranches, r.GetDefaultBranch())
 	}
 	if len(allBranches) == 0 {
 		return &policydef.Result{
@@ -303,14 +296,14 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 			if rsp != nil && rsp.StatusCode == http.StatusNotFound {
 				// Branch not protected
 				pass = false
-				text = text + fmt.Sprintf("No protection found for branch %v\n", b)
+				text += fmt.Sprintf("No protection found for branch %v\n", b)
 				ds[b] = details{}
 				continue
 			}
 			if rsp != nil && rsp.StatusCode == http.StatusForbidden {
 				// Protection not available
 				pass = false
-				text = text + "Branch Protection enforcement is configured in Allstar, however Branch Protection is not " +
+				text += "Branch Protection enforcement is configured in Allstar, however Branch Protection is not " +
 					"available on this repository. Upgrade to GitHub Pro or make this repository public to " +
 					"enable this feature.\n" +
 					"See: https://docs.github.com/en/repositories/" +
@@ -331,35 +324,28 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 			d.DismissStale = rev.DismissStaleReviews
 			d.RequireCodeOwnerReviews = rev.RequireCodeOwnerReviews
 			if mc.DismissStale && !rev.DismissStaleReviews {
-				text = text +
-					fmt.Sprintf("Dismiss stale reviews not configured for branch %v\n", b)
+				text += fmt.Sprintf("Dismiss stale reviews not configured for branch %v\n", b)
 				pass = false
 			}
 			d.NumReviews = rev.RequiredApprovingReviewCount
 			if rev.RequiredApprovingReviewCount < mc.ApprovalCount {
 				pass = false
-				text = text +
-					fmt.Sprintf("PR Approvals below threshold %v : %v for branch %v\n",
-						rev.RequiredApprovingReviewCount, mc.ApprovalCount, b)
+				text += fmt.Sprintf("PR Approvals below threshold %v : %v for branch %v\n",
+					rev.RequiredApprovingReviewCount, mc.ApprovalCount, b)
 			}
 			if mc.RequireCodeOwnerReviews && !rev.RequireCodeOwnerReviews {
-				text = text +
-					fmt.Sprintf("Require Code Owner Reviews not configured for branch %v\n", b)
+				text += fmt.Sprintf("Require Code Owner Reviews not configured for branch %v\n", b)
 				pass = false
 			}
-		} else {
-			if mc.RequireApproval || mc.RequireCodeOwnerReviews {
-				pass = false
-				text = text +
-					fmt.Sprintf("PR Approvals not configured for branch %v\n", b)
-			}
+		} else if mc.RequireApproval || mc.RequireCodeOwnerReviews {
+			pass = false
+			text += fmt.Sprintf("PR Approvals not configured for branch %v\n", b)
 		}
 		afp := p.GetAllowForcePushes()
 		d.BlockForce = true
 		if afp != nil {
 			if mc.BlockForce && afp.Enabled {
-				text = text +
-					fmt.Sprintf("Block force push not configured for branch %v\n", b)
+				text += fmt.Sprintf("Block force push not configured for branch %v\n", b)
 				pass = false
 				d.BlockForce = false
 			}
@@ -367,9 +353,8 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		ea := p.GetEnforceAdmins()
 		d.EnforceOnAdmins = (ea != nil && ea.Enabled)
 		if mc.EnforceOnAdmins && (ea == nil || !ea.Enabled) {
-			text = text +
-				fmt.Sprintf("Enforce status checks on admins not configured for branch %v\n",
-					b)
+			text += fmt.Sprintf("Enforce status checks on admins not configured for branch %v\n",
+				b)
 			pass = false
 		}
 		if len(mc.RequireStatusChecks) > 0 {
@@ -377,9 +362,8 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 			if rsc != nil {
 				d.RequireUpToDateBranch = rsc.Strict
 				if mc.RequireUpToDateBranch && !rsc.Strict {
-					text = text +
-						fmt.Sprintf("Require up to date branch not configured for branch %v\n",
-							b)
+					text += fmt.Sprintf("Require up to date branch not configured for branch %v\n",
+						b)
 					pass = false
 				}
 				for _, c := range rsc.GetChecks() {
@@ -395,15 +379,13 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 						appIDTxt = fmt.Sprintf("(AppID: %v)", *c.AppID)
 					}
 					if _, ok := lt[sch]; !ok {
-						text = text +
-							fmt.Sprintf("Status check %s %s not found for branch %v\n",
-								c.Context, appIDTxt, b)
+						text += fmt.Sprintf("Status check %s %s not found for branch %v\n",
+							c.Context, appIDTxt, b)
 						pass = false
 					}
 				}
 			} else {
-				text = text +
-					fmt.Sprintf("Status checks required by policy, but none found for branch %v\n", b)
+				text += fmt.Sprintf("Status checks required by policy, but none found for branch %v\n", b)
 				pass = false
 			}
 		}
@@ -415,7 +397,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		d.RequireSignedCommits = signatureProtectionEnabled
 		if mc.RequireSignedCommits && !d.RequireSignedCommits {
 			pass = false
-			text = text + fmt.Sprintf("Signed commits required, but not enabled for branch: %v\n", b)
+			text += fmt.Sprintf("Signed commits required, but not enabled for branch: %v\n", b)
 		}
 
 		ds[b] = d
@@ -453,7 +435,7 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 	}
 	allBranches := mc.EnforceBranches
 	if mc.EnforceDefault {
-		allBranches = append(mc.EnforceBranches, r.GetDefaultBranch())
+		allBranches = append(allBranches, r.GetDefaultBranch())
 	}
 	for _, b := range allBranches {
 		p, rsp, err := rep.GetBranchProtection(ctx, owner, repo, b)
@@ -680,8 +662,7 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 	return nil
 }
 
-func getSignatureProtectionEnabled(ctx context.Context, rep repositories, owner string, repo string,
-	branch string) (
+func getSignatureProtectionEnabled(ctx context.Context, rep repositories, owner, repo, branch string) (
 	bool, error,
 ) {
 	sp, rsp, err := rep.GetSignaturesProtectedBranch(ctx, owner, repo, branch)

@@ -39,7 +39,7 @@ func (m mockRepos) ListCollaborators(ctx context.Context, o, r string,
 	return listCollaborators(ctx, o, r, op)
 }
 
-func (m mockRepos) ListTeams(ctx context.Context, owner string, repo string, opts *github.ListOptions) ([]*github.Team, *github.Response, error) {
+func (m mockRepos) ListTeams(ctx context.Context, owner, repo string, opts *github.ListOptions) ([]*github.Team, *github.Response, error) {
 	return listTeams(ctx, owner, repo, opts)
 }
 

@@ -43,28 +43,16 @@ type (
 
 var (
 	doNothingOnOptOut       = operator.DoNothingOnOptOut
-	policiesGetPolicies     func() []policydef.Policy
-	issueEnsure             func(context.Context, *github.Client, string, string, string, string) error
-	issueClose              func(context.Context, *github.Client, string, string, string) error
-	configIsBotEnabled      func(context.Context, *github.Client, string, string) bool
-	getAppInstallations     func(context.Context, *github.Client) ([]*github.Installation, error)
-	getAppInstallationRepos func(context.Context, *github.Client) ([]*github.Repository, *github.Response, error)
-	runPolicies             func(context.Context, *github.Client, string, string, bool, string) (EnforceRepoResults, error)
-	deleteInstallation      func(context.Context, *github.Client, int64) (*github.Response, error)
-	listInstallations       func(context.Context, *github.Client) ([]*github.Installation, error)
-)
-
-func init() {
-	policiesGetPolicies = policies.GetPolicies
-	issueEnsure = issue.Ensure
-	issueClose = issue.Close
-	configIsBotEnabled = config.IsBotEnabled
-	getAppInstallations = getAppInstallationsReal
+	policiesGetPolicies     = policies.GetPolicies
+	issueEnsure             = issue.Ensure
+	issueClose              = issue.Close
+	configIsBotEnabled      = config.IsBotEnabled
+	getAppInstallations     = getAppInstallationsReal
 	getAppInstallationRepos = getAppInstallationReposReal
-	runPolicies = runPoliciesReal
-	deleteInstallation = deleteInstallationReal
-	listInstallations = listInstallationsReal
-}
+	runPolicies             = runPoliciesReal
+	deleteInstallation      = deleteInstallationReal
+	listInstallations       = listInstallationsReal
+)
 
 // EnforceAll iterates through all available installations and repos Allstar
 // has access to and runs policies on those repos. It is meant to be a
@@ -72,8 +60,8 @@ func init() {
 //
 // TBD: determine if this should remain exported, or if it will only be called
 // from EnforceJob.
-func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificPolicyArg string,
-	specificRepoArg string,
+func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface,
+	specificPolicyArg, specificRepoArg string,
 ) (EnforceAllResults, error) {
 	var repoCount int
 	enforceAllResults := make(EnforceAllResults)
@@ -146,7 +134,6 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificP
 				log.Error().
 					Err(err).
 					Msg("Unexpected error listing installation repos.")
-				// return nil, err
 				return nil
 			}
 
@@ -159,7 +146,7 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface, specificP
 			instResults, err := runPoliciesOnInstRepos(ctx, repos, ic, specificPolicyArg)
 
 			mu.Lock()
-			repoCount = repoCount + len(repos)
+			repoCount += len(repos)
 			for policyName, results := range instResults {
 				if enforceAllResults[policyName] == nil {
 					enforceAllResults[policyName] = make(map[string]int)
@@ -316,7 +303,7 @@ func getAppInstallationReposReal(ctx context.Context, ic *github.Client) ([]*git
 // EnforceJob is a reconciliation job that enforces policies on all repos every
 // d duration. It runs forever until the context is done.
 func EnforceJob(ctx context.Context, ghc *ghclients.GHClients, d time.Duration,
-	specificPolicyArg string, specificRepoArg string,
+	specificPolicyArg, specificRepoArg string,
 ) error {
 	for {
 		_, err := EnforceAll(ctx, ghc, specificPolicyArg, specificRepoArg)

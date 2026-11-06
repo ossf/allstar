@@ -158,15 +158,9 @@ const (
 	RepoLevel
 )
 
-var walkGC func(context.Context, repositories, string, string, string,
-	*github.RepositoryContentGetOptions) (*github.RepositoryContent,
-	[]*github.RepositoryContent, *github.Response, error)
+var walkGC = walkGetContents
 
 var gc = globCache{}
-
-func init() {
-	walkGC = walkGetContents
-}
 
 type repositories interface {
 	Get(context.Context, string, string) (*github.Repository,
@@ -250,7 +244,7 @@ type anyWithBase struct {
 // checkAndMergeBase checks the contents for a field "baseConfig". If found
 // reads that as "org/repo" then pulls the same path from there and uses it as
 // a base config to merge this contents on top of. Returns JSON.
-func checkAndMergeBase(ctx context.Context, r repositories, path string, contents []byte) ([]byte, error) {
+func checkAndMergeBase(ctx context.Context, r repositories, configPath string, contents []byte) ([]byte, error) {
 	var b anyWithBase
 	if err := json.Unmarshal(contents, &b); err != nil {
 		return nil, err
@@ -261,16 +255,16 @@ func checkAndMergeBase(ctx context.Context, r repositories, path string, content
 	sp := strings.Split(*b.BaseConfig, "/")
 	if len(sp) != 2 {
 		log.Warn().
-			Str("file", path).
+			Str("file", configPath).
 			Str("baseConfig", *b.BaseConfig).
 			Msg("Expect baseConfig to be a GitHub \"owner/repo\", ignoring.")
 		return contents, nil
 	}
-	cf, _, rsp, err := r.GetContents(ctx, sp[0], sp[1], path, nil)
+	cf, _, rsp, err := r.GetContents(ctx, sp[0], sp[1], configPath, nil)
 	if err != nil {
 		if rsp != nil && rsp.StatusCode == http.StatusNotFound {
 			log.Warn().
-				Str("file", path).
+				Str("file", configPath).
 				Str("baseConfig", *b.BaseConfig).
 				Msg("Path in specified baseConfig does not exist.")
 			return contents, nil
@@ -439,8 +433,8 @@ func matches(s []string, e string, gc globCache) bool {
 
 // compileGlob returns cached glob if present, otherwise attempts glob.Compile.
 func (g globCache) compileGlob(s string) (glob.Glob, error) {
-	if glob, ok := g[s]; ok {
-		return glob, nil
+	if cached, ok := g[s]; ok {
+		return cached, nil
 	}
 	c, err := glob.Compile(s)
 	if err != nil {
