@@ -11,8 +11,7 @@ linters:
     - copyloopvar
     - dogsled
     - durationcheck
-    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
-    #- err113
+    - err113
     - errchkjson
     - errname
     - errorlint

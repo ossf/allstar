@@ -16,6 +16,7 @@
 package operator
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strconv"
@@ -190,6 +191,11 @@ func readConfig(getenv func(string) string) operatorConfig {
 // operator is almost always someone part-way through that document.
 const docsURL = "https://github.com/ossf/allstar/blob/main/operator.md"
 
+var (
+	errNoGitHubApp  = errors.New("no GitHub App configured")
+	errNoPrivateKey = errors.New("no private key available")
+)
+
 // Validate reports whether the operator configuration is usable, returning an
 // error naming the environment variable to set if it is not. Allstar has no
 // usable defaults for the GitHub App identity: every operator runs their own
@@ -198,17 +204,17 @@ const docsURL = "https://github.com/ossf/allstar/blob/main/operator.md"
 func Validate() error {
 	if AppID == 0 {
 		return fmt.Errorf(
-			"no GitHub App configured: set APP_ID to the application ID of "+
+			"%w: set APP_ID to the application ID of "+
 				"the GitHub App Allstar should authenticate as; see %s",
-			docsURL)
+			errNoGitHubApp, docsURL)
 	}
 	if KeySecret == "direct" && PrivateKey == "" {
 		return fmt.Errorf(
-			"no private key available: KEY_SECRET is %q, so the App private "+
+			"%w: KEY_SECRET is %q, so the App private "+
 				"key must be supplied in PRIVATE_KEY; alternatively set "+
 				"KEY_SECRET to a gocloud.dev runtimevar URL for your secret "+
 				"store; see %s",
-			KeySecret, docsURL)
+			errNoPrivateKey, KeySecret, docsURL)
 	}
 	return nil
 }
