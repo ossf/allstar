@@ -31,6 +31,7 @@ import (
 	sc "github.com/ossf/scorecard/v5/pkg/scorecard"
 )
 
+//nolint:paralleltest // Replaces package-level Scorecard and configuration mocks.
 func TestConfigPrecedence(t *testing.T) {
 	tests := []struct {
 		Name      string
@@ -216,6 +217,7 @@ func TestConfigPrecedence(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level Scorecard and configuration mocks.
 func TestCheck(t *testing.T) {
 	tests := []struct {
 		Name    string
@@ -300,6 +302,7 @@ func TestCheck(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level Scorecard and configuration mocks.
 func TestCheckUnknownCheckSkipped(t *testing.T) {
 	origConfigFetchConfig := configFetchConfig
 	origConfigIsEnabled := configIsEnabled
@@ -358,6 +361,7 @@ func TestCheckUnknownCheckSkipped(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level Scorecard and configuration mocks.
 func TestCheckPerCheckErrorSkipped(t *testing.T) {
 	origConfigFetchConfig := configFetchConfig
 	origConfigIsEnabled := configIsEnabled

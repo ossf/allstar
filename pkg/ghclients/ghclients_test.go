@@ -27,7 +27,9 @@ import (
 	"github.com/ossf/allstar/pkg/config/operator"
 )
 
+//nolint:paralleltest // Replaces transport factories and operator configuration globals.
 func TestGet(t *testing.T) {
+	setupGHClientTest(t)
 	called := 0
 	ghinstallationNewAppsTransport = func(http.RoundTripper, int64,
 		[]byte,
@@ -81,17 +83,9 @@ func TestGet(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces transport factories and operator configuration globals.
 func TestGetKey(t *testing.T) {
-	ghinstallationNewAppsTransport = func(http.RoundTripper, int64,
-		[]byte,
-	) (*ghinstallation.AppsTransport, error) {
-		return &ghinstallation.AppsTransport{BaseURL: fmt.Sprint(0)}, nil
-	}
-	ghinstallationNew = func(r http.RoundTripper, a int64, i int64,
-		f []byte,
-	) (*ghinstallation.Transport, error) {
-		return &ghinstallation.Transport{BaseURL: fmt.Sprint(i)}, nil
-	}
+	setupGHClientTest(t)
 
 	tests := []struct {
 		Name       string
@@ -138,7 +132,9 @@ func TestGetKey(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces transport factories and operator configuration globals.
 func TestGitHubEnterpriseClient(t *testing.T) {
+	setupGHClientTest(t)
 	tests := []struct {
 		Name                string
 		GitHubEnterpriseUrl string
@@ -191,4 +187,25 @@ func TestGitHubEnterpriseClient(t *testing.T) {
 			}
 		})
 	}
+}
+
+func setupGHClientTest(t *testing.T) {
+	t.Helper()
+	oldAppsTransport, oldTransport := ghinstallationNewAppsTransport, ghinstallationNew
+	oldGetSecret := getKeyFromSecret
+	oldPrivateKey, oldKeySecret := privateKey, keySecret
+	oldEnterpriseURL := operator.GitHubEnterpriseUrl
+	t.Cleanup(func() {
+		ghinstallationNewAppsTransport, ghinstallationNew = oldAppsTransport, oldTransport
+		getKeyFromSecret = oldGetSecret
+		privateKey, keySecret = oldPrivateKey, oldKeySecret
+		operator.GitHubEnterpriseUrl = oldEnterpriseURL
+	})
+	ghinstallationNewAppsTransport = func(http.RoundTripper, int64, []byte) (*ghinstallation.AppsTransport, error) {
+		return &ghinstallation.AppsTransport{BaseURL: fmt.Sprint(0)}, nil
+	}
+	ghinstallationNew = func(_ http.RoundTripper, _ int64, i int64, _ []byte) (*ghinstallation.Transport, error) {
+		return &ghinstallation.Transport{BaseURL: fmt.Sprint(i)}, nil
+	}
+	getKeyFromSecret = func(_ context.Context, secret string) ([]byte, error) { return []byte(secret), nil }
 }

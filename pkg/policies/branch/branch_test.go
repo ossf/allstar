@@ -85,6 +85,7 @@ func (m mockRepos) RequireSignaturesOnProtectedBranch(ctx context.Context, owner
 	return requireSignaturesProtectedBranch(ctx, owner, repo, branch)
 }
 
+//nolint:paralleltest // Replaces package-level branch protection and configuration mocks.
 func TestConfigPrecedence(t *testing.T) {
 	tests := []struct {
 		Name      string
@@ -250,6 +251,7 @@ func TestConfigPrecedence(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level branch protection and configuration mocks.
 func TestGetSignatureProtectionEnabled(t *testing.T) {
 	error403 := errors.New("403")
 	tests := []struct {
@@ -310,6 +312,7 @@ func TestGetSignatureProtectionEnabled(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level branch protection and configuration mocks.
 func TestCheck(t *testing.T) {
 	tests := []struct {
 		Name          string
@@ -1363,6 +1366,7 @@ func TestCheck(t *testing.T) {
 	})
 }
 
+//nolint:paralleltest // Replaces package-level branch protection and configuration mocks.
 func TestFix(t *testing.T) {
 	tests := []struct {
 		Name                 string

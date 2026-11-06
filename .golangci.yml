@@ -50,8 +50,7 @@ linters:
     - nilnesserr
     - noctx
     - nolintlint
-    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
-    #- paralleltest
+    - paralleltest
     - predeclared
     - protogetter
     - reassign

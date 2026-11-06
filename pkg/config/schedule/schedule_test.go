@@ -31,6 +31,7 @@ func setDay(wd time.Weekday) {
 	}
 }
 
+//nolint:paralleltest // Replaces the package-level clock.
 func TestShouldPerform(t *testing.T) {
 	t.Run("AllowDay", func(t *testing.T) {
 		sch := &config.ScheduleConfig{
@@ -76,34 +77,48 @@ func TestShouldPerform(t *testing.T) {
 }
 
 func TestMergeSchedules(t *testing.T) {
+	t.Parallel()
+
 	sch1 := &config.ScheduleConfig{}
 	sch2 := &config.ScheduleConfig{}
 	t.Run("Nil", func(t *testing.T) {
+		t.Parallel()
+
 		if MergeSchedules(nil, nil, nil) != nil {
 			t.Errorf("Expected nil config")
 		}
 	})
 	t.Run("oc", func(t *testing.T) {
+		t.Parallel()
+
 		if MergeSchedules(sch1, nil, nil) != sch1 {
 			t.Errorf("Expected sch1 config")
 		}
 	})
 	t.Run("orc", func(t *testing.T) {
+		t.Parallel()
+
 		if MergeSchedules(nil, sch1, nil) != sch1 {
 			t.Errorf("Expected sch1 config")
 		}
 	})
 	t.Run("rc", func(t *testing.T) {
+		t.Parallel()
+
 		if MergeSchedules(nil, nil, sch1) != sch1 {
 			t.Errorf("Expected sch1 config")
 		}
 	})
 	t.Run("oc-rc", func(t *testing.T) {
+		t.Parallel()
+
 		if MergeSchedules(sch1, nil, sch2) != sch2 {
 			t.Errorf("Expected sch2 config")
 		}
 	})
 	t.Run("oc-orc", func(t *testing.T) {
+		t.Parallel()
+
 		if MergeSchedules(sch1, sch2, nil) != sch2 {
 			t.Errorf("Expected sch2 config")
 		}

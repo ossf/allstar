@@ -94,6 +94,7 @@ func (m MockGhClients) Get(i int64) (*github.Client, error) {
 
 func (m MockGhClients) Free(i int64) {}
 
+//nolint:paralleltest // Replaces package-level policy and GitHub mocks.
 func TestRunPolicies(t *testing.T) {
 	policiesGetPolicies = func() []policydef.Policy {
 		return []policydef.Policy{
@@ -237,6 +238,7 @@ func TestRunPolicies(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level policy and GitHub mocks.
 func TestRunPoliciesOnInstRepos(t *testing.T) {
 	configIsBotEnabled = func(ctx context.Context, c *github.Client, owner, repo string) bool {
 		return true
@@ -313,6 +315,7 @@ func TestRunPoliciesOnInstRepos(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level policy and GitHub mocks.
 func TestDoNothingOnOptOut(t *testing.T) {
 	policiesGetPolicies = func() []policydef.Policy {
 		return []policydef.Policy{
@@ -366,6 +369,7 @@ func TestDoNothingOnOptOut(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level policy and GitHub mocks.
 func TestEnforceAll(t *testing.T) {
 	policiesGetPolicies = func() []policydef.Policy {
 		return []policydef.Policy{
@@ -563,6 +567,7 @@ func TestEnforceAll(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level policy and GitHub mocks.
 func TestSuspendedEnforce(t *testing.T) {
 	var suspended bool
 	var gaicalled bool
@@ -607,6 +612,7 @@ func injective(s string) int64 {
 	return int64(binary.BigEndian.Uint64([]byte(s)))
 }
 
+//nolint:paralleltest // Replaces package-level policy and GitHub mocks.
 func TestAllowedRepositories(t *testing.T) {
 	tests := []struct {
 		desc       string
