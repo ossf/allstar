@@ -16,12 +16,14 @@ package action
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/google/go-github/v84/github"
 )
 
 var requireWorkflowOnForRequire = []string{"pull_request", "push"}
+
+var errNotRequireRule = errors.New("rule is not a require rule")
 
 // runInProgressStatuses is the set of workflow run statuses that are
 // acceptable when mustPass is true on a require rule and the conclusion is
@@ -123,7 +125,7 @@ func evaluateRequireRule(ctx context.Context, c *github.Client, owner, repo stri
 	actions []*actionMetadata, headSHA string, gc globCache, sc semverCache,
 ) (*requireRuleEvaluationResult, error) {
 	if rule.Method != ruleMethodRequire {
-		return nil, fmt.Errorf("rule is not a require rule")
+		return nil, errNotRequireRule
 	}
 	useCount := 1
 	if rule.RequireAll {

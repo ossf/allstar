@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"net/http"
@@ -34,6 +35,8 @@ import (
 	"github.com/ossf/allstar/pkg/policies"
 	scorecardPolicy "github.com/ossf/allstar/pkg/policies/scorecard"
 )
+
+var errUnsupportedPolicy = errors.New("unsupported policy flag")
 
 func main() {
 	setupLog()
@@ -82,7 +85,7 @@ func main() {
 				Str("Policy filtering", *specificPolicyArg).
 				Msg(fmt.Sprintf("Allstar will only run on policy %s", v))
 		} else {
-			log.Fatal().Err(fmt.Errorf("unsupported policy flag %s", *specificPolicyArg)).
+			log.Fatal().Err(fmt.Errorf("%w %s", errUnsupportedPolicy, *specificPolicyArg)).
 				Msg(fmt.Sprintf("Supported policies: %s", supportedPoliciesMsg))
 		}
 	}

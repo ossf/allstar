@@ -49,6 +49,12 @@ const (
 	ruleMethodDeny    = "deny"
 )
 
+var (
+	errInvalidActionName = errors.New("invalid name")
+	errNoMatchingTag     = errors.New("no corresponding tag found")
+	errNoCommits         = errors.New("repo has no commits")
+)
+
 var priorities = map[string]int{
 	"critical": 0,
 	"high":     1,
@@ -511,7 +517,7 @@ func resolveVersion(ctx context.Context, c *github.Client, m *actionMetadata, gc
 	// On error, attempt locate tag (assume m.version is a commit ref)
 	ownerRepo := strings.Split(m.name, "/")
 	if len(ownerRepo) != 2 {
-		return nil, fmt.Errorf("%s: invalid name \"%s\"", errPrefix, m.name)
+		return nil, fmt.Errorf("%s: %w \"%s\"", errPrefix, errInvalidActionName, m.name)
 	}
 	tags, err := listTags(ctx, c, ownerRepo[0], ownerRepo[1])
 	if err != nil {
@@ -523,7 +529,7 @@ func resolveVersion(ctx context.Context, c *github.Client, m *actionMetadata, gc
 			return version, err
 		}
 	}
-	return nil, fmt.Errorf("%s: no corresponding tag found", errPrefix)
+	return nil, fmt.Errorf("%s: %w", errPrefix, errNoMatchingTag)
 }
 
 // match checks if an ActionSelector matches an actionMetadata.
@@ -674,7 +680,7 @@ func getLatestCommitHashReal(ctx context.Context, c *github.Client, owner, repo 
 	if len(commits) > 0 && commits[0].SHA != nil {
 		return *commits[0].SHA, nil
 	}
-	return "", errors.New("repo has no commits")
+	return "", errNoCommits
 }
 
 // listWorkflowRunsByFilenameReal returns workflow runs for a repo by
