@@ -109,16 +109,7 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface,
 		g.Go(func() error {
 			repos, _, err := getAppInstallationRepos(ctx, ic)
 
-			if specificRepoArg != "" {
-				searchRepos := repos
-				repos = make([]*github.Repository, 0, 1)
-				for _, r := range searchRepos {
-					if r.GetFullName() == specificRepoArg {
-						repos = append(repos, r)
-						break
-					}
-				}
-			}
+			repos = filterInstallationRepos(repos, specificRepoArg)
 
 			//nolint:godox // TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
 			// FIXME, not getting a rsp for this one, instead I think it is a special
@@ -374,33 +365,11 @@ func runPoliciesReal(ctx context.Context, c *github.Client, owner, repo string, 
 		a := p.GetAction(ctx, c, owner, repo)
 		enforceResults[p.Name()] = r.Pass
 		if !r.Pass {
-			switch a {
-			case "log":
-			case "issue":
-				err := issueEnsure(ctx, c, owner, repo, p.Name(), r.NotifyText)
-				if err != nil {
-					return nil, err
-				}
-			case "email":
-				log.Warn().
-					Str("org", owner).
-					Str("repo", repo).
-					Str("area", p.Name()).
-					Msg("Email action configured, but not implemented yet.")
-			case "fix":
-				err := p.Fix(ctx, c, owner, repo)
-				if err != nil {
-					return nil, err
-				}
-			default:
-				log.Warn().
-					Str("org", owner).
-					Str("repo", repo).
-					Str("area", p.Name()).
-					Str("action", a).
-					Msg("Unknown action configured.")
+			if err := handlePolicyFailure(ctx, c, owner, repo, p, a, r.NotifyText); err != nil {
+				return nil, err
 			}
 		}
+
 		if r.Pass && (a == "issue" || a == "fix") {
 			err := issueClose(ctx, c, owner, repo, p.Name())
 			if err != nil {
@@ -410,4 +379,48 @@ func runPoliciesReal(ctx context.Context, c *github.Client, owner, repo string, 
 	}
 
 	return enforceResults, nil
+}
+
+func filterInstallationRepos(repos []*github.Repository, fullName string) []*github.Repository {
+	if fullName == "" {
+		return repos
+	}
+	for _, r := range repos {
+		if r.GetFullName() == fullName {
+			return []*github.Repository{r}
+		}
+	}
+	return make([]*github.Repository, 0)
+}
+
+func handlePolicyFailure(ctx context.Context, c *github.Client, owner, repo string,
+	p policydef.Policy, a, notifyText string,
+) error {
+	switch a {
+	case "log":
+	case "issue":
+		err := issueEnsure(ctx, c, owner, repo, p.Name(), notifyText)
+		if err != nil {
+			return err
+		}
+	case "email":
+		log.Warn().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("area", p.Name()).
+			Msg("Email action configured, but not implemented yet.")
+	case "fix":
+		err := p.Fix(ctx, c, owner, repo)
+		if err != nil {
+			return err
+		}
+	default:
+		log.Warn().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("area", p.Name()).
+			Str("action", a).
+			Msg("Unknown action configured.")
+	}
+	return nil
 }

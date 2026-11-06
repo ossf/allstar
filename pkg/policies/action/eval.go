@@ -40,42 +40,14 @@ func evaluateActionDenied(ctx context.Context, c *github.Client, rules []*intern
 	var errs []error
 
 	for _, r := range rules {
-		// Check if the Action is matched by the rule's ActionSelectors
-		ruleMatch := false
-		errored := false
-
-		var ruleVersionConstraint string
-		versionMismatch := false
-
-		for _, a := range r.Actions {
-			match, matchName, _, err := a.match(ctx, c, action, gc, sc)
-			if err != nil {
-				errs = append(errs, err)
-				errored = true
-				break
-			}
-			if !match {
-				if matchName {
-					versionMismatch = true
-					ruleVersionConstraint = a.Version
-					continue
-				}
-				continue
-			}
-			// This is a denied Action
-			ruleMatch = true
-			break
-		}
-		if r.Actions == nil {
-			// All Actions qualified for this step
-			ruleMatch = true
-		}
+		ruleMatch, versionMismatch, ruleVersionConstraint, err := matchDenyRule(ctx, c, r, action, gc, sc)
 		stepResult := &denyRuleEvaluationStepResult{
 			status:                denyRuleStepStatusError,
 			rule:                  r,
 			ruleVersionConstraint: "",
 		}
-		if errored {
+		if err != nil {
+			errs = append(errs, err)
 			result.steps = append(result.steps, stepResult)
 			continue
 		}
@@ -266,4 +238,26 @@ func requireActionDetermineFix(ctx context.Context, c *github.Client, owner, rep
 	}
 	// Not passing. Suggest fix.
 	return false, requireRuleEvaluationFixMethodFix, nil
+}
+
+func matchDenyRule(ctx context.Context, c *github.Client, r *internalRule, action *actionMetadata,
+	gc globCache, sc semverCache,
+) (match, versionMismatch bool, constraint string, err error) {
+	if r.Actions == nil {
+		return true, false, "", nil
+	}
+	for _, a := range r.Actions {
+		matches, matchName, _, err := a.match(ctx, c, action, gc, sc)
+		if err != nil {
+			return false, versionMismatch, constraint, err
+		}
+		if matches {
+			return true, versionMismatch, constraint, nil
+		}
+		if matchName {
+			versionMismatch = true
+			constraint = a.Version
+		}
+	}
+	return false, versionMismatch, constraint, nil
 }

@@ -210,25 +210,13 @@ func TestRunPolicies(t *testing.T) {
 				t.Fatalf("Unexpected error: %v", err)
 			}
 			if test.ShouldFix != fixCalled {
-				if test.ShouldFix {
-					t.Error("Expected Fix to be called")
-				} else {
-					t.Error("Fix called unexpectedly.")
-				}
+				t.Errorf("Fix called = %t, want %t", fixCalled, test.ShouldFix)
 			}
 			if test.ShouldEnsure != ensureCalled {
-				if test.ShouldEnsure {
-					t.Error("Expected Ensure to be called")
-				} else {
-					t.Error("Ensure called unexpectedly.")
-				}
+				t.Errorf("Ensure called = %t, want %t", ensureCalled, test.ShouldEnsure)
 			}
 			if test.ShouldClose != closeCalled {
-				if test.ShouldClose {
-					t.Error("Expected Close to be called")
-				} else {
-					t.Error("Close called unexpectedly.")
-				}
+				t.Errorf("Close called = %t, want %t", closeCalled, test.ShouldClose)
 			}
 			if diff := cmp.Diff(test.ExpEnforceResults, enforceResults); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)

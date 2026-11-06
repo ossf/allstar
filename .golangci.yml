@@ -21,8 +21,7 @@ linters:
     - gocheckcompilerdirectives
     - gochecknoinits
     - gochecksumtype
-    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
-    #- gocognit
+    - gocognit
     - goconst
     - gocritic
     # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
