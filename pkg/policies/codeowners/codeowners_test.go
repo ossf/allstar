@@ -41,6 +41,7 @@ func (m MockGhClient) Get(i int64) (*github.Client, error) {
 	return github.NewClient(&http.Client{}), nil
 }
 
+//nolint:paralleltest // Replaces package-level Codeowners and configuration mocks.
 func TestConfigPrecedence(t *testing.T) {
 	tests := []struct {
 		Name      string
@@ -149,6 +150,7 @@ func TestConfigPrecedence(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level Codeowners and configuration mocks.
 func TestCheck(t *testing.T) {
 	tests := []struct {
 		Name           string

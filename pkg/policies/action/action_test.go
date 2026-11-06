@@ -31,6 +31,8 @@ import (
 )
 
 func TestListWorkflowsRealCanceledRequest(t *testing.T) {
+	t.Parallel()
+
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
@@ -44,6 +46,8 @@ func TestListWorkflowsRealCanceledRequest(t *testing.T) {
 }
 
 func TestSortableRules(t *testing.T) {
+	t.Parallel()
+
 	makeRule := func(method, priority string, priorityInt int) *internalRule {
 		return &internalRule{
 			Rule: &Rule{
@@ -55,6 +59,8 @@ func TestSortableRules(t *testing.T) {
 	}
 
 	t.Run("higher priority sorts before lower priority regardless of method", func(t *testing.T) {
+		t.Parallel()
+
 		// Start with the high-priority deny rule already first.
 		// The buggy Less() will incorrectly move the low-priority allow
 		// rule ahead of it because it returns true when Method != "deny",
@@ -76,6 +82,8 @@ func TestSortableRules(t *testing.T) {
 	})
 
 	t.Run("priority ordering preserved across mixed methods", func(t *testing.T) {
+		t.Parallel()
+
 		// Three rules at different priorities with mixed methods.
 		// The buggy Less() can reorder these incorrectly because a
 		// low-priority non-deny rule claims to be "less than" a
@@ -97,6 +105,7 @@ func TestSortableRules(t *testing.T) {
 	})
 }
 
+//nolint:paralleltest // Replaces package-level workflow and configuration mocks.
 func TestCheck(t *testing.T) {
 	createWorkflowRun := func(sha string, complete bool, passing *bool) *github.WorkflowRun {
 		status := "completed"

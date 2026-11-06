@@ -71,7 +71,11 @@ func setShouldPerform(b bool) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level GitHub and configuration mocks.
 func TestEnsure(t *testing.T) {
+	oldShouldPerform := scheduleShouldPerform
+	setShouldPerform(true)
+	t.Cleanup(func() { scheduleShouldPerform = oldShouldPerform })
 	issueTitle := "Security Policy violation thispolicy"
 	issueTitleOtherRepo := "Security Policy violation for repository \"\" thispolicy"
 	closed := "closed"
@@ -96,6 +100,7 @@ func TestEnsure(t *testing.T) {
 	t.Run("IssuewithIssueDetails", func(t *testing.T) { testEnsureIssuewithIssueDetails(t, issueTitle, bodyIssueDetail) })
 }
 
+//nolint:paralleltest // Replaces package-level GitHub and configuration mocks.
 func TestClose(t *testing.T) {
 	issueTitle := fmt.Sprintf(sameRepoTitle, "thispolicy")
 	configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
@@ -178,6 +183,7 @@ func TestClose(t *testing.T) {
 	})
 }
 
+//nolint:paralleltest // Replaces package-level GitHub and configuration mocks.
 func TestLabel(t *testing.T) {
 	tests := []struct {
 		Name         string
@@ -238,6 +244,7 @@ func TestLabel(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level GitHub and configuration mocks.
 func TestRepoTitle(t *testing.T) {
 	tests := []struct {
 		Name      string

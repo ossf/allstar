@@ -136,6 +136,7 @@ func (m mockRC) GetFileReader(filename string) (io.ReadCloser, error) {
 	return nil, nil
 }
 
+//nolint:paralleltest // Replaces package-level client factories and uses the shared client cache.
 func TestGetNew(t *testing.T) {
 	var makeCalled, createCalled, initCalled bool
 	githubrepoMakeGitHubRepo = func(s string) (clients.Repo, error) {
@@ -166,6 +167,7 @@ func TestGetNew(t *testing.T) {
 	Close("org/repo")
 }
 
+//nolint:paralleltest // Replaces package-level client factories and uses the shared client cache.
 func TestGetExisting(t *testing.T) {
 	var makeCalled, createCalled, initCalled bool
 	githubrepoMakeGitHubRepo = func(s string) (clients.Repo, error) {
@@ -198,6 +200,7 @@ func TestGetExisting(t *testing.T) {
 	Close("org/repo")
 }
 
+//nolint:paralleltest // Replaces package-level client factories and uses the shared client cache.
 func TestClose(t *testing.T) {
 	var closeCalled bool
 	githubrepoMakeGitHubRepo = func(s string) (clients.Repo, error) {
@@ -220,6 +223,7 @@ func TestClose(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level client factories and uses the shared client cache.
 func TestRecreate(t *testing.T) {
 	var makeCalled, createCalled, initCalled bool
 	githubrepoMakeGitHubRepo = func(s string) (clients.Repo, error) {
@@ -272,6 +276,7 @@ func _testCreateLocal(ctx context.Context, fullRepo string) (*ScClient, error) {
 	}, nil
 }
 
+//nolint:paralleltest // Replaces package-level client factories and uses the shared client cache.
 func TestLocal(t *testing.T) {
 	createLocal = _testCreateLocal
 	repo := "go-git/go-git"

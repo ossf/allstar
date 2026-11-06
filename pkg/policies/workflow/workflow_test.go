@@ -24,6 +24,7 @@ import (
 	"github.com/ossf/allstar/pkg/config"
 )
 
+//nolint:paralleltest // Replaces the package-level configuration mock.
 func TestConfigPrecedence(t *testing.T) {
 	tests := []struct {
 		Name      string

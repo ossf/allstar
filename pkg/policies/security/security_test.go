@@ -33,6 +33,7 @@ func (m mockClient) Query(ctx context.Context, q interface{}, v map[string]inter
 	return query(ctx, q, v)
 }
 
+//nolint:paralleltest // Replaces package-level GraphQL and configuration mocks.
 func TestConfigPrecedence(t *testing.T) {
 	tests := []struct {
 		Name      string
@@ -141,6 +142,7 @@ func TestConfigPrecedence(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level GraphQL and configuration mocks.
 func TestCheck(t *testing.T) {
 	tests := []struct {
 		Name         string

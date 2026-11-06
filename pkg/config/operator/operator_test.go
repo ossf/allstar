@@ -31,6 +31,8 @@ import (
 // are gone, so an operator who configures nothing must get an unusable config
 // that Validate rejects, not someone else's app.
 func TestDefaults(t *testing.T) {
+	t.Parallel()
+
 	if setAppID != 0 {
 		t.Errorf("setAppID default = %d, want 0 (no app configured)", setAppID)
 	}
@@ -39,6 +41,7 @@ func TestDefaults(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Mutates operator configuration globals.
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		Name       string
@@ -116,6 +119,8 @@ func TestValidate(t *testing.T) {
 }
 
 func TestInitialConfigEnvironment(t *testing.T) {
+	t.Parallel()
+
 	if os.Getenv("ALLSTAR_TEST_OPERATOR_STARTUP") == "1" {
 		want := operatorConfig{
 			AppID:                123,
@@ -171,6 +176,7 @@ func TestInitialConfigEnvironment(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Changes zerolog's global log level.
 func TestReadConfig(t *testing.T) {
 	tests := []struct {
 		Name                  string
