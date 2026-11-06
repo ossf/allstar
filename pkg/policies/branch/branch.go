@@ -317,88 +317,12 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 			return nil, err
 		}
 
-		var d details
-		rev := p.GetRequiredPullRequestReviews()
-		if rev != nil {
-			d.PRReviews = true
-			d.DismissStale = rev.DismissStaleReviews
-			d.RequireCodeOwnerReviews = rev.RequireCodeOwnerReviews
-			if mc.DismissStale && !rev.DismissStaleReviews {
-				text += fmt.Sprintf("Dismiss stale reviews not configured for branch %v\n", b)
-				pass = false
-			}
-			d.NumReviews = rev.RequiredApprovingReviewCount
-			if rev.RequiredApprovingReviewCount < mc.ApprovalCount {
-				pass = false
-				text += fmt.Sprintf("PR Approvals below threshold %v : %v for branch %v\n",
-					rev.RequiredApprovingReviewCount, mc.ApprovalCount, b)
-			}
-			if mc.RequireCodeOwnerReviews && !rev.RequireCodeOwnerReviews {
-				text += fmt.Sprintf("Require Code Owner Reviews not configured for branch %v\n", b)
-				pass = false
-			}
-		} else if mc.RequireApproval || mc.RequireCodeOwnerReviews {
-			pass = false
-			text += fmt.Sprintf("PR Approvals not configured for branch %v\n", b)
-		}
-		afp := p.GetAllowForcePushes()
-		d.BlockForce = true
-		if afp != nil {
-			if mc.BlockForce && afp.Enabled {
-				text += fmt.Sprintf("Block force push not configured for branch %v\n", b)
-				pass = false
-				d.BlockForce = false
-			}
-		}
-		ea := p.GetEnforceAdmins()
-		d.EnforceOnAdmins = (ea != nil && ea.Enabled)
-		if mc.EnforceOnAdmins && (ea == nil || !ea.Enabled) {
-			text += fmt.Sprintf("Enforce status checks on admins not configured for branch %v\n",
-				b)
-			pass = false
-		}
-		if len(mc.RequireStatusChecks) > 0 {
-			rsc := p.GetRequiredStatusChecks()
-			if rsc != nil {
-				d.RequireUpToDateBranch = rsc.Strict
-				if mc.RequireUpToDateBranch && !rsc.Strict {
-					text += fmt.Sprintf("Require up to date branch not configured for branch %v\n",
-						b)
-					pass = false
-				}
-				for _, c := range rsc.GetChecks() {
-					sc := StatusCheck{Context: c.Context, AppID: c.AppID}
-					d.RequireStatusChecks = append(d.RequireStatusChecks, sc)
-				}
-				lt := makeSCLookupTable(rsc.GetChecks())
-				for _, c := range mc.RequireStatusChecks {
-					appIDTxt := "(any app)"
-					sch := statusCheckHash{context: c.Context}
-					if c.AppID != nil {
-						sch.appID = *c.AppID
-						appIDTxt = fmt.Sprintf("(AppID: %v)", *c.AppID)
-					}
-					if _, ok := lt[sch]; !ok {
-						text += fmt.Sprintf("Status check %s %s not found for branch %v\n",
-							c.Context, appIDTxt, b)
-						pass = false
-					}
-				}
-			} else {
-				text += fmt.Sprintf("Status checks required by policy, but none found for branch %v\n", b)
-				pass = false
-			}
-		}
-
-		signatureProtectionEnabled, err := getSignatureProtectionEnabled(ctx, rep, owner, repo, b)
+		d, branchText, branchPass, err := checkBranchProtection(ctx, rep, owner, repo, b, p, mc)
 		if err != nil {
 			return nil, err
 		}
-		d.RequireSignedCommits = signatureProtectionEnabled
-		if mc.RequireSignedCommits && !d.RequireSignedCommits {
-			pass = false
-			text += fmt.Sprintf("Signed commits required, but not enabled for branch: %v\n", b)
-		}
+		text += branchText
+		pass = pass && branchPass
 
 		ds[b] = d
 	}
@@ -442,46 +366,9 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 		if err != nil {
 			if rsp != nil && rsp.StatusCode == http.StatusNotFound {
 				// No existing protection, create from config.
-				afp := !mc.BlockForce
-				pr := &github.ProtectionRequest{
-					AllowForcePushes: &afp,
-				}
-				if mc.EnforceOnAdmins {
-					pr.EnforceAdmins = true
-				}
-				if mc.RequireApproval || mc.RequireCodeOwnerReviews {
-					rq := &github.PullRequestReviewsEnforcementRequest{
-						DismissStaleReviews:          mc.DismissStale,
-						RequiredApprovingReviewCount: mc.ApprovalCount,
-						RequireCodeOwnerReviews:      mc.RequireCodeOwnerReviews,
-					}
-					pr.RequiredPullRequestReviews = rq
-				}
-				if len(mc.RequireStatusChecks) > 0 {
-					checks := make([]*github.RequiredStatusCheck, len(mc.RequireStatusChecks))
-					for i, check := range mc.RequireStatusChecks {
-						checks[i] = &github.RequiredStatusCheck{
-							Context: check.Context,
-							AppID:   check.AppID,
-						}
-					}
-					rsc := &github.RequiredStatusChecks{
-						Strict: mc.RequireUpToDateBranch,
-						Checks: github.Ptr(checks),
-					}
-					pr.RequiredStatusChecks = rsc
-				}
-				_, rsp, err := rep.UpdateBranchProtection(ctx, owner, repo, b, pr)
-				if err != nil {
-					if rsp != nil && rsp.StatusCode == http.StatusForbidden {
-						log.Warn().
-							Str("org", owner).
-							Str("repo", repo).
-							Str("area", polName).
-							Msg("Action set to fix, but did not accept admin:write permissions update.")
-						// no sense to continue, just return
-						return nil
-					}
+				pr := newProtectionRequest(mc)
+				ok, err := applyBranchProtection(ctx, rep, owner, repo, b, pr)
+				if err != nil || !ok {
 					return err
 				}
 				continue
@@ -498,132 +385,10 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 			return err
 		}
 		// Got existing protection, modify from existing
-		update := false
-		pr := &github.ProtectionRequest{
-			RequiredStatusChecks: p.RequiredStatusChecks,
-			EnforceAdmins:        p.EnforceAdmins.Enabled,
-			AllowForcePushes:     &p.AllowForcePushes.Enabled,
-		}
-		if mc.EnforceOnAdmins && !pr.EnforceAdmins {
-			pr.EnforceAdmins = true
-			update = true
-		}
-		if pr.RequiredStatusChecks != nil {
-			// Clear out Contexts, since API populates both, but updates require only one.
-			pr.RequiredStatusChecks.Contexts = nil
-			// If there are no actual checks or contexts, then unset RequiredStatusChecks entirely,
-			// otherwise update fails
-			if len(pr.RequiredStatusChecks.GetChecks()) == 0 && len(pr.RequiredStatusChecks.GetContexts()) == 0 {
-				update = true
-				pr.RequiredStatusChecks = nil
-			}
-		}
-		if p.RequiredPullRequestReviews != nil {
-			prr := &github.PullRequestReviewsEnforcementRequest{
-				DismissStaleReviews:          p.RequiredPullRequestReviews.DismissStaleReviews,
-				RequireCodeOwnerReviews:      p.RequiredPullRequestReviews.RequireCodeOwnerReviews,
-				RequiredApprovingReviewCount: p.RequiredPullRequestReviews.RequiredApprovingReviewCount,
-			}
-			pr.RequiredPullRequestReviews = prr
-		}
-		if p.Restrictions != nil {
-			rr := &github.BranchRestrictionsRequest{
-				Users: make([]string, 0),
-				Teams: make([]string, 0),
-			}
-			if p.Restrictions.Users != nil {
-				for _, u := range p.Restrictions.Users {
-					rr.Users = append(rr.Users, *u.Login)
-				}
-			}
-			if p.Restrictions.Teams != nil {
-				for _, t := range p.Restrictions.Teams {
-					rr.Teams = append(rr.Teams, *t.Slug)
-				}
-			}
-			if p.Restrictions.Apps != nil {
-				rr.Apps = make([]string, 0)
-				for _, a := range p.Restrictions.Apps {
-					rr.Apps = append(rr.Apps, *a.Slug)
-				}
-			}
-			pr.Restrictions = rr
-		}
-		if *pr.AllowForcePushes && mc.BlockForce {
-			f := false
-			pr.AllowForcePushes = &f
-			update = true
-		}
-		if pr.RequiredPullRequestReviews == nil && mc.RequireApproval {
-			rq := &github.PullRequestReviewsEnforcementRequest{
-				DismissStaleReviews:          mc.DismissStale,
-				RequiredApprovingReviewCount: mc.ApprovalCount,
-				RequireCodeOwnerReviews:      mc.RequireCodeOwnerReviews,
-			}
-			pr.RequiredPullRequestReviews = rq
-			update = true
-		}
-		if mc.RequireApproval {
-			if mc.DismissStale && !pr.RequiredPullRequestReviews.DismissStaleReviews {
-				pr.RequiredPullRequestReviews.DismissStaleReviews = true
-				update = true
-			}
-			if mc.ApprovalCount > pr.RequiredPullRequestReviews.RequiredApprovingReviewCount {
-				pr.RequiredPullRequestReviews.RequiredApprovingReviewCount = mc.ApprovalCount
-				update = true
-			}
-			if mc.RequireCodeOwnerReviews && !pr.RequiredPullRequestReviews.RequireCodeOwnerReviews {
-				pr.RequiredPullRequestReviews.RequireCodeOwnerReviews = true
-				update = true
-			}
-		}
-		if len(mc.RequireStatusChecks) > 0 {
-			if pr.RequiredStatusChecks == nil {
-				checks := make([]*github.RequiredStatusCheck, len(mc.RequireStatusChecks))
-				for i, check := range mc.RequireStatusChecks {
-					checks[i] = &github.RequiredStatusCheck{
-						Context: check.Context,
-						AppID:   check.AppID,
-					}
-				}
-				rsc := &github.RequiredStatusChecks{
-					Strict: mc.RequireUpToDateBranch,
-					Checks: github.Ptr(checks),
-				}
-				pr.RequiredStatusChecks = rsc
-				update = true
-			} else {
-				if mc.RequireUpToDateBranch && !pr.RequiredStatusChecks.Strict {
-					pr.RequiredStatusChecks.Strict = true
-					update = true
-				}
-				ac := pr.RequiredStatusChecks.GetChecks()
-				lt := makeSCLookupTable(pr.RequiredStatusChecks.GetChecks())
-				for _, c := range mc.RequireStatusChecks {
-					// Only mark for update if there are status checks required, but not already set.
-					sch := statusCheckHash{context: c.Context}
-					if c.AppID != nil {
-						sch.appID = *c.AppID
-					}
-					if _, ok := lt[sch]; !ok {
-						ac = append(ac, &github.RequiredStatusCheck{Context: c.Context, AppID: c.AppID})
-						update = true
-					}
-				}
-				pr.RequiredStatusChecks.Checks = github.Ptr(ac)
-			}
-		}
+		pr, update := updatedProtectionRequest(p, mc)
 		if update {
-			_, rsp, err := rep.UpdateBranchProtection(ctx, owner, repo, b, pr)
-			if err != nil {
-				if rsp != nil && rsp.StatusCode == http.StatusForbidden {
-					log.Warn().
-						Str("org", owner).
-						Str("repo", repo).
-						Str("area", polName).
-						Msg("Action set to fix, but did not accept admin:write permissions update.")
-					return nil
-				}
+			ok, err := applyBranchProtection(ctx, rep, owner, repo, b, pr)
+			if err != nil || !ok {
 				return err
 			}
 			log.Info().
@@ -633,30 +398,9 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 				Msg("Updated with Fix action.")
 		}
 
-		signatureProtectionEnabled, err := getSignatureProtectionEnabled(ctx, rep, owner, repo, b)
-		if err != nil {
+		ok, err := ensureSignedCommits(ctx, rep, owner, repo, b, mc.RequireSignedCommits)
+		if err != nil || !ok {
 			return err
-		}
-		if mc.RequireSignedCommits && !signatureProtectionEnabled {
-			_, rsp, err = rep.RequireSignaturesOnProtectedBranch(ctx, owner, repo, b)
-			if err != nil {
-				if rsp != nil && rsp.StatusCode == http.StatusForbidden {
-					log.Warn().
-						Str("org", owner).
-						Str("repo", repo).
-						Str("area", polName).
-						Str("branch", b).
-						Msg("Action set to fix, but did not accept admin:write update to make signed commits required.")
-					return nil
-				}
-				return err
-			}
-			log.Info().
-				Str("org", owner).
-				Str("repo", repo).
-				Str("area", polName).
-				Str("branch", b).
-				Msg("Updated to make signed commits required with Fix action.")
 		}
 	}
 	return nil
@@ -810,4 +554,330 @@ func makeSCLookupTable(prrsc []*github.RequiredStatusCheck) map[statusCheckHash]
 		}
 	}
 	return lt
+}
+
+func checkReviewProtection(p *github.Protection, mc *mergedConfig, b string) (details, string, bool) {
+	pass := true
+	text := ""
+	var d details
+	rev := p.GetRequiredPullRequestReviews()
+	if rev != nil {
+		d.PRReviews = true
+		d.DismissStale = rev.DismissStaleReviews
+		d.RequireCodeOwnerReviews = rev.RequireCodeOwnerReviews
+		if mc.DismissStale && !rev.DismissStaleReviews {
+			text += fmt.Sprintf("Dismiss stale reviews not configured for branch %v\n", b)
+			pass = false
+		}
+		d.NumReviews = rev.RequiredApprovingReviewCount
+		if rev.RequiredApprovingReviewCount < mc.ApprovalCount {
+			pass = false
+			text += fmt.Sprintf("PR Approvals below threshold %v : %v for branch %v\n",
+				rev.RequiredApprovingReviewCount, mc.ApprovalCount, b)
+		}
+		if mc.RequireCodeOwnerReviews && !rev.RequireCodeOwnerReviews {
+			text += fmt.Sprintf("Require Code Owner Reviews not configured for branch %v\n", b)
+			pass = false
+		}
+	} else if mc.RequireApproval || mc.RequireCodeOwnerReviews {
+		pass = false
+		text += fmt.Sprintf("PR Approvals not configured for branch %v\n", b)
+	}
+	return d, text, pass
+}
+
+func checkStatusProtection(p *github.Protection, mc *mergedConfig, b string, d *details) (string, bool) {
+	pass := true
+	text := ""
+	if len(mc.RequireStatusChecks) > 0 {
+		rsc := p.GetRequiredStatusChecks()
+		if rsc != nil {
+			d.RequireUpToDateBranch = rsc.Strict
+			if mc.RequireUpToDateBranch && !rsc.Strict {
+				text += fmt.Sprintf("Require up to date branch not configured for branch %v\n",
+					b)
+				pass = false
+			}
+			for _, c := range rsc.GetChecks() {
+				sc := StatusCheck{Context: c.Context, AppID: c.AppID}
+				d.RequireStatusChecks = append(d.RequireStatusChecks, sc)
+			}
+			lt := makeSCLookupTable(rsc.GetChecks())
+			for _, c := range mc.RequireStatusChecks {
+				appIDTxt := "(any app)"
+				sch := statusCheckHash{context: c.Context}
+				if c.AppID != nil {
+					sch.appID = *c.AppID
+					appIDTxt = fmt.Sprintf("(AppID: %v)", *c.AppID)
+				}
+				if _, ok := lt[sch]; !ok {
+					text += fmt.Sprintf("Status check %s %s not found for branch %v\n",
+						c.Context, appIDTxt, b)
+					pass = false
+				}
+			}
+		} else {
+			text += fmt.Sprintf("Status checks required by policy, but none found for branch %v\n", b)
+			pass = false
+		}
+	}
+	return text, pass
+}
+
+func newProtectionRequest(mc *mergedConfig) *github.ProtectionRequest {
+	afp := !mc.BlockForce
+	pr := &github.ProtectionRequest{
+		AllowForcePushes: &afp,
+	}
+	if mc.EnforceOnAdmins {
+		pr.EnforceAdmins = true
+	}
+	if mc.RequireApproval || mc.RequireCodeOwnerReviews {
+		rq := &github.PullRequestReviewsEnforcementRequest{
+			DismissStaleReviews:          mc.DismissStale,
+			RequiredApprovingReviewCount: mc.ApprovalCount,
+			RequireCodeOwnerReviews:      mc.RequireCodeOwnerReviews,
+		}
+		pr.RequiredPullRequestReviews = rq
+	}
+	if len(mc.RequireStatusChecks) > 0 {
+		checks := make([]*github.RequiredStatusCheck, len(mc.RequireStatusChecks))
+		for i, check := range mc.RequireStatusChecks {
+			checks[i] = &github.RequiredStatusCheck{
+				Context: check.Context,
+				AppID:   check.AppID,
+			}
+		}
+		rsc := &github.RequiredStatusChecks{
+			Strict: mc.RequireUpToDateBranch,
+			Checks: github.Ptr(checks),
+		}
+		pr.RequiredStatusChecks = rsc
+	}
+	return pr
+}
+
+func updatedProtectionRequest(p *github.Protection, mc *mergedConfig) (*github.ProtectionRequest, bool) {
+	update := false
+	pr := &github.ProtectionRequest{
+		RequiredStatusChecks: p.RequiredStatusChecks,
+		EnforceAdmins:        p.EnforceAdmins.Enabled,
+		AllowForcePushes:     &p.AllowForcePushes.Enabled,
+	}
+	if mc.EnforceOnAdmins && !pr.EnforceAdmins {
+		pr.EnforceAdmins = true
+		update = true
+	}
+	if pr.RequiredStatusChecks != nil {
+		// Clear out Contexts, since API populates both, but updates require only one.
+		pr.RequiredStatusChecks.Contexts = nil
+		// If there are no actual checks or contexts, then unset RequiredStatusChecks entirely,
+		// otherwise update fails
+		if len(pr.RequiredStatusChecks.GetChecks()) == 0 && len(pr.RequiredStatusChecks.GetContexts()) == 0 {
+			update = true
+			pr.RequiredStatusChecks = nil
+		}
+	}
+	if p.RequiredPullRequestReviews != nil {
+		prr := &github.PullRequestReviewsEnforcementRequest{
+			DismissStaleReviews:          p.RequiredPullRequestReviews.DismissStaleReviews,
+			RequireCodeOwnerReviews:      p.RequiredPullRequestReviews.RequireCodeOwnerReviews,
+			RequiredApprovingReviewCount: p.RequiredPullRequestReviews.RequiredApprovingReviewCount,
+		}
+		pr.RequiredPullRequestReviews = prr
+	}
+	pr.Restrictions = copyBranchRestrictions(p.Restrictions)
+	if *pr.AllowForcePushes && mc.BlockForce {
+		f := false
+		pr.AllowForcePushes = &f
+		update = true
+	}
+	if updateReviewProtection(pr, mc) {
+		update = true
+	}
+	if updateStatusProtection(pr, mc) {
+		update = true
+	}
+
+	return pr, update
+}
+
+func copyBranchRestrictions(restrictions *github.BranchRestrictions) *github.BranchRestrictionsRequest {
+	if restrictions == nil {
+		return nil
+	}
+	rr := &github.BranchRestrictionsRequest{
+		Users: make([]string, 0),
+		Teams: make([]string, 0),
+	}
+	if restrictions.Users != nil {
+		for _, u := range restrictions.Users {
+			rr.Users = append(rr.Users, *u.Login)
+		}
+	}
+	if restrictions.Teams != nil {
+		for _, t := range restrictions.Teams {
+			rr.Teams = append(rr.Teams, *t.Slug)
+		}
+	}
+	if restrictions.Apps != nil {
+		rr.Apps = make([]string, 0)
+		for _, a := range restrictions.Apps {
+			rr.Apps = append(rr.Apps, *a.Slug)
+		}
+	}
+	return rr
+}
+
+func updateReviewProtection(pr *github.ProtectionRequest, mc *mergedConfig) bool {
+	update := false
+	if pr.RequiredPullRequestReviews == nil && mc.RequireApproval {
+		rq := &github.PullRequestReviewsEnforcementRequest{
+			DismissStaleReviews:          mc.DismissStale,
+			RequiredApprovingReviewCount: mc.ApprovalCount,
+			RequireCodeOwnerReviews:      mc.RequireCodeOwnerReviews,
+		}
+		pr.RequiredPullRequestReviews = rq
+		update = true
+	}
+	if mc.RequireApproval {
+		if mc.DismissStale && !pr.RequiredPullRequestReviews.DismissStaleReviews {
+			pr.RequiredPullRequestReviews.DismissStaleReviews = true
+			update = true
+		}
+		if mc.ApprovalCount > pr.RequiredPullRequestReviews.RequiredApprovingReviewCount {
+			pr.RequiredPullRequestReviews.RequiredApprovingReviewCount = mc.ApprovalCount
+			update = true
+		}
+		if mc.RequireCodeOwnerReviews && !pr.RequiredPullRequestReviews.RequireCodeOwnerReviews {
+			pr.RequiredPullRequestReviews.RequireCodeOwnerReviews = true
+			update = true
+		}
+	}
+	return update
+}
+
+func updateStatusProtection(pr *github.ProtectionRequest, mc *mergedConfig) bool {
+	update := false
+	if len(mc.RequireStatusChecks) > 0 {
+		if pr.RequiredStatusChecks == nil {
+			checks := make([]*github.RequiredStatusCheck, len(mc.RequireStatusChecks))
+			for i, check := range mc.RequireStatusChecks {
+				checks[i] = &github.RequiredStatusCheck{
+					Context: check.Context,
+					AppID:   check.AppID,
+				}
+			}
+			rsc := &github.RequiredStatusChecks{
+				Strict: mc.RequireUpToDateBranch,
+				Checks: github.Ptr(checks),
+			}
+			pr.RequiredStatusChecks = rsc
+			update = true
+		} else {
+			if mc.RequireUpToDateBranch && !pr.RequiredStatusChecks.Strict {
+				pr.RequiredStatusChecks.Strict = true
+				update = true
+			}
+			ac := pr.RequiredStatusChecks.GetChecks()
+			lt := makeSCLookupTable(pr.RequiredStatusChecks.GetChecks())
+			for _, c := range mc.RequireStatusChecks {
+				// Only mark for update if there are status checks required, but not already set.
+				sch := statusCheckHash{context: c.Context}
+				if c.AppID != nil {
+					sch.appID = *c.AppID
+				}
+				if _, ok := lt[sch]; !ok {
+					ac = append(ac, &github.RequiredStatusCheck{Context: c.Context, AppID: c.AppID})
+					update = true
+				}
+			}
+			pr.RequiredStatusChecks.Checks = github.Ptr(ac)
+		}
+	}
+	return update
+}
+
+func checkBranchProtection(ctx context.Context, rep repositories, owner, repo, b string,
+	p *github.Protection, mc *mergedConfig,
+) (details, string, bool, error) {
+	pass := true
+	text := ""
+	d, reviewText, reviewsPass := checkReviewProtection(p, mc, b)
+	text += reviewText
+	pass = pass && reviewsPass
+	afp := p.GetAllowForcePushes()
+	d.BlockForce = true
+	if afp != nil {
+		if mc.BlockForce && afp.Enabled {
+			text += fmt.Sprintf("Block force push not configured for branch %v\n", b)
+			pass = false
+			d.BlockForce = false
+		}
+	}
+	ea := p.GetEnforceAdmins()
+	d.EnforceOnAdmins = (ea != nil && ea.Enabled)
+	if mc.EnforceOnAdmins && (ea == nil || !ea.Enabled) {
+		text += fmt.Sprintf("Enforce status checks on admins not configured for branch %v\n",
+			b)
+		pass = false
+	}
+	statusText, statusPass := checkStatusProtection(p, mc, b, &d)
+	text += statusText
+	pass = pass && statusPass
+
+	signatureProtectionEnabled, err := getSignatureProtectionEnabled(ctx, rep, owner, repo, b)
+	if err != nil {
+		return details{}, "", false, err
+	}
+	d.RequireSignedCommits = signatureProtectionEnabled
+	if mc.RequireSignedCommits && !d.RequireSignedCommits {
+		pass = false
+		text += fmt.Sprintf("Signed commits required, but not enabled for branch: %v\n", b)
+	}
+
+	return d, text, pass, nil
+}
+
+// applyBranchProtection reports whether enforcement can continue after the update.
+func applyBranchProtection(ctx context.Context, rep repositories, owner, repo, branch string,
+	pr *github.ProtectionRequest,
+) (bool, error) {
+	_, rsp, err := rep.UpdateBranchProtection(ctx, owner, repo, branch, pr)
+	if err != nil && rsp != nil && rsp.StatusCode == http.StatusForbidden {
+		log.Warn().Str("org", owner).Str("repo", repo).Str("area", polName).
+			Msg("Action set to fix, but did not accept admin:write permissions update.")
+		return false, nil
+	}
+	return err == nil, err
+}
+
+// ensureSignedCommits reports whether enforcement can continue for the next branch.
+func ensureSignedCommits(ctx context.Context, rep repositories, owner, repo, b string, required bool) (bool, error) {
+	signatureProtectionEnabled, err := getSignatureProtectionEnabled(ctx, rep, owner, repo, b)
+	if err != nil {
+		return false, err
+	}
+	if required && !signatureProtectionEnabled {
+		_, rsp, err := rep.RequireSignaturesOnProtectedBranch(ctx, owner, repo, b)
+		if err != nil {
+			if rsp != nil && rsp.StatusCode == http.StatusForbidden {
+				log.Warn().
+					Str("org", owner).
+					Str("repo", repo).
+					Str("area", polName).
+					Str("branch", b).
+					Msg("Action set to fix, but did not accept admin:write update to make signed commits required.")
+				return false, nil
+			}
+			return false, err
+		}
+		log.Info().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("area", polName).
+			Str("branch", b).
+			Msg("Updated to make signed commits required with Fix action.")
+	}
+	return true, nil
 }

@@ -314,30 +314,16 @@ func TestReadConfig(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			getenv := func(in string) string {
-				if in == "APP_ID" {
-					return test.AppID
-				}
-				if in == "KEY_SECRET" {
-					return test.KeySecret
-				}
-				if in == "ALLSTAR_GHE_URL" {
-					return test.GitHubEnterpriseUrl
-				}
-				if in == "DO_NOTHING_ON_OPT_OUT" {
-					return test.DoNothingOnOptOut
-				}
-				if in == "NOTICE_PING_DURATION_HOURS" {
-					return test.NoticePingDurationHrs
-				}
-				if in == "PRIVATE_KEY" {
-					return test.PrivateKey
-				}
-				if in == "GITHUB_ALLOWED_ORGS" {
-					return test.OperatorAllowlist
-				}
-				return ""
+			env := map[string]string{
+				"APP_ID":                     test.AppID,
+				"KEY_SECRET":                 test.KeySecret,
+				"ALLSTAR_GHE_URL":            test.GitHubEnterpriseUrl,
+				"DO_NOTHING_ON_OPT_OUT":      test.DoNothingOnOptOut,
+				"NOTICE_PING_DURATION_HOURS": test.NoticePingDurationHrs,
+				"PRIVATE_KEY":                test.PrivateKey,
+				"GITHUB_ALLOWED_ORGS":        test.OperatorAllowlist,
 			}
+			getenv := func(in string) string { return env[in] }
 			cfg := readConfig(getenv)
 			if diff := cmp.Diff(test.ExpAppID, cfg.AppID); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)

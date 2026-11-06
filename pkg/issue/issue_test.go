@@ -82,433 +82,18 @@ func TestEnsure(t *testing.T) {
 	configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
 		return &config.OrgConfig{}, &config.RepoConfig{}, &config.RepoConfig{}
 	}
-	t.Run("NoIssue", func(t *testing.T) {
-		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions,
-		) ([]*github.Issue, *github.Response, error) {
-			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
-		}
-		createCalled := false
-		create = func(ctx context.Context, owner string, repo string,
-			issue *github.IssueRequest,
-		) (*github.Issue, *github.Response, error) {
-			if *issue.Title != issueTitle {
-				t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
-			}
-			if (*issue.Labels)[0] != operator.GitHubIssueLabel {
-				t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
-			}
-			if *issue.Body != body {
-				t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), body)
-			}
-			createCalled = true
-			return nil, nil, nil
-		}
-		edit = nil
-		createComment = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
-		if err != nil {
-			t.Fatalf("Unexpected error: %v", err)
-		}
-		if createCalled != true {
-			t.Error("Expected issue to be created")
-		}
-	})
-	t.Run("NoIssueInAnotherRepo", func(t *testing.T) {
-		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
-			return &config.OrgConfig{IssueRepo: "issuerepo"}, &config.RepoConfig{}, &config.RepoConfig{}
-		}
-		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions,
-		) ([]*github.Issue, *github.Response, error) {
-			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
-		}
-		createCalled := false
-		create = func(ctx context.Context, owner string, repo string,
-			issue *github.IssueRequest,
-		) (*github.Issue, *github.Response, error) {
-			if *issue.Title != issueTitleOtherRepo {
-				t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitleOtherRepo)
-			}
-			if (*issue.Labels)[0] != operator.GitHubIssueLabel {
-				t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
-			}
-			if *issue.Body != bodyOtherRepo {
-				t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), bodyOtherRepo)
-			}
-			createCalled = true
-			return nil, nil, nil
-		}
-		edit = nil
-		createComment = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
-		if err != nil {
-			t.Fatalf("Unexpected error: %v", err)
-		}
-		if createCalled != true {
-			t.Error("Expected issue to be created")
-		}
-	})
-	t.Run("NoIssueWithFooter", func(t *testing.T) {
-		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
-			return &config.OrgConfig{IssueFooter: "CustomFooter"}, &config.RepoConfig{}, &config.RepoConfig{}
-		}
-		bodyWithFooter := "_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)._\n\n**Security Policy Violation**\nStatus text\n\n---\n\n<!-- Edit section #updates --><!-- Current result text hash: 1ab61918ea1b7d10e20db2b40287c1a265a1617b998d87b28579a4462b2efac2 --><!-- Edit section #updates -->\n\n\nCustomFooter\n\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
-		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions,
-		) ([]*github.Issue, *github.Response, error) {
-			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
-		}
-		createCalled := false
-		create = func(ctx context.Context, owner string, repo string,
-			issue *github.IssueRequest,
-		) (*github.Issue, *github.Response, error) {
-			if *issue.Title != issueTitle {
-				t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
-			}
-			if (*issue.Labels)[0] != operator.GitHubIssueLabel {
-				t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
-			}
-			if *issue.Body != bodyWithFooter {
-				t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), bodyWithFooter)
-			}
-			createCalled = true
-			return nil, nil, nil
-		}
-		edit = nil
-		createComment = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
-		if err != nil {
-			t.Fatalf("Unexpected error: %v", err)
-		}
-		if createCalled != true {
-			t.Error("Expected issue to be created")
-		}
-	})
-	t.Run("ClosedIssue", func(t *testing.T) {
-		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions,
-		) ([]*github.Issue, *github.Response, error) {
-			return []*github.Issue{
-				{
-					Title: &issueTitle,
-					State: &closed,
-				},
-			}, &github.Response{NextPage: 0}, nil
-		}
-		create = nil
-		editCalled := false
-		edit = func(ctx context.Context, owner string, repo string, number int,
-			issue *github.IssueRequest,
-		) (*github.Issue, *github.Response, error) {
-			if issue.GetState() != "open" {
-				t.Errorf("Unexpected state: %v", issue.GetState())
-			}
-			editCalled = true
-			return nil, nil, nil
-		}
-		commentCalled := false
-		createComment = func(ctx context.Context, owner string, repo string,
-			number int, comment *github.IssueComment,
-		) (*github.IssueComment, *github.Response, error) {
-			if !strings.HasPrefix(comment.GetBody(), "Reopening issue") {
-				t.Errorf("Unexpected comment: %v", comment.GetBody())
-			}
-			commentCalled = true
-			return nil, nil, nil
-		}
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
-		if err != nil {
-			t.Fatalf("Unexpected error: %v", err)
-		}
-		if editCalled != true {
-			t.Error("Expected issue to be re-opened")
-		}
-		if commentCalled != true {
-			t.Error("Expected comment to be left")
-		}
-	})
-	t.Run("ClosedIssueUpdatedText", func(t *testing.T) {
-		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions,
-		) ([]*github.Issue, *github.Response, error) {
-			return []*github.Issue{
-				{
-					Title: &issueTitle,
-					State: &closed,
-					Body:  &body,
-				},
-			}, &github.Response{NextPage: 0}, nil
-		}
-		create = nil
-		editCalled := false
-		edit = func(ctx context.Context, owner string, repo string, number int,
-			issue *github.IssueRequest,
-		) (*github.Issue, *github.Response, error) {
-			if issue.GetState() != "open" {
-				t.Errorf("Unexpected state: %v", issue.GetState())
-			}
-			if !strings.Contains(issue.GetBody(), "<!-- Current result text hash: 3079c555ed4ca1a5d828505dd39ed455313c07451755e380c36ee48a359038e9 -->") {
-				t.Errorf("Unexpected issue edit body (missing hash): %v", issue.GetBody())
-			}
-			if !strings.Contains(issue.GetBody(), "Click here to see the latest update") {
-				t.Errorf("Unexpected issue edit body (missing link to update): %v", issue.GetBody())
-			}
-			editCalled = true
-			return nil, nil, nil
-		}
-		commentCalled := false
-		createComment = func(ctx context.Context, owner string, repo string,
-			number int, comment *github.IssueComment,
-		) (*github.IssueComment, *github.Response, error) {
-			if !strings.HasPrefix(comment.GetBody(), "The policy result has been updated") {
-				t.Errorf("Unexpected comment: %v", comment.GetBody())
-			}
-			commentCalled = true
-			return nil, nil, nil
-		}
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "New status text")
-		if err != nil {
-			t.Fatalf("Unexpected error: %v", err)
-		}
-		if editCalled != true {
-			t.Error("Expected issue to be re-opened")
-		}
-		if commentCalled != true {
-			t.Error("Expected comment to be left")
-		}
-	})
-	t.Run("OpenFreshIssue", func(t *testing.T) {
-		now := github.Timestamp{Time: time.Now()}
-
-		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions,
-		) ([]*github.Issue, *github.Response, error) {
-			return []*github.Issue{
-				{
-					Title:     &issueTitle,
-					State:     &open,
-					UpdatedAt: &now,
-				},
-			}, &github.Response{NextPage: 0}, nil
-		}
-		// Expect to not call nil functions
-		create = nil
-		edit = nil
-		createComment = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
-		if err != nil {
-			t.Fatalf("Unexpected error: %v", err)
-		}
-	})
-	t.Run("OpenStaleIssue", func(t *testing.T) {
-		stale := github.Timestamp{Time: time.Now().Add(-10 * operator.NoticePingDuration)}
-		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions,
-		) ([]*github.Issue, *github.Response, error) {
-			return []*github.Issue{
-				{
-					Title:     &issueTitle,
-					State:     &open,
-					UpdatedAt: &stale,
-				},
-			}, &github.Response{NextPage: 0}, nil
-		}
-		commentCalled := false
-		createComment = func(ctx context.Context, owner string, repo string,
-			number int, comment *github.IssueComment,
-		) (*github.IssueComment, *github.Response, error) {
-			if !strings.HasPrefix(comment.GetBody(), "Updating issue") {
-				t.Errorf("Unexpected comment: %v", comment.GetBody())
-			}
-			commentCalled = true
-			return nil, nil, nil
-		}
-		// Expect to not call nil functions
-		create = nil
-		edit = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
-		if err != nil {
-			t.Fatalf("Unexpected error: %v", err)
-		}
-		if commentCalled != true {
-			t.Error("Expected comment to be left")
-		}
-	})
-	t.Run("NoIssueScheduleBlocksCreate", func(t *testing.T) {
-		setShouldPerform(false)
-		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions,
-		) ([]*github.Issue, *github.Response, error) {
-			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
-		}
-		createCalled := false
-		create = func(ctx context.Context, owner string, repo string,
-			issue *github.IssueRequest,
-		) (*github.Issue, *github.Response, error) {
-			if *issue.Title != issueTitle {
-				t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
-			}
-			if (*issue.Labels)[0] != operator.GitHubIssueLabel {
-				t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
-			}
-			if *issue.Body != body {
-				t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), body)
-			}
-			createCalled = true
-			return nil, nil, nil
-		}
-		edit = nil
-		createComment = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
-		if err != nil {
-			t.Fatalf("Unexpected error: %v", err)
-		}
-		if createCalled != false {
-			t.Error("Expected no issue to be created")
-		}
-	})
-	t.Run("NoIssueScheduleAllowsCreate", func(t *testing.T) {
-		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
-			return &config.OrgConfig{}, &config.RepoConfig{}, &config.RepoConfig{}
-		}
-		setShouldPerform(true)
-		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions,
-		) ([]*github.Issue, *github.Response, error) {
-			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
-		}
-		createCalled := false
-		create = func(ctx context.Context, owner string, repo string,
-			issue *github.IssueRequest,
-		) (*github.Issue, *github.Response, error) {
-			if *issue.Title != issueTitle {
-				t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
-			}
-			if (*issue.Labels)[0] != operator.GitHubIssueLabel {
-				t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
-			}
-			if *issue.Body != body {
-				t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), body)
-			}
-			createCalled = true
-			return nil, nil, nil
-		}
-		edit = nil
-		createComment = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
-		if err != nil {
-			t.Fatalf("Unexpected error: %v", err)
-		}
-		if createCalled != true {
-			t.Error("Expected issue to be created")
-		}
-	})
-	t.Run("OpenStaleIssueScheduleAllowsPing", func(t *testing.T) {
-		setShouldPerform(true)
-		stale := github.Timestamp{Time: time.Now().Add(-10 * operator.NoticePingDuration)}
-		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions,
-		) ([]*github.Issue, *github.Response, error) {
-			return []*github.Issue{
-				{
-					Title:     &issueTitle,
-					State:     &open,
-					UpdatedAt: &stale,
-				},
-			}, &github.Response{NextPage: 0}, nil
-		}
-		commentCalled := false
-		createComment = func(ctx context.Context, owner string, repo string,
-			number int, comment *github.IssueComment,
-		) (*github.IssueComment, *github.Response, error) {
-			if !strings.HasPrefix(comment.GetBody(), "Updating issue") {
-				t.Errorf("Unexpected comment: %v", comment.GetBody())
-			}
-			commentCalled = true
-			return nil, nil, nil
-		}
-		// Expect to not call nil functions
-		create = nil
-		edit = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
-		if err != nil {
-			t.Fatalf("Unexpected error: %v", err)
-		}
-		if commentCalled != true {
-			t.Error("Expected comment to be left")
-		}
-	})
-	t.Run("OpenStaleIssueScheduleBlocksPing", func(t *testing.T) {
-		setShouldPerform(false)
-		stale := github.Timestamp{Time: time.Now().Add(-10 * operator.NoticePingDuration)}
-		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions,
-		) ([]*github.Issue, *github.Response, error) {
-			return []*github.Issue{
-				{
-					Title:     &issueTitle,
-					State:     &open,
-					UpdatedAt: &stale,
-				},
-			}, &github.Response{NextPage: 0}, nil
-		}
-		commentCalled := false
-		createComment = func(ctx context.Context, owner string, repo string,
-			number int, comment *github.IssueComment,
-		) (*github.IssueComment, *github.Response, error) {
-			if !strings.HasPrefix(comment.GetBody(), "Updating issue") {
-				t.Errorf("Unexpected comment: %v", comment.GetBody())
-			}
-			commentCalled = true
-			return nil, nil, nil
-		}
-		// Expect to not call nil functions
-		create = nil
-		edit = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
-		if err != nil {
-			t.Fatalf("Unexpected error: %v", err)
-		}
-		if commentCalled != false {
-			t.Error("Expected no comment to be left")
-		}
-	})
-	t.Run("IssuewithIssueDetails", func(t *testing.T) {
-		configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
-			return &config.OrgConfig{IssueDetails: "Some issue details"}, &config.RepoConfig{}, &config.RepoConfig{}
-		}
-		listByRepo = func(ctx context.Context, owner string, repo string,
-			opts *github.IssueListByRepoOptions,
-		) ([]*github.Issue, *github.Response, error) {
-			return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
-		}
-		createCalled := true
-		create = func(ctx context.Context, owner string, repo string,
-			issue *github.IssueRequest,
-		) (*github.Issue, *github.Response, error) {
-			if *issue.Title != issueTitle {
-				t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
-			}
-			if (*issue.Labels)[0] != operator.GitHubIssueLabel {
-				t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
-			}
-			if *issue.Body != bodyIssueDetail {
-				t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), bodyIssueDetail)
-			}
-			createCalled = true
-			return nil, nil, nil
-		}
-		edit = nil
-		createComment = nil
-		err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
-		if err != nil {
-			t.Fatalf("Unexpected error: %v", err)
-		}
-		if createCalled != true {
-			t.Error("Expected issue to be created")
-		}
-	})
+	t.Run("NoIssue", func(t *testing.T) { testEnsureNoIssue(t, issueTitle, body) })
+	t.Run("NoIssueInAnotherRepo", func(t *testing.T) { testEnsureNoIssueInAnotherRepo(t, issueTitleOtherRepo, bodyOtherRepo) })
+	t.Run("NoIssueWithFooter", func(t *testing.T) { testEnsureNoIssueWithFooter(t, issueTitle) })
+	t.Run("ClosedIssue", func(t *testing.T) { testEnsureClosedIssue(t, issueTitle, closed) })
+	t.Run("ClosedIssueUpdatedText", func(t *testing.T) { testEnsureClosedIssueUpdatedText(t, issueTitle, closed, body) })
+	t.Run("OpenFreshIssue", func(t *testing.T) { testEnsureOpenFreshIssue(t, issueTitle, open) })
+	t.Run("OpenStaleIssue", func(t *testing.T) { testEnsureOpenStaleIssue(t, issueTitle, open) })
+	t.Run("NoIssueScheduleBlocksCreate", func(t *testing.T) { testEnsureNoIssueScheduleBlocksCreate(t, issueTitle, body) })
+	t.Run("NoIssueScheduleAllowsCreate", func(t *testing.T) { testEnsureNoIssueScheduleAllowsCreate(t, issueTitle, body) })
+	t.Run("OpenStaleIssueScheduleAllowsPing", func(t *testing.T) { testEnsureOpenStaleIssueScheduleAllowsPing(t, issueTitle, open) })
+	t.Run("OpenStaleIssueScheduleBlocksPing", func(t *testing.T) { testEnsureOpenStaleIssueScheduleBlocksPing(t, issueTitle, open) })
+	t.Run("IssuewithIssueDetails", func(t *testing.T) { testEnsureIssuewithIssueDetails(t, issueTitle, bodyIssueDetail) })
 }
 
 func TestClose(t *testing.T) {
@@ -691,5 +276,468 @@ func TestRepoTitle(t *testing.T) {
 				t.Errorf("Unexpected Issue Title. Want: %q Got: %q", test.ExpTitle, gotTitle)
 			}
 		})
+	}
+}
+
+func testEnsureNoIssue(t *testing.T, issueTitle, body string) {
+	t.Helper()
+
+	listByRepo = func(ctx context.Context, owner string, repo string,
+		opts *github.IssueListByRepoOptions,
+	) ([]*github.Issue, *github.Response, error) {
+		return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
+	}
+	createCalled := false
+	create = func(ctx context.Context, owner string, repo string,
+		issue *github.IssueRequest,
+	) (*github.Issue, *github.Response, error) {
+		if *issue.Title != issueTitle {
+			t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
+		}
+		if (*issue.Labels)[0] != operator.GitHubIssueLabel {
+			t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
+		}
+		if *issue.Body != body {
+			t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), body)
+		}
+		createCalled = true
+		return nil, nil, nil
+	}
+	edit = nil
+	createComment = nil
+	err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if createCalled != true {
+		t.Error("Expected issue to be created")
+	}
+}
+
+func testEnsureNoIssueInAnotherRepo(t *testing.T, issueTitleOtherRepo, bodyOtherRepo string) {
+	t.Helper()
+
+	configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+		return &config.OrgConfig{IssueRepo: "issuerepo"}, &config.RepoConfig{}, &config.RepoConfig{}
+	}
+	listByRepo = func(ctx context.Context, owner string, repo string,
+		opts *github.IssueListByRepoOptions,
+	) ([]*github.Issue, *github.Response, error) {
+		return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
+	}
+	createCalled := false
+	create = func(ctx context.Context, owner string, repo string,
+		issue *github.IssueRequest,
+	) (*github.Issue, *github.Response, error) {
+		if *issue.Title != issueTitleOtherRepo {
+			t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitleOtherRepo)
+		}
+		if (*issue.Labels)[0] != operator.GitHubIssueLabel {
+			t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
+		}
+		if *issue.Body != bodyOtherRepo {
+			t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), bodyOtherRepo)
+		}
+		createCalled = true
+		return nil, nil, nil
+	}
+	edit = nil
+	createComment = nil
+	err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if createCalled != true {
+		t.Error("Expected issue to be created")
+	}
+}
+
+func testEnsureNoIssueWithFooter(t *testing.T, issueTitle string) {
+	t.Helper()
+
+	configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+		return &config.OrgConfig{IssueFooter: "CustomFooter"}, &config.RepoConfig{}, &config.RepoConfig{}
+	}
+	bodyWithFooter := "_This issue was automatically created by [Allstar](https://github.com/ossf/allstar/)._\n\n**Security Policy Violation**\nStatus text\n\n---\n\n<!-- Edit section #updates --><!-- Current result text hash: 1ab61918ea1b7d10e20db2b40287c1a265a1617b998d87b28579a4462b2efac2 --><!-- Edit section #updates -->\n\n\nCustomFooter\n\nThis issue will auto resolve when the policy is in compliance.\n\nIssue created by Allstar. See https://github.com/ossf/allstar/ for more information. For questions specific to the repository, please contact the owner or maintainer."
+	listByRepo = func(ctx context.Context, owner string, repo string,
+		opts *github.IssueListByRepoOptions,
+	) ([]*github.Issue, *github.Response, error) {
+		return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
+	}
+	createCalled := false
+	create = func(ctx context.Context, owner string, repo string,
+		issue *github.IssueRequest,
+	) (*github.Issue, *github.Response, error) {
+		if *issue.Title != issueTitle {
+			t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
+		}
+		if (*issue.Labels)[0] != operator.GitHubIssueLabel {
+			t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
+		}
+		if *issue.Body != bodyWithFooter {
+			t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), bodyWithFooter)
+		}
+		createCalled = true
+		return nil, nil, nil
+	}
+	edit = nil
+	createComment = nil
+	err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if createCalled != true {
+		t.Error("Expected issue to be created")
+	}
+}
+
+func testEnsureClosedIssue(t *testing.T, issueTitle, closed string) {
+	t.Helper()
+
+	listByRepo = func(ctx context.Context, owner string, repo string,
+		opts *github.IssueListByRepoOptions,
+	) ([]*github.Issue, *github.Response, error) {
+		return []*github.Issue{
+			{
+				Title: &issueTitle,
+				State: &closed,
+			},
+		}, &github.Response{NextPage: 0}, nil
+	}
+	create = nil
+	editCalled := false
+	edit = func(ctx context.Context, owner string, repo string, number int,
+		issue *github.IssueRequest,
+	) (*github.Issue, *github.Response, error) {
+		if issue.GetState() != "open" {
+			t.Errorf("Unexpected state: %v", issue.GetState())
+		}
+		editCalled = true
+		return nil, nil, nil
+	}
+	commentCalled := false
+	createComment = func(ctx context.Context, owner string, repo string,
+		number int, comment *github.IssueComment,
+	) (*github.IssueComment, *github.Response, error) {
+		if !strings.HasPrefix(comment.GetBody(), "Reopening issue") {
+			t.Errorf("Unexpected comment: %v", comment.GetBody())
+		}
+		commentCalled = true
+		return nil, nil, nil
+	}
+	err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if editCalled != true {
+		t.Error("Expected issue to be re-opened")
+	}
+	if commentCalled != true {
+		t.Error("Expected comment to be left")
+	}
+}
+
+func testEnsureClosedIssueUpdatedText(t *testing.T, issueTitle, closed, body string) {
+	t.Helper()
+
+	listByRepo = func(ctx context.Context, owner string, repo string,
+		opts *github.IssueListByRepoOptions,
+	) ([]*github.Issue, *github.Response, error) {
+		return []*github.Issue{
+			{
+				Title: &issueTitle,
+				State: &closed,
+				Body:  &body,
+			},
+		}, &github.Response{NextPage: 0}, nil
+	}
+	create = nil
+	editCalled := false
+	edit = func(ctx context.Context, owner string, repo string, number int,
+		issue *github.IssueRequest,
+	) (*github.Issue, *github.Response, error) {
+		if issue.GetState() != "open" {
+			t.Errorf("Unexpected state: %v", issue.GetState())
+		}
+		if !strings.Contains(issue.GetBody(), "<!-- Current result text hash: 3079c555ed4ca1a5d828505dd39ed455313c07451755e380c36ee48a359038e9 -->") {
+			t.Errorf("Unexpected issue edit body (missing hash): %v", issue.GetBody())
+		}
+		if !strings.Contains(issue.GetBody(), "Click here to see the latest update") {
+			t.Errorf("Unexpected issue edit body (missing link to update): %v", issue.GetBody())
+		}
+		editCalled = true
+		return nil, nil, nil
+	}
+	commentCalled := false
+	createComment = func(ctx context.Context, owner string, repo string,
+		number int, comment *github.IssueComment,
+	) (*github.IssueComment, *github.Response, error) {
+		if !strings.HasPrefix(comment.GetBody(), "The policy result has been updated") {
+			t.Errorf("Unexpected comment: %v", comment.GetBody())
+		}
+		commentCalled = true
+		return nil, nil, nil
+	}
+	err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "New status text")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if editCalled != true {
+		t.Error("Expected issue to be re-opened")
+	}
+	if commentCalled != true {
+		t.Error("Expected comment to be left")
+	}
+}
+
+func testEnsureOpenFreshIssue(t *testing.T, issueTitle, open string) {
+	t.Helper()
+
+	now := github.Timestamp{Time: time.Now()}
+
+	listByRepo = func(ctx context.Context, owner string, repo string,
+		opts *github.IssueListByRepoOptions,
+	) ([]*github.Issue, *github.Response, error) {
+		return []*github.Issue{
+			{
+				Title:     &issueTitle,
+				State:     &open,
+				UpdatedAt: &now,
+			},
+		}, &github.Response{NextPage: 0}, nil
+	}
+	// Expect to not call nil functions
+	create = nil
+	edit = nil
+	createComment = nil
+	err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+}
+
+func testEnsureOpenStaleIssue(t *testing.T, issueTitle, open string) {
+	t.Helper()
+
+	stale := github.Timestamp{Time: time.Now().Add(-10 * operator.NoticePingDuration)}
+	listByRepo = func(ctx context.Context, owner string, repo string,
+		opts *github.IssueListByRepoOptions,
+	) ([]*github.Issue, *github.Response, error) {
+		return []*github.Issue{
+			{
+				Title:     &issueTitle,
+				State:     &open,
+				UpdatedAt: &stale,
+			},
+		}, &github.Response{NextPage: 0}, nil
+	}
+	commentCalled := false
+	createComment = func(ctx context.Context, owner string, repo string,
+		number int, comment *github.IssueComment,
+	) (*github.IssueComment, *github.Response, error) {
+		if !strings.HasPrefix(comment.GetBody(), "Updating issue") {
+			t.Errorf("Unexpected comment: %v", comment.GetBody())
+		}
+		commentCalled = true
+		return nil, nil, nil
+	}
+	// Expect to not call nil functions
+	create = nil
+	edit = nil
+	err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if commentCalled != true {
+		t.Error("Expected comment to be left")
+	}
+}
+
+func testEnsureNoIssueScheduleBlocksCreate(t *testing.T, issueTitle, body string) {
+	t.Helper()
+
+	setShouldPerform(false)
+	listByRepo = func(ctx context.Context, owner string, repo string,
+		opts *github.IssueListByRepoOptions,
+	) ([]*github.Issue, *github.Response, error) {
+		return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
+	}
+	createCalled := false
+	create = func(ctx context.Context, owner string, repo string,
+		issue *github.IssueRequest,
+	) (*github.Issue, *github.Response, error) {
+		if *issue.Title != issueTitle {
+			t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
+		}
+		if (*issue.Labels)[0] != operator.GitHubIssueLabel {
+			t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
+		}
+		if *issue.Body != body {
+			t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), body)
+		}
+		createCalled = true
+		return nil, nil, nil
+	}
+	edit = nil
+	createComment = nil
+	err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if createCalled != false {
+		t.Error("Expected no issue to be created")
+	}
+}
+
+func testEnsureNoIssueScheduleAllowsCreate(t *testing.T, issueTitle, body string) {
+	t.Helper()
+
+	configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+		return &config.OrgConfig{}, &config.RepoConfig{}, &config.RepoConfig{}
+	}
+	setShouldPerform(true)
+	listByRepo = func(ctx context.Context, owner string, repo string,
+		opts *github.IssueListByRepoOptions,
+	) ([]*github.Issue, *github.Response, error) {
+		return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
+	}
+	createCalled := false
+	create = func(ctx context.Context, owner string, repo string,
+		issue *github.IssueRequest,
+	) (*github.Issue, *github.Response, error) {
+		if *issue.Title != issueTitle {
+			t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
+		}
+		if (*issue.Labels)[0] != operator.GitHubIssueLabel {
+			t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
+		}
+		if *issue.Body != body {
+			t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), body)
+		}
+		createCalled = true
+		return nil, nil, nil
+	}
+	edit = nil
+	createComment = nil
+	err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if createCalled != true {
+		t.Error("Expected issue to be created")
+	}
+}
+
+func testEnsureOpenStaleIssueScheduleAllowsPing(t *testing.T, issueTitle, open string) {
+	t.Helper()
+
+	setShouldPerform(true)
+	stale := github.Timestamp{Time: time.Now().Add(-10 * operator.NoticePingDuration)}
+	listByRepo = func(ctx context.Context, owner string, repo string,
+		opts *github.IssueListByRepoOptions,
+	) ([]*github.Issue, *github.Response, error) {
+		return []*github.Issue{
+			{
+				Title:     &issueTitle,
+				State:     &open,
+				UpdatedAt: &stale,
+			},
+		}, &github.Response{NextPage: 0}, nil
+	}
+	commentCalled := false
+	createComment = func(ctx context.Context, owner string, repo string,
+		number int, comment *github.IssueComment,
+	) (*github.IssueComment, *github.Response, error) {
+		if !strings.HasPrefix(comment.GetBody(), "Updating issue") {
+			t.Errorf("Unexpected comment: %v", comment.GetBody())
+		}
+		commentCalled = true
+		return nil, nil, nil
+	}
+	// Expect to not call nil functions
+	create = nil
+	edit = nil
+	err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if commentCalled != true {
+		t.Error("Expected comment to be left")
+	}
+}
+
+func testEnsureOpenStaleIssueScheduleBlocksPing(t *testing.T, issueTitle, open string) {
+	t.Helper()
+
+	setShouldPerform(false)
+	stale := github.Timestamp{Time: time.Now().Add(-10 * operator.NoticePingDuration)}
+	listByRepo = func(ctx context.Context, owner string, repo string,
+		opts *github.IssueListByRepoOptions,
+	) ([]*github.Issue, *github.Response, error) {
+		return []*github.Issue{
+			{
+				Title:     &issueTitle,
+				State:     &open,
+				UpdatedAt: &stale,
+			},
+		}, &github.Response{NextPage: 0}, nil
+	}
+	commentCalled := false
+	createComment = func(ctx context.Context, owner string, repo string,
+		number int, comment *github.IssueComment,
+	) (*github.IssueComment, *github.Response, error) {
+		if !strings.HasPrefix(comment.GetBody(), "Updating issue") {
+			t.Errorf("Unexpected comment: %v", comment.GetBody())
+		}
+		commentCalled = true
+		return nil, nil, nil
+	}
+	// Expect to not call nil functions
+	create = nil
+	edit = nil
+	err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if commentCalled != false {
+		t.Error("Expected no comment to be left")
+	}
+}
+
+func testEnsureIssuewithIssueDetails(t *testing.T, issueTitle, bodyIssueDetail string) {
+	t.Helper()
+
+	configGetAppConfigs = func(context.Context, *github.Client, string, string) (*config.OrgConfig, *config.RepoConfig, *config.RepoConfig) {
+		return &config.OrgConfig{IssueDetails: "Some issue details"}, &config.RepoConfig{}, &config.RepoConfig{}
+	}
+	listByRepo = func(ctx context.Context, owner string, repo string,
+		opts *github.IssueListByRepoOptions,
+	) ([]*github.Issue, *github.Response, error) {
+		return make([]*github.Issue, 0), &github.Response{NextPage: 0}, nil
+	}
+	createCalled := true
+	create = func(ctx context.Context, owner string, repo string,
+		issue *github.IssueRequest,
+	) (*github.Issue, *github.Response, error) {
+		if *issue.Title != issueTitle {
+			t.Errorf("Unexpected title: %q expect: %q", issue.GetTitle(), issueTitle)
+		}
+		if (*issue.Labels)[0] != operator.GitHubIssueLabel {
+			t.Errorf("Unexpected label: %v", (*issue.Labels)[0])
+		}
+		if *issue.Body != bodyIssueDetail {
+			t.Errorf("Unexpected body: %q expect: %q", issue.GetBody(), bodyIssueDetail)
+		}
+		createCalled = true
+		return nil, nil, nil
+	}
+	edit = nil
+	createComment = nil
+	err := ensure(context.Background(), nil, mockIssues{}, "", "", "thispolicy", "Status text")
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if createCalled != true {
+		t.Error("Expected issue to be created")
 	}
 }
