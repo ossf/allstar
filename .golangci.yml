@@ -176,7 +176,6 @@ linters:
     rules:
       - path: '(.+)_test\.go'
         linters:
-          - dogsled # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
           - err113
           - errcheck # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
           - funlen
