@@ -29,6 +29,8 @@ import (
 // results unless collection was turned on. Uploads that keep failing (for
 // example a 403 while the App lacks security_events: write) retry the same
 // commit every cycle, which used to add an entry each time.
+//
+//nolint:paralleltest // Replaces package-level upload mocks and resets shared results collection state.
 func TestResultsCollection(t *testing.T) {
 	origUpload := codeScanningUploadFunc
 	origGetRef := getDefaultBranchRefFunc
