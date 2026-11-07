@@ -97,7 +97,11 @@ func (b Binary) Name() string {
 // Check whether this policy is enabled or not.
 func (b Binary) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
-	return config.IsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
+	enabled, err := config.IsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
+	if err != nil {
+		return enabled, fmt.Errorf("checking binary policy enablement for %s/%s: %w", owner, repo, err)
+	}
+	return enabled, nil
 }
 
 // Check performs the policy check for this policy based on the
@@ -109,7 +113,7 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 	mc := mergeConfig(oc, orc, rc, repo)
 	enabled, err := config.IsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("checking binary policy enablement for %s/%s: %w", owner, repo, err)
 	}
 	log.Info().
 		Str("org", owner).
@@ -122,7 +126,7 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 	tr := c.Client().Transport
 	scc, err := scorecard.Get(ctx, fullName, false, tr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting Scorecard client for %s: %w", fullName, err)
 	}
 
 	allRes, err := sc.Run(ctx, scc.ScRepo,

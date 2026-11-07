@@ -22,6 +22,7 @@ package scorecard
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
@@ -103,11 +104,11 @@ func (scc ScClient) SwitchLocalBranch(branchName string) error {
 
 	w, err := scc.gitRepo.Worktree()
 	if err != nil {
-		return err
+		return fmt.Errorf("getting local repository worktree: %w", err)
 	}
 	err = w.Checkout(&git.CheckoutOptions{Branch: plumbing.ReferenceName(branchName)})
 	if err != nil {
-		return err
+		return fmt.Errorf("checking out branch %s: %w", branchName, err)
 	}
 	return nil
 }
@@ -116,7 +117,7 @@ func (scc ScClient) SwitchLocalBranch(branchName string) error {
 func (scc ScClient) FetchBranches() ([]string, error) {
 	refs, err := scc.gitRepo.References()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting repository references for branch listing: %w", err)
 	}
 
 	var ret []string
@@ -127,7 +128,7 @@ func (scc ScClient) FetchBranches() ([]string, error) {
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("iterating branch references: %w", err)
 	}
 	return ret, nil
 }
@@ -136,7 +137,7 @@ func (scc ScClient) FetchBranches() ([]string, error) {
 func (scc ScClient) GetDefaultBranchName() (string, error) {
 	refs, err := scc.gitRepo.References()
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("getting repository references for default branch: %w", err)
 	}
 
 	var ret string
@@ -147,7 +148,7 @@ func (scc ScClient) GetDefaultBranchName() (string, error) {
 		return nil
 	})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("iterating default branch references: %w", err)
 	}
 	return ret, nil
 }
@@ -161,7 +162,7 @@ func checkoutRepo(fullRepo, token string) (string, *git.Repository, error) {
 	// create a temp dir to store the repo
 	dir, err := os.MkdirTemp("", "allstar")
 	if err != nil {
-		return "", nil, err
+		return "", nil, fmt.Errorf("creating checkout directory: %w", err)
 	}
 
 	// can be empty for testing
@@ -179,7 +180,7 @@ func checkoutRepo(fullRepo, token string) (string, *git.Repository, error) {
 		Auth: auth,
 	})
 	if err != nil {
-		return "", nil, err
+		return "", nil, fmt.Errorf("cloning repository %s: %w", fullRepo, err)
 	}
 	return dir, repo, nil
 }
@@ -217,11 +218,11 @@ func _createLocal(ctx context.Context, fullRepo string) (*ScClient, error) {
 	// connect to the GitHub API
 	ghc, err := ghclients.NewGHClients(ctx, http.DefaultTransport)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating GitHub clients for local checkout: %w", err)
 	}
 	client, err := ghc.Get(0)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting app client for local checkout: %w", err)
 	}
 
 	log.Debug().
@@ -233,7 +234,7 @@ func _createLocal(ctx context.Context, fullRepo string) (*ScClient, error) {
 	// use the GitHub API to issue an installation access token
 	installation, _, err := client.Apps.FindRepositoryInstallation(ctx, owner, repo)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("finding installation for %s/%s: %w", owner, repo, err)
 	}
 	log.Debug().
 		Int64("ID", installation.GetID()).
@@ -246,7 +247,7 @@ func _createLocal(ctx context.Context, fullRepo string) (*ScClient, error) {
 	}
 	token, _, err := client.Apps.CreateInstallationToken(ctx, installation.GetID(), opts)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating checkout installation token for %s/%s: %w", owner, repo, err)
 	}
 	log.Debug().
 		Msg("local checkout -- installation access token retrieved")
@@ -258,7 +259,7 @@ func _createLocal(ctx context.Context, fullRepo string) (*ScClient, error) {
 	}
 	scr, err := localdir.MakeLocalDirRepo(localPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("creating local Scorecard repository: %w", err)
 	}
 	log.Debug().
 		Msg("local checkout -- checkout success")
@@ -277,7 +278,7 @@ func createRemote(ctx context.Context, fullRepo string, tr http.RoundTripper) (*
 	}
 	scrc := githubrepoCreateGitHubRepoClientWithTransport(ctx, tr)
 	if err := scrc.InitRepo(scr, defaultGitRef, 0); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("initializing remote Scorecard repository %s: %w", fullRepo, err)
 	}
 	return &ScClient{
 		ScRepo:       scr,

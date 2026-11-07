@@ -77,7 +77,7 @@ func getPolicyIssue(ctx context.Context, issues issues, owner, repo, policy, tit
 	for {
 		is, resp, err := issues.ListByRepo(ctx, owner, repo, opt)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("listing policy issues in %s/%s: %w", owner, repo, err)
 		}
 		for _, i := range is {
 			if i.GetTitle() == title {
@@ -112,7 +112,7 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 	// Hash text for update checking
 	h := sha256.New()
 	if _, err := h.Write([]byte(text)); err != nil {
-		return err
+		return fmt.Errorf("hashing policy result text: %w", err)
 	}
 	hash := hex.EncodeToString(h.Sum(nil))
 	if issue == nil {
@@ -146,14 +146,17 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 					Msg("Action set to issue, but issues are disabled.")
 				return nil
 			}
-			return err
+			return fmt.Errorf("reopening issue %d in %s/%s: %w", issue.GetNumber(), owner, issueRepo, err)
 		}
 		body := fmt.Sprintf("Reopening issue. See its status below.\n\n---\n\n%s", text)
 		comment := &github.IssueComment{
 			Body: &body,
 		}
 		_, _, err := issues.CreateComment(ctx, owner, issueRepo, issue.GetNumber(), comment)
-		return err
+		if err != nil {
+			return fmt.Errorf("commenting on reopened issue %d: %w", issue.GetNumber(), err)
+		}
+		return nil
 	}
 	if issue.GetUpdatedAt().Before(time.Now().Add(-1 * operator.NoticePingDuration)) {
 		body := fmt.Sprintf("Updating issue after ping interval. See its status below.\n\n---\n\n%s", text)
@@ -169,7 +172,10 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 				Msg("Action set to issue, but issues are disabled.")
 			return nil
 		}
-		return err
+		if err != nil {
+			return fmt.Errorf("pinging issue %d: %w", issue.GetNumber(), err)
+		}
+		return nil
 	}
 	return nil
 }
@@ -201,14 +207,14 @@ func closeIssue(ctx context.Context, c *github.Client, issues issues, owner, rep
 					Msg("Action set to issue, but issues are disabled.")
 				return nil
 			}
-			return err
+			return fmt.Errorf("commenting on resolved issue %d: %w", issue.GetNumber(), err)
 		}
 		state := issueStateClosed
 		update := &github.IssueRequest{
 			State: &state,
 		}
 		if _, _, err := issues.Edit(ctx, owner, issueRepo, issue.GetNumber(), update); err != nil {
-			return err
+			return fmt.Errorf("closing issue %d: %w", issue.GetNumber(), err)
 		}
 	}
 	return nil
@@ -296,7 +302,10 @@ func createPolicyIssue(ctx context.Context, issues issues,
 			Msg("Action set to issue, but issues are disabled.")
 		return nil
 	}
-	return err
+	if err != nil {
+		return fmt.Errorf("creating policy issue in %s/%s: %w", owner, issueRepo, err)
+	}
+	return nil
 }
 
 func updatePolicyIssue(ctx context.Context, issues issues,

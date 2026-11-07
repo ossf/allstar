@@ -17,6 +17,7 @@ package admin
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/gobwas/glob"
 	"github.com/google/go-github/v84/github"
@@ -248,7 +249,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	for {
 		ts, resp, err := rep.ListTeams(ctx, owner, repo, opt)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("listing teams in %s/%s: %w", owner, repo, err)
 		}
 		teams = append(teams, ts...)
 		if resp.NextPage == 0 {
@@ -330,7 +331,7 @@ func getAdminUsers(ctx context.Context, r repositories, owner, repo string,
 	for {
 		us, resp, err := r.ListCollaborators(ctx, owner, repo, opt)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("listing collaborators in %s/%s: %w", owner, repo, err)
 		}
 		users = append(users, us...)
 		if resp.NextPage == 0 {
@@ -559,7 +560,7 @@ func (g globCache) compileGlob(s string) (glob.Glob, error) {
 	}
 	c, err := glob.Compile(s)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("compiling admin glob %q: %w", s, err)
 	}
 	g[s] = c
 	return c, nil

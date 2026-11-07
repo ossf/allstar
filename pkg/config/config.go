@@ -18,6 +18,7 @@ package config
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"path"
 	"strings"
@@ -212,11 +213,11 @@ func fetchConfig(ctx context.Context, r repositories, owner, repoIn, name string
 	}
 	con, err := cf.GetContent()
 	if err != nil {
-		return err
+		return fmt.Errorf("decoding configuration %s: %w", p, err)
 	}
 	conJSON, err := yaml.YAMLToJSON([]byte(con))
 	if err != nil {
-		return err
+		return fmt.Errorf("converting configuration %s to JSON: %w", p, err)
 	}
 	if cl == OrgLevel {
 		mergedJSON, err := checkAndMergeBase(ctx, r, p, conJSON)
@@ -247,7 +248,7 @@ type anyWithBase struct {
 func checkAndMergeBase(ctx context.Context, r repositories, configPath string, contents []byte) ([]byte, error) {
 	var b anyWithBase
 	if err := json.Unmarshal(contents, &b); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading base configuration reference: %w", err)
 	}
 	if b.BaseConfig == nil {
 		return contents, nil
@@ -269,22 +270,22 @@ func checkAndMergeBase(ctx context.Context, r repositories, configPath string, c
 				Msg("Path in specified baseConfig does not exist.")
 			return contents, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("fetching base configuration %s from %s: %w", configPath, *b.BaseConfig, err)
 	}
 	baseYAML, err := cf.GetContent()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decoding base configuration %s: %w", configPath, err)
 	}
 	baseJSON, err := yaml.YAMLToJSON([]byte(baseYAML))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("converting base configuration %s to JSON: %w", configPath, err)
 	}
 	if string(baseJSON) == "null" {
 		baseJSON = []byte("{}")
 	}
 	mergedJSON, err := jsonpatch.MergePatch(baseJSON, contents)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("merging base configuration %s: %w", configPath, err)
 	}
 	return mergedJSON, nil
 }
@@ -304,7 +305,7 @@ func isEnabled(ctx context.Context, o OrgOptConfig, orc, r RepoOptConfig, rep re
 
 	gr, _, err := rep.Get(ctx, owner, repo)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("getting repository %s/%s for enablement: %w", owner, repo, err)
 	}
 
 	if o.OptOutStrategy {
@@ -438,7 +439,7 @@ func (g globCache) compileGlob(s string) (glob.Glob, error) {
 	}
 	c, err := glob.Compile(s)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("compiling glob %q: %w", s, err)
 	}
 	g[s] = c
 	return c, nil

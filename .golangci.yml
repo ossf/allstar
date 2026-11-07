@@ -65,8 +65,7 @@ linters:
     - usestdlibvars
     - usetesting
     - whitespace
-    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
-    #- wrapcheck
+    - wrapcheck
     - zerologlint
   disable:
     - exhaustruct # initializing every struct makes tests longer without much benefit

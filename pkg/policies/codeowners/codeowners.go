@@ -185,7 +185,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		}, nil
 	}
 	// Unknown error getting "CODEOWNERS", this could be an HTTP 500
-	return nil, err
+	return nil, fmt.Errorf("getting CODEOWNERS errors in %s/%s: %w", owner, repo, err)
 }
 
 // Fix implementing policydef.Policy.Fix(). Currently not supported. Plan

@@ -15,6 +15,8 @@
 package action
 
 import (
+	"fmt"
+
 	"github.com/Masterminds/semver/v3"
 	"github.com/gobwas/glob"
 )
@@ -34,7 +36,7 @@ func (g globCache) compileGlob(s string) (glob.Glob, error) {
 	}
 	c, err := glob.Compile(s)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("compiling action glob %q: %w", s, err)
 	}
 	g[s] = c
 	return c, nil
@@ -63,7 +65,7 @@ func (c semverCache) compileVersion(s string) (*semver.Version, error) {
 	}
 	nv, err := semver.NewVersion(s)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parsing action version %q: %w", s, err)
 	}
 	c.version[s] = nv
 	return nv, nil
@@ -77,7 +79,7 @@ func (c semverCache) compileConstraints(s string) (*semver.Constraints, error) {
 	}
 	nc, err := semver.NewConstraint(s)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parsing action version constraint %q: %w", s, err)
 	}
 	c.constraints[s] = nc
 	return nc, nil
