@@ -90,26 +90,9 @@ func (g *GHClients) Get(i int64) (*github.Client, error) {
 		MarkCachedResponses: true,
 	}
 
-	var tr http.RoundTripper
-	if i == 0 {
-		appTransport, err := ghinstallationNewAppsTransport(ctr, operator.AppID, g.key)
-		if err != nil {
-			return nil, err
-		}
-		// other than clien.WithEnterpriseUrls, setting the BaseUrl plainly, we need to ensure the /api/v3 ending
-		if operator.GitHubEnterpriseUrl != "" {
-			appTransport.BaseURL = fullEnterpriseApiUrl(operator.GitHubEnterpriseUrl)
-		}
-		tr = appTransport
-	} else {
-		ghiTransport, err := ghinstallationNew(ctr, operator.AppID, i, g.key)
-		if err != nil {
-			return nil, err
-		}
-		if operator.GitHubEnterpriseUrl != "" {
-			ghiTransport.BaseURL = fullEnterpriseApiUrl(operator.GitHubEnterpriseUrl)
-		}
-		tr = ghiTransport
+	tr, err := g.newTransport(ctr, i)
+	if err != nil {
+		return nil, err
 	}
 
 	c := github.NewClient(&http.Client{Transport: tr})
@@ -156,4 +139,26 @@ func getKeyReal(ctx context.Context) ([]byte, error) {
 		return []byte(privateKey), nil
 	}
 	return getKeyFromSecret(ctx, keySecret)
+}
+
+func (g *GHClients) newTransport(ctr http.RoundTripper, i int64) (http.RoundTripper, error) {
+	if i == 0 {
+		appTransport, err := ghinstallationNewAppsTransport(ctr, operator.AppID, g.key)
+		if err != nil {
+			return nil, err
+		}
+		// The transport also needs the enterprise API URL with its /api/v3/ suffix.
+		if operator.GitHubEnterpriseUrl != "" {
+			appTransport.BaseURL = fullEnterpriseApiUrl(operator.GitHubEnterpriseUrl)
+		}
+		return appTransport, nil
+	}
+	ghiTransport, err := ghinstallationNew(ctr, operator.AppID, i, g.key)
+	if err != nil {
+		return nil, err
+	}
+	if operator.GitHubEnterpriseUrl != "" {
+		ghiTransport.BaseURL = fullEnterpriseApiUrl(operator.GitHubEnterpriseUrl)
+	}
+	return ghiTransport, nil
 }

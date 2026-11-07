@@ -307,30 +307,7 @@ func isEnabled(ctx context.Context, o OrgOptConfig, orc, r RepoOptConfig, rep re
 		return false, err
 	}
 
-	if o.OptOutStrategy {
-		enabled = true
-		if matches(o.OptOutRepos, repo, gc) {
-			enabled = false
-		}
-		if o.OptOutPrivateRepos && gr.GetPrivate() {
-			enabled = false
-		}
-		if o.OptOutPublicRepos && !gr.GetPrivate() {
-			enabled = false
-		}
-		if o.OptOutArchivedRepos && gr.GetArchived() {
-			enabled = false
-		}
-		if o.OptOutForkedRepos && gr.GetFork() {
-			enabled = false
-		}
-		if orc.OptOut {
-			enabled = false
-		}
-		if !o.DisableRepoOverride && r.OptOut {
-			enabled = false
-		}
-	} else {
+	if !o.OptOutStrategy {
 		enabled = false
 		if matches(o.OptInRepos, repo, gc) {
 			enabled = true
@@ -341,6 +318,29 @@ func isEnabled(ctx context.Context, o OrgOptConfig, orc, r RepoOptConfig, rep re
 		if !o.DisableRepoOverride && r.OptIn {
 			enabled = true
 		}
+		return enabled, nil
+	}
+	enabled = true
+	if matches(o.OptOutRepos, repo, gc) {
+		enabled = false
+	}
+	if o.OptOutPrivateRepos && gr.GetPrivate() {
+		enabled = false
+	}
+	if o.OptOutPublicRepos && !gr.GetPrivate() {
+		enabled = false
+	}
+	if o.OptOutArchivedRepos && gr.GetArchived() {
+		enabled = false
+	}
+	if o.OptOutForkedRepos && gr.GetFork() {
+		enabled = false
+	}
+	if orc.OptOut {
+		enabled = false
+	}
+	if !o.DisableRepoOverride && r.OptOut {
+		enabled = false
 	}
 	return enabled, nil
 }

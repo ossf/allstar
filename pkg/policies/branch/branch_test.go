@@ -2165,6 +2165,8 @@ func sortProtectionStatusChecks(requests map[string]github.ProtectionRequest) {
 
 // A failed update must stop the entire fix run, including signature changes and
 // later branches. Forbidden responses are handled without returning an error.
+//
+//nolint:paralleltest // Replaces package-level branch protection and configuration mocks.
 func TestFixStopsAfterProtectionUpdateFailure(t *testing.T) {
 	oldGet, oldGetProtection := get, getBranchProtection
 	oldUpdate, oldGetSignatures := updateBranchProtection, getSignaturesProtectedBranch

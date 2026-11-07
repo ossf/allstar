@@ -110,25 +110,25 @@ func main() {
 					Msg("Failed to write results file.")
 			}
 		}
-	} else {
-		var wg sync.WaitGroup
-		// Kickoff webhook listener, delayed enforce, reconcile job...
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			log.Info().
-				Err(enforce.EnforceJob(ctx, ghc, (5 * time.Minute), *specificPolicyArg, *specificRepoArg)).
-				Msg("Enforce job shutting down.")
-		}()
-		sigs := make(chan os.Signal, 1)
-		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-		s := <-sigs
-		cf()
-		log.Info().
-			Str("signal", s.String()).
-			Msg("Signal received, shutting down gracefully")
-		wg.Wait()
+		return
 	}
+	var wg sync.WaitGroup
+	// Kickoff webhook listener, delayed enforce, reconcile job...
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		log.Info().
+			Err(enforce.EnforceJob(ctx, ghc, (5 * time.Minute), *specificPolicyArg, *specificRepoArg)).
+			Msg("Enforce job shutting down.")
+	}()
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	s := <-sigs
+	cf()
+	log.Info().
+		Str("signal", s.String()).
+		Msg("Signal received, shutting down gracefully")
+	wg.Wait()
 }
 
 func setupLog() {

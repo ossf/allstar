@@ -589,35 +589,34 @@ func checkReviewProtection(p *github.Protection, mc *mergedConfig, b string) (de
 func checkStatusProtection(p *github.Protection, mc *mergedConfig, b string, d *details) (string, bool) {
 	pass := true
 	text := ""
-	if len(mc.RequireStatusChecks) > 0 {
-		rsc := p.GetRequiredStatusChecks()
-		if rsc != nil {
-			d.RequireUpToDateBranch = rsc.Strict
-			if mc.RequireUpToDateBranch && !rsc.Strict {
-				text += fmt.Sprintf("Require up to date branch not configured for branch %v\n",
-					b)
-				pass = false
-			}
-			for _, c := range rsc.GetChecks() {
-				sc := StatusCheck{Context: c.Context, AppID: c.AppID}
-				d.RequireStatusChecks = append(d.RequireStatusChecks, sc)
-			}
-			lt := makeSCLookupTable(rsc.GetChecks())
-			for _, c := range mc.RequireStatusChecks {
-				appIDTxt := "(any app)"
-				sch := statusCheckHash{context: c.Context}
-				if c.AppID != nil {
-					sch.appID = *c.AppID
-					appIDTxt = fmt.Sprintf("(AppID: %v)", *c.AppID)
-				}
-				if _, ok := lt[sch]; !ok {
-					text += fmt.Sprintf("Status check %s %s not found for branch %v\n",
-						c.Context, appIDTxt, b)
-					pass = false
-				}
-			}
-		} else {
-			text += fmt.Sprintf("Status checks required by policy, but none found for branch %v\n", b)
+	if len(mc.RequireStatusChecks) == 0 {
+		return text, pass
+	}
+	rsc := p.GetRequiredStatusChecks()
+	if rsc == nil {
+		return fmt.Sprintf("Status checks required by policy, but none found for branch %v\n", b), false
+	}
+	d.RequireUpToDateBranch = rsc.Strict
+	if mc.RequireUpToDateBranch && !rsc.Strict {
+		text += fmt.Sprintf("Require up to date branch not configured for branch %v\n",
+			b)
+		pass = false
+	}
+	for _, c := range rsc.GetChecks() {
+		sc := StatusCheck{Context: c.Context, AppID: c.AppID}
+		d.RequireStatusChecks = append(d.RequireStatusChecks, sc)
+	}
+	lt := makeSCLookupTable(rsc.GetChecks())
+	for _, c := range mc.RequireStatusChecks {
+		appIDTxt := "(any app)"
+		sch := statusCheckHash{context: c.Context}
+		if c.AppID != nil {
+			sch.appID = *c.AppID
+			appIDTxt = fmt.Sprintf("(AppID: %v)", *c.AppID)
+		}
+		if _, ok := lt[sch]; !ok {
+			text += fmt.Sprintf("Status check %s %s not found for branch %v\n",
+				c.Context, appIDTxt, b)
 			pass = false
 		}
 	}
@@ -759,42 +758,42 @@ func updateReviewProtection(pr *github.ProtectionRequest, mc *mergedConfig) bool
 
 func updateStatusProtection(pr *github.ProtectionRequest, mc *mergedConfig) bool {
 	update := false
-	if len(mc.RequireStatusChecks) > 0 {
-		if pr.RequiredStatusChecks == nil {
-			checks := make([]*github.RequiredStatusCheck, len(mc.RequireStatusChecks))
-			for i, check := range mc.RequireStatusChecks {
-				checks[i] = &github.RequiredStatusCheck{
-					Context: check.Context,
-					AppID:   check.AppID,
-				}
+	if len(mc.RequireStatusChecks) == 0 {
+		return false
+	}
+	if pr.RequiredStatusChecks == nil {
+		checks := make([]*github.RequiredStatusCheck, len(mc.RequireStatusChecks))
+		for i, check := range mc.RequireStatusChecks {
+			checks[i] = &github.RequiredStatusCheck{
+				Context: check.Context,
+				AppID:   check.AppID,
 			}
-			rsc := &github.RequiredStatusChecks{
-				Strict: mc.RequireUpToDateBranch,
-				Checks: github.Ptr(checks),
-			}
-			pr.RequiredStatusChecks = rsc
+		}
+		rsc := &github.RequiredStatusChecks{
+			Strict: mc.RequireUpToDateBranch,
+			Checks: github.Ptr(checks),
+		}
+		pr.RequiredStatusChecks = rsc
+		return true
+	}
+	if mc.RequireUpToDateBranch && !pr.RequiredStatusChecks.Strict {
+		pr.RequiredStatusChecks.Strict = true
+		update = true
+	}
+	ac := pr.RequiredStatusChecks.GetChecks()
+	lt := makeSCLookupTable(pr.RequiredStatusChecks.GetChecks())
+	for _, c := range mc.RequireStatusChecks {
+		// Only mark for update if there are status checks required, but not already set.
+		sch := statusCheckHash{context: c.Context}
+		if c.AppID != nil {
+			sch.appID = *c.AppID
+		}
+		if _, ok := lt[sch]; !ok {
+			ac = append(ac, &github.RequiredStatusCheck{Context: c.Context, AppID: c.AppID})
 			update = true
-		} else {
-			if mc.RequireUpToDateBranch && !pr.RequiredStatusChecks.Strict {
-				pr.RequiredStatusChecks.Strict = true
-				update = true
-			}
-			ac := pr.RequiredStatusChecks.GetChecks()
-			lt := makeSCLookupTable(pr.RequiredStatusChecks.GetChecks())
-			for _, c := range mc.RequireStatusChecks {
-				// Only mark for update if there are status checks required, but not already set.
-				sch := statusCheckHash{context: c.Context}
-				if c.AppID != nil {
-					sch.appID = *c.AppID
-				}
-				if _, ok := lt[sch]; !ok {
-					ac = append(ac, &github.RequiredStatusCheck{Context: c.Context, AppID: c.AppID})
-					update = true
-				}
-			}
-			pr.RequiredStatusChecks.Checks = github.Ptr(ac)
 		}
 	}
+	pr.RequiredStatusChecks.Checks = github.Ptr(ac)
 	return update
 }
 
