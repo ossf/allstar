@@ -223,38 +223,7 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 		if !branchPass {
 			pass = false
 			if notify == "" {
-				notify = fmt.Sprintf(`Project is out of compliance with Dangerous Workflow policy: %v
-
-		**Rule Description**
-		Dangerous workflows are GitHub Action workflows that exhibit dangerous patterns that `+
-					`could render them vulnerable to attack. A vulnerable workflow is susceptible to leaking `+
-					`repository secrets, or allowing an attacker write access using the GITHUB_TOKEN. For more `+
-					`information about the particular patterns that are detected, see the [OpenSSF Scorecard `+
-					`documentation](https://github.com/ossf/scorecard/blob/main/docs/`+
-					`checks.md#dangerous-workflow) on dangerous workflows. Any vulnerable branch can be `+
-					`exploited, so this rule will check all branches (vulnerable list below).
-
-		**Remediation Steps**
-		Avoid the dangerous workflow patterns. See this `+
-					`[post](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/) `+
-					`for information on avoiding untrusted code checkouts. See this `+
-					`[document](https://docs.github.com/en/actions/security-guides/`+
-					`security-hardening-for-github-actions#understanding-the-risk-of-script-injections) for `+
-					`information on avoiding and mitigating the risk of script injections.
-		`,
-					res.Reason)
-				if len(logs) > 10 {
-					notify += fmt.Sprintf(
-						"**First 10 Dangerous Patterns Found**\n\n%v"+
-							"- Run a Scorecard scan to see full list.\n\n",
-						listJoin(logs[:10]))
-				} else {
-					notify += fmt.Sprintf("**Dangerous Patterns Found**\n\n%v\n", listJoin(logs))
-				}
-				notify += `**Additional Information**
-	This policy uses [OpenSSF Scorecard](https://github.com/ossf/scorecard/). You may wish ` +
-					`to run a Scorecard scan directly on this repository for more details.
-`
+				notify = dangerousWorkflowNotice(res.Reason, logs)
 			}
 			notify += fmt.Sprintf("\nVulnerable Branch: %s", branch)
 		}
@@ -375,4 +344,41 @@ func configParseBranches(oc, orc, rc string) []string {
 		ret = append(ret, strings.Split(rc, ",")...)
 	}
 	return ret
+}
+
+func dangerousWorkflowNotice(reason string, logs []string) string {
+	var notify string
+	notify = fmt.Sprintf(`Project is out of compliance with Dangerous Workflow policy: %v
+
+		**Rule Description**
+		Dangerous workflows are GitHub Action workflows that exhibit dangerous patterns that `+
+		`could render them vulnerable to attack. A vulnerable workflow is susceptible to leaking `+
+		`repository secrets, or allowing an attacker write access using the GITHUB_TOKEN. For more `+
+		`information about the particular patterns that are detected, see the [OpenSSF Scorecard `+
+		`documentation](https://github.com/ossf/scorecard/blob/main/docs/`+
+		`checks.md#dangerous-workflow) on dangerous workflows. Any vulnerable branch can be `+
+		`exploited, so this rule will check all branches (vulnerable list below).
+
+		**Remediation Steps**
+		Avoid the dangerous workflow patterns. See this `+
+		`[post](https://securitylab.github.com/research/github-actions-preventing-pwn-requests/) `+
+		`for information on avoiding untrusted code checkouts. See this `+
+		`[document](https://docs.github.com/en/actions/security-guides/`+
+		`security-hardening-for-github-actions#understanding-the-risk-of-script-injections) for `+
+		`information on avoiding and mitigating the risk of script injections.
+		`,
+		reason)
+	if len(logs) > 10 {
+		notify += fmt.Sprintf(
+			"**First 10 Dangerous Patterns Found**\n\n%v"+
+				"- Run a Scorecard scan to see full list.\n\n",
+			listJoin(logs[:10]))
+	} else {
+		notify += fmt.Sprintf("**Dangerous Patterns Found**\n\n%v\n", listJoin(logs))
+	}
+	notify += `**Additional Information**
+	This policy uses [OpenSSF Scorecard](https://github.com/ossf/scorecard/). You may wish ` +
+		`to run a Scorecard scan directly on this repository for more details.
+`
+	return notify
 }

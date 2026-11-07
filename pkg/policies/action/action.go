@@ -49,6 +49,12 @@ const (
 	ruleMethodDeny    = "deny"
 )
 
+var (
+	errInvalidActionName = errors.New("invalid name")
+	errNoMatchingTag     = errors.New("no corresponding tag found")
+	errNoCommits         = errors.New("repo has no commits")
+)
+
 var priorities = map[string]int{
 	"critical": 0,
 	"high":     1,
@@ -246,93 +252,14 @@ func (a Action) Check(ctx context.Context, c *github.Client, owner,
 		return nil, err
 	}
 
-	// Create index of which workflows run which Actions
-	var actions []*actionMetadata
-
-	for _, wf := range wfs {
-		if wf.workflow.Name == nil {
-			wf.workflow.Name = &actionlint.String{Value: wf.filename}
-		}
-		if wf.workflow.Jobs == nil {
-			continue
-		}
-		for _, j := range wf.workflow.Jobs {
-			if j == nil {
-				continue
-			}
-			for _, s := range j.Steps {
-				if s == nil || s.Exec == nil {
-					continue
-				}
-				actionStep, ok := s.Exec.(*actionlint.ExecAction)
-				if !ok || actionStep == nil {
-					continue
-				}
-				if actionStep.Uses == nil {
-					// Missing uses in step
-					continue
-				}
-				sm := strings.SplitN(actionStep.Uses.Value, "@", 2)
-				if len(sm) != 2 {
-					// Ignore invalid Action
-					log.Warn().
-						Str("org", owner).
-						Str("repo", repo).
-						Str("area", polName).
-						Str("action", actionStep.Uses.Value).
-						Msg("Ignoring invalid action")
-					continue
-				}
-				name := sm[0]
-				version := sm[1]
-				actions = append(actions, &actionMetadata{
-					name:             name,
-					version:          version,
-					workflowFilename: wf.filename,
-					workflowName:     wf.workflow.Name.Value,
-					workflowOn:       wf.workflow.On,
-				})
-			}
-		}
-	}
+	actions := indexWorkflowActions(wfs, owner, repo)
 
 	// Init caches
 
 	gc := newGlobCache()
 	sc := newSemverCache()
 
-	// Determine applicable rules
-
-	var applicableRules sortableRules
-
-	for _, g := range oc.Groups {
-		// Check if group match
-		groupMatch := false
-		for _, rs := range g.Repos {
-			// Ignore error while checking match. Match will be false on error.
-			match, err := rs.match(ctx, c, owner, repo, repoSelectorExcludeDepthLimit, gc, sc)
-			if err != nil {
-				log.Warn().
-					Str("org", owner).
-					Str("repo", repo).
-					Str("area", polName).
-					Err(err).
-					Msg("Invalid RepoSelector, will skip.")
-				continue
-			}
-
-			if match {
-				groupMatch = true
-				break
-			}
-		}
-		if g.Repos == nil {
-			groupMatch = true
-		}
-		if groupMatch {
-			applicableRules = append(applicableRules, g.Rules...)
-		}
-	}
+	applicableRules := selectApplicableRules(ctx, c, owner, repo, oc.Groups, gc, sc)
 
 	// Sort rules into priority order
 	// First by priority, second by method with require/allow before deny
@@ -511,7 +438,7 @@ func resolveVersion(ctx context.Context, c *github.Client, m *actionMetadata, gc
 	// On error, attempt locate tag (assume m.version is a commit ref)
 	ownerRepo := strings.Split(m.name, "/")
 	if len(ownerRepo) != 2 {
-		return nil, fmt.Errorf("%s: invalid name \"%s\"", errPrefix, m.name)
+		return nil, fmt.Errorf("%s: %w \"%s\"", errPrefix, errInvalidActionName, m.name)
 	}
 	tags, err := listTags(ctx, c, ownerRepo[0], ownerRepo[1])
 	if err != nil {
@@ -523,7 +450,7 @@ func resolveVersion(ctx context.Context, c *github.Client, m *actionMetadata, gc
 			return version, err
 		}
 	}
-	return nil, fmt.Errorf("%s: no corresponding tag found", errPrefix)
+	return nil, fmt.Errorf("%s: %w", errPrefix, errNoMatchingTag)
 }
 
 // match checks if an ActionSelector matches an actionMetadata.
@@ -674,7 +601,7 @@ func getLatestCommitHashReal(ctx context.Context, c *github.Client, owner, repo 
 	if len(commits) > 0 && commits[0].SHA != nil {
 		return *commits[0].SHA, nil
 	}
-	return "", errors.New("repo has no commits")
+	return "", errNoCommits
 }
 
 // listWorkflowRunsByFilenameReal returns workflow runs for a repo by
@@ -793,4 +720,103 @@ func listTagsReal(ctx context.Context, c *github.Client, owner, repo string) ([]
 		return nil, err
 	}
 	return tags, nil
+}
+
+func indexWorkflowActions(wfs []*workflowMetadata, owner, repo string) []*actionMetadata {
+	// Create index of which workflows run which Actions
+	var actions []*actionMetadata
+
+	for _, wf := range wfs {
+		if wf.workflow.Name == nil {
+			wf.workflow.Name = &actionlint.String{Value: wf.filename}
+		}
+		if wf.workflow.Jobs == nil {
+			continue
+		}
+		actions = append(actions, workflowActions(wf, owner, repo)...)
+	}
+
+	return actions
+}
+
+func workflowActions(wf *workflowMetadata, owner, repo string) []*actionMetadata {
+	var actions []*actionMetadata
+	for _, j := range wf.workflow.Jobs {
+		if j == nil {
+			continue
+		}
+		for _, s := range j.Steps {
+			if s == nil || s.Exec == nil {
+				continue
+			}
+			actionStep, ok := s.Exec.(*actionlint.ExecAction)
+			if !ok || actionStep == nil {
+				continue
+			}
+			if actionStep.Uses == nil {
+				// Missing uses in step
+				continue
+			}
+			sm := strings.SplitN(actionStep.Uses.Value, "@", 2)
+			if len(sm) != 2 {
+				// Ignore invalid Action
+				log.Warn().
+					Str("org", owner).
+					Str("repo", repo).
+					Str("area", polName).
+					Str("action", actionStep.Uses.Value).
+					Msg("Ignoring invalid action")
+				continue
+			}
+			name := sm[0]
+			version := sm[1]
+			actions = append(actions, &actionMetadata{
+				name:             name,
+				version:          version,
+				workflowFilename: wf.filename,
+				workflowName:     wf.workflow.Name.Value,
+				workflowOn:       wf.workflow.On,
+			})
+		}
+	}
+	return actions
+}
+
+func selectApplicableRules(ctx context.Context, c *github.Client, owner, repo string,
+	groups []*internalRuleGroup, gc globCache, sc semverCache,
+) sortableRules {
+	// Determine applicable rules
+
+	var applicableRules sortableRules
+
+	for _, g := range groups {
+		// Check if group match
+		groupMatch := false
+		for _, rs := range g.Repos {
+			// Ignore error while checking match. Match will be false on error.
+			match, err := rs.match(ctx, c, owner, repo, repoSelectorExcludeDepthLimit, gc, sc)
+			if err != nil {
+				log.Warn().
+					Str("org", owner).
+					Str("repo", repo).
+					Str("area", polName).
+					Err(err).
+					Msg("Invalid RepoSelector, will skip.")
+				continue
+			}
+
+			if match {
+				groupMatch = true
+				break
+			}
+		}
+		if g.Repos == nil {
+			groupMatch = true
+		}
+		if groupMatch {
+			applicableRules = append(applicableRules, g.Rules...)
+		}
+	}
+
+	return applicableRules
 }

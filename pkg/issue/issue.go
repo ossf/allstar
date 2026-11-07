@@ -119,75 +119,11 @@ func ensure(ctx context.Context, c *github.Client, issues issues, owner, repo, p
 		if !shouldPing {
 			return nil
 		}
-		var footer string
-		if oc.IssueFooter == "" {
-			footer = operator.GitHubIssueFooter
-		} else {
-			footer = fmt.Sprintf("%v\n\n%v", oc.IssueFooter, operator.GitHubIssueFooter)
-		}
-
-		issueDetails := ""
-		if oc.IssueDetails != "" {
-			issueDetails = fmt.Sprintf("For more: %v", oc.IssueDetails)
-		}
-		body := createIssueBody(owner, repo, text, hash, issueDetails, footer, issueRepo == repo)
-		newIssueReq := &github.IssueRequest{
-			Title:  &title,
-			Body:   &body,
-			Labels: &[]string{label},
-		}
-		_, rsp, err := issues.Create(ctx, owner, issueRepo, newIssueReq)
-		if err != nil && rsp != nil && (rsp.StatusCode == http.StatusGone || rsp.StatusCode == http.StatusForbidden) {
-			log.Warn().
-				Str("org", owner).
-				Str("repo", repo).
-				Str("area", policy).
-				Msg("Action set to issue, but issues are disabled.")
-			return nil
-		}
-		return err
+		return createPolicyIssue(ctx, issues, owner, repo, issueRepo, policy, title, label, text, hash, oc)
 	}
 	// Check if current-version issue is not up to date
 	if !strings.Contains(issue.GetBody(), hash) && hasIssueSection(issue.GetBody(), updateSectionName) {
-		// Comment update and update issue body
-		commentBody := fmt.Sprintf("The policy result has been updated.\n\n---\n\n%s", text)
-		comment, rsp, err := issues.CreateComment(ctx, owner, issueRepo, issue.GetNumber(), &github.IssueComment{
-			Body: &commentBody,
-		})
-		if err != nil && rsp != nil && (rsp.StatusCode == http.StatusGone || rsp.StatusCode == http.StatusForbidden) {
-			log.Warn().
-				Str("org", owner).
-				Str("repo", repo).
-				Str("area", policy).
-				Msg("Cannot create new comment on issue")
-			return nil
-		}
-		if err != nil {
-			return fmt.Errorf("while updating issue: creating comment: %w", err)
-		}
-		updateWarning := fmt.Sprintf(updateWarningFormat,
-			fmt.Sprintf(resultTextHashCommentFormat, hash), comment.GetHTMLURL())
-		newBody, ok := updateIssueSection(issue.GetBody(), updateSectionName, updateWarning)
-		if !ok {
-			// This shouldn't occur because hasIssueSection was true
-			log.Error().
-				Str("org", owner).
-				Str("repo", repo).
-				Str("area", policy).
-				Int("issueNumber", issue.GetNumber()).
-				Msg("Unexpectedly failed to update issue update section.")
-			return nil
-		}
-		// Ensure issue is open as well
-		state := issueStateOpen
-		_, _, err = issues.Edit(ctx, owner, issueRepo, issue.GetNumber(), &github.IssueRequest{
-			State: &state,
-			Body:  &newBody,
-		})
-		if err != nil {
-			return fmt.Errorf("while updating issue %d: editing body: %w", issue.GetNumber(), err)
-		}
-		return nil
+		return updatePolicyIssue(ctx, issues, owner, repo, issueRepo, policy, text, hash, issue)
 	}
 	// If should not ping, don't continue. Below here is:
 	// - Reopen (& ping) if closed & not passing
@@ -329,4 +265,80 @@ func updateIssueSection(body, sectionName, editText string) (string, bool) {
 		return body, false
 	}
 	return strings.Join([]string{s[0], header, editText, header, s[2]}, ""), true
+}
+
+func createPolicyIssue(ctx context.Context, issues issues,
+	owner, repo, issueRepo, policy, title, label, text, hash string, oc *config.OrgConfig,
+) error {
+	var footer string
+	if oc.IssueFooter == "" {
+		footer = operator.GitHubIssueFooter
+	} else {
+		footer = fmt.Sprintf("%v\n\n%v", oc.IssueFooter, operator.GitHubIssueFooter)
+	}
+
+	issueDetails := ""
+	if oc.IssueDetails != "" {
+		issueDetails = fmt.Sprintf("For more: %v", oc.IssueDetails)
+	}
+	body := createIssueBody(owner, repo, text, hash, issueDetails, footer, issueRepo == repo)
+	newIssueReq := &github.IssueRequest{
+		Title:  &title,
+		Body:   &body,
+		Labels: &[]string{label},
+	}
+	_, rsp, err := issues.Create(ctx, owner, issueRepo, newIssueReq)
+	if err != nil && rsp != nil && (rsp.StatusCode == http.StatusGone || rsp.StatusCode == http.StatusForbidden) {
+		log.Warn().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("area", policy).
+			Msg("Action set to issue, but issues are disabled.")
+		return nil
+	}
+	return err
+}
+
+func updatePolicyIssue(ctx context.Context, issues issues,
+	owner, repo, issueRepo, policy, text, hash string, issue *github.Issue,
+) error {
+	// Comment update and update issue body
+	commentBody := fmt.Sprintf("The policy result has been updated.\n\n---\n\n%s", text)
+	comment, rsp, err := issues.CreateComment(ctx, owner, issueRepo, issue.GetNumber(), &github.IssueComment{
+		Body: &commentBody,
+	})
+	if err != nil && rsp != nil && (rsp.StatusCode == http.StatusGone || rsp.StatusCode == http.StatusForbidden) {
+		log.Warn().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("area", policy).
+			Msg("Cannot create new comment on issue")
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("while updating issue: creating comment: %w", err)
+	}
+	updateWarning := fmt.Sprintf(updateWarningFormat,
+		fmt.Sprintf(resultTextHashCommentFormat, hash), comment.GetHTMLURL())
+	newBody, ok := updateIssueSection(issue.GetBody(), updateSectionName, updateWarning)
+	if !ok {
+		// This shouldn't occur because hasIssueSection was true
+		log.Error().
+			Str("org", owner).
+			Str("repo", repo).
+			Str("area", policy).
+			Int("issueNumber", issue.GetNumber()).
+			Msg("Unexpectedly failed to update issue update section.")
+		return nil
+	}
+	// Ensure issue is open as well
+	state := issueStateOpen
+	_, _, err = issues.Edit(ctx, owner, issueRepo, issue.GetNumber(), &github.IssueRequest{
+		State: &state,
+		Body:  &newBody,
+	})
+	if err != nil {
+		return fmt.Errorf("while updating issue %d: editing body: %w", issue.GetNumber(), err)
+	}
+	return nil
 }

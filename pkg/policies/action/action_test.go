@@ -31,6 +31,8 @@ import (
 )
 
 func TestListWorkflowsRealCanceledRequest(t *testing.T) {
+	t.Parallel()
+
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
@@ -44,6 +46,8 @@ func TestListWorkflowsRealCanceledRequest(t *testing.T) {
 }
 
 func TestSortableRules(t *testing.T) {
+	t.Parallel()
+
 	makeRule := func(method, priority string, priorityInt int) *internalRule {
 		return &internalRule{
 			Rule: &Rule{
@@ -55,6 +59,8 @@ func TestSortableRules(t *testing.T) {
 	}
 
 	t.Run("higher priority sorts before lower priority regardless of method", func(t *testing.T) {
+		t.Parallel()
+
 		// Start with the high-priority deny rule already first.
 		// The buggy Less() will incorrectly move the low-priority allow
 		// rule ahead of it because it returns true when Method != "deny",
@@ -76,6 +82,8 @@ func TestSortableRules(t *testing.T) {
 	})
 
 	t.Run("priority ordering preserved across mixed methods", func(t *testing.T) {
+		t.Parallel()
+
 		// Three rules at different priorities with mixed methods.
 		// The buggy Less() can reorder these incorrectly because a
 		// low-priority non-deny rule claims to be "less than" a
@@ -97,6 +105,7 @@ func TestSortableRules(t *testing.T) {
 	})
 }
 
+//nolint:paralleltest // Replaces package-level workflow and configuration mocks.
 func TestCheck(t *testing.T) {
 	createWorkflowRun := func(sha string, complete bool, passing *bool) *github.WorkflowRun {
 		status := "completed"
@@ -124,14 +133,6 @@ func TestCheck(t *testing.T) {
 		return &s
 	}
 
-	type testingWorkflowMetadata struct {
-		// File is the actual filename of the workflow to load.
-		// Will be loaded from test_workflows/ directory.
-		File string
-
-		Runs []*github.WorkflowRun
-	}
-
 	denyAll := &Rule{
 		Name:   "Deny default",
 		Method: "deny",
@@ -149,33 +150,7 @@ func TestCheck(t *testing.T) {
 		RequireAll: true,
 	}
 
-	tests := []struct {
-		Name string
-
-		Org OrgConfig
-
-		// Workflows is a map of filenames to workflowMetadata structs.
-		// Filename: just filename eg. "my_workflow.yaml"
-		Workflows []testingWorkflowMetadata
-
-		LatestCommitHash string
-
-		// LatestCommitHashErr is returned by the getLatestCommitHash stub
-		// instead of LatestCommitHash when set.
-		LatestCommitHashErr error
-
-		// ExpectHashCalls, when non-zero, is the number of times
-		// getLatestCommitHash is expected to be called.
-		ExpectHashCalls int
-
-		Langs map[string]int
-
-		// Tags is a map of "owner/repo" to []*github.RepositoryTag
-		Tags map[string][]*github.RepositoryTag
-
-		ExpectMessage []string
-		ExpectPass    bool
-	}{
+	tests := []actionCheckTest{
 		{
 			Name: "Deny all, has Action",
 			Org: OrgConfig{
@@ -1281,78 +1256,7 @@ func TestCheck(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			// Override external functions
-
-			configFetchConfig = func(ctx context.Context, c *github.Client, owner, repo, path string,
-				ol config.ConfigLevel, out interface{},
-			) error {
-				if ol == config.OrgLevel {
-					oc := out.(*OrgConfig)
-					*oc = test.Org
-				}
-				return nil
-			}
-
-			listWorkflows = func(ctx context.Context, c *github.Client, owner, repo string) (
-				[]*workflowMetadata, error,
-			) {
-				var wfs []*workflowMetadata
-				for _, w := range test.Workflows {
-					d, err := os.ReadFile(filepath.Join("test_workflows", w.File))
-					if err != nil {
-						return nil, fmt.Errorf("failed to open test workflow file: %w", err)
-					}
-					workflow, errs := actionlint.Parse(d)
-					if len(errs) > 0 {
-						for _, er := range errs {
-							t.Logf("parse err on %s: %s", w.File, er.Error())
-						}
-					}
-					if workflow == nil {
-						t.Logf("nil workflow")
-						continue
-					}
-					wfs = append(wfs, &workflowMetadata{
-						filename: w.File,
-						workflow: workflow,
-					})
-				}
-				return wfs, nil
-			}
-
-			listLanguages = func(ctx context.Context, c *github.Client, owner, repo string) (map[string]int, error) {
-				return test.Langs, nil
-			}
-
-			listWorkflowRunsByFilename = func(ctx context.Context, c *github.Client, owner, repo,
-				workflowFilename string,
-			) ([]*github.WorkflowRun, error) {
-				for _, wf := range test.Workflows {
-					if wf.File == workflowFilename {
-						return wf.Runs, nil
-					}
-				}
-				return nil, fmt.Errorf("could not find testWorkflowMetadata for filename %s", workflowFilename)
-			}
-
-			hashCalls := 0
-			getLatestCommitHash = func(ctx context.Context, c *github.Client, owner, repo string) (string, error) {
-				hashCalls++
-				if test.LatestCommitHashErr != nil {
-					return "", test.LatestCommitHashErr
-				}
-				return test.LatestCommitHash, nil
-			}
-
-			listTags = func(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryTag, error) {
-				ownerRepo := fmt.Sprintf("%s/%s", owner, repo)
-				var tags []*github.RepositoryTag
-				var ok bool
-				if tags, ok = test.Tags[ownerRepo]; !ok {
-					t.Fatalf("tried to find tags for \"%s\", they were not specified in test", ownerRepo)
-				}
-				return tags, nil
-			}
+			hashCalls := setupActionCheck(t, &test)
 
 			res, err := a.Check(context.Background(), nil, "thisorg", "thisrepo")
 			// Check result
@@ -1365,26 +1269,13 @@ func TestCheck(t *testing.T) {
 				t.Logf("NotifyText:\n%s", res.NotifyText)
 			}
 
-			if test.ExpectHashCalls != 0 && hashCalls != test.ExpectHashCalls {
+			if test.ExpectHashCalls != 0 && *hashCalls != test.ExpectHashCalls {
 				t.Errorf("Expect getLatestCommitHash calls = %d, got %d",
-					test.ExpectHashCalls, hashCalls)
+					test.ExpectHashCalls, *hashCalls)
 			}
 
 			if !res.Pass {
-				d := res.Details.(details)
-				if d.FailedRules == nil {
-					t.Errorf("FailedRules nil")
-				}
-				for i, r := range d.FailedRules {
-					if r == nil {
-						t.Errorf("nil Rule in FailedRules")
-					}
-					for i2, r2 := range d.FailedRules {
-						if i != i2 && r == r2 {
-							t.Errorf("duplicate Rule in FailedRules")
-						}
-					}
-				}
+				checkFailedRules(t, res.Details.(details).FailedRules)
 			}
 
 			for _, message := range test.ExpectMessage {
@@ -1398,4 +1289,139 @@ func TestCheck(t *testing.T) {
 			}
 		})
 	}
+}
+
+type testingWorkflowMetadata struct {
+	// File is the actual filename of the workflow to load.
+	// Will be loaded from test_workflows/ directory.
+	File string
+
+	Runs []*github.WorkflowRun
+}
+
+func loadTestWorkflows(t *testing.T, workflows []testingWorkflowMetadata) ([]*workflowMetadata, error) {
+	t.Helper()
+	var wfs []*workflowMetadata
+	for _, w := range workflows {
+		d, err := os.ReadFile(filepath.Join("test_workflows", w.File))
+		if err != nil {
+			return nil, fmt.Errorf("failed to open test workflow file: %w", err)
+		}
+		workflow, errs := actionlint.Parse(d)
+		if len(errs) > 0 {
+			for _, er := range errs {
+				t.Logf("parse err on %s: %s", w.File, er.Error())
+			}
+		}
+		if workflow == nil {
+			t.Logf("nil workflow")
+			continue
+		}
+		wfs = append(wfs, &workflowMetadata{
+			filename: w.File,
+			workflow: workflow,
+		})
+	}
+	return wfs, nil
+}
+
+func checkFailedRules(t *testing.T, rules []*Rule) {
+	t.Helper()
+	if rules == nil {
+		t.Errorf("FailedRules nil")
+	}
+	for i, r := range rules {
+		if r == nil {
+			t.Errorf("nil Rule in FailedRules")
+		}
+		for i2, r2 := range rules {
+			if i != i2 && r == r2 {
+				t.Errorf("duplicate Rule in FailedRules")
+			}
+		}
+	}
+}
+
+type actionCheckTest struct {
+	Name string
+
+	Org OrgConfig
+
+	// Workflows is a map of filenames to workflowMetadata structs.
+	// Filename: just filename eg. "my_workflow.yaml"
+	Workflows []testingWorkflowMetadata
+
+	LatestCommitHash string
+
+	// LatestCommitHashErr is returned by the getLatestCommitHash stub
+	// instead of LatestCommitHash when set.
+	LatestCommitHashErr error
+
+	// ExpectHashCalls, when non-zero, is the number of times
+	// getLatestCommitHash is expected to be called.
+	ExpectHashCalls int
+
+	Langs map[string]int
+
+	// Tags is a map of "owner/repo" to []*github.RepositoryTag
+	Tags map[string][]*github.RepositoryTag
+
+	ExpectMessage []string
+	ExpectPass    bool
+}
+
+func setupActionCheck(t *testing.T, test *actionCheckTest) *int {
+	t.Helper()
+	// Override external functions
+
+	configFetchConfig = func(ctx context.Context, c *github.Client, owner, repo, path string,
+		ol config.ConfigLevel, out interface{},
+	) error {
+		if ol == config.OrgLevel {
+			oc := out.(*OrgConfig)
+			*oc = test.Org
+		}
+		return nil
+	}
+
+	listWorkflows = func(ctx context.Context, c *github.Client, owner, repo string) (
+		[]*workflowMetadata, error,
+	) {
+		return loadTestWorkflows(t, test.Workflows)
+	}
+
+	listLanguages = func(ctx context.Context, c *github.Client, owner, repo string) (map[string]int, error) {
+		return test.Langs, nil
+	}
+
+	listWorkflowRunsByFilename = func(ctx context.Context, c *github.Client, owner, repo,
+		workflowFilename string,
+	) ([]*github.WorkflowRun, error) {
+		for _, wf := range test.Workflows {
+			if wf.File == workflowFilename {
+				return wf.Runs, nil
+			}
+		}
+		return nil, fmt.Errorf("could not find testWorkflowMetadata for filename %s", workflowFilename)
+	}
+
+	hashCalls := 0
+	getLatestCommitHash = func(ctx context.Context, c *github.Client, owner, repo string) (string, error) {
+		hashCalls++
+		if test.LatestCommitHashErr != nil {
+			return "", test.LatestCommitHashErr
+		}
+		return test.LatestCommitHash, nil
+	}
+
+	listTags = func(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryTag, error) {
+		ownerRepo := fmt.Sprintf("%s/%s", owner, repo)
+		var tags []*github.RepositoryTag
+		var ok bool
+		if tags, ok = test.Tags[ownerRepo]; !ok {
+			t.Fatalf("tried to find tags for \"%s\", they were not specified in test", ownerRepo)
+		}
+		return tags, nil
+	}
+	return &hashCalls
 }

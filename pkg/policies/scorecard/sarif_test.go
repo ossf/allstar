@@ -44,6 +44,8 @@ func clearSARIFHashes() {
 }
 
 func TestCompressAndEncode(t *testing.T) {
+	t.Parallel()
+
 	input := []byte(`{"version":"2.1.0","runs":[]}`)
 
 	encoded, err := compressAndEncode(input)
@@ -77,6 +79,7 @@ func TestCompressAndEncode(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level SARIF and Scorecard mocks and clears shared upload state.
 func TestUploadSARIF(t *testing.T) {
 	origUpload := codeScanningUploadFunc
 	origGetRef := getDefaultBranchRefFunc
@@ -130,6 +133,7 @@ func TestUploadSARIF(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level SARIF and Scorecard mocks and clears shared upload state.
 func TestUploadSARIFNewCommit(t *testing.T) {
 	origUpload := codeScanningUploadFunc
 	origGetRef := getDefaultBranchRefFunc
@@ -179,6 +183,7 @@ func TestUploadSARIFNewCommit(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level SARIF and Scorecard mocks and clears shared upload state.
 func TestCheckWithSARIFUpload(t *testing.T) {
 	origScRun := scRun
 	origUpload := codeScanningUploadFunc
@@ -283,6 +288,7 @@ func TestCheckWithSARIFUpload(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level SARIF and Scorecard mocks and clears shared upload state.
 func TestCheckSARIFUploadErrorNonBlocking(t *testing.T) {
 	origScRun := scRun
 	origUpload := codeScanningUploadFunc

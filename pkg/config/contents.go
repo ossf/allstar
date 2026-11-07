@@ -23,6 +23,8 @@ import (
 	"github.com/google/go-github/v84/github"
 )
 
+var errContentNotFound = errors.New("not found")
+
 func walkGetContents(ctx context.Context, r repositories, owner, repo, p string,
 	opt *github.RepositoryContentGetOptions) (*github.RepositoryContent,
 	[]*github.RepositoryContent, *github.Response, error,
@@ -35,7 +37,7 @@ func walkGetContents(ctx context.Context, r repositories, owner, repo, p string,
 			return nil, nil, rsp, err
 		}
 		if !fileExists(file, rcs) {
-			return nil, nil, &github.Response{Response: &http.Response{StatusCode: http.StatusNotFound}}, errors.New("not found")
+			return nil, nil, &github.Response{Response: &http.Response{StatusCode: http.StatusNotFound}}, errContentNotFound
 		}
 	}
 	// File should exist

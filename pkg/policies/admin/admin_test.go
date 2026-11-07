@@ -43,6 +43,7 @@ func (m mockRepos) ListTeams(ctx context.Context, owner, repo string, opts *gith
 	return listTeams(ctx, owner, repo, opts)
 }
 
+//nolint:paralleltest // Replaces package-level collaborator and configuration mocks.
 func TestConfigPrecedence(t *testing.T) {
 	tests := []struct {
 		Name      string
@@ -203,6 +204,7 @@ func TestConfigPrecedence(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level collaborator and configuration mocks.
 func TestCheck(t *testing.T) {
 	bob := "bob"
 	alice := "alice"

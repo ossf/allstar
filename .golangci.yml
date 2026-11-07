@@ -11,8 +11,7 @@ linters:
     - copyloopvar
     - dogsled
     - durationcheck
-    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
-    #- err113
+    - err113
     - errchkjson
     - errname
     - errorlint
@@ -21,8 +20,7 @@ linters:
     - gocheckcompilerdirectives
     - gochecknoinits
     - gochecksumtype
-    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
-    #- gocognit
+    - gocognit
     - goconst
     - gocritic
     # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
@@ -50,8 +48,7 @@ linters:
     - nilnesserr
     - noctx
     - nolintlint
-    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
-    #- paralleltest
+    - paralleltest
     - predeclared
     - protogetter
     - reassign

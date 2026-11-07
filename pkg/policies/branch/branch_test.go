@@ -85,6 +85,7 @@ func (m mockRepos) RequireSignaturesOnProtectedBranch(ctx context.Context, owner
 	return requireSignaturesProtectedBranch(ctx, owner, repo, branch)
 }
 
+//nolint:paralleltest // Replaces package-level branch protection and configuration mocks.
 func TestConfigPrecedence(t *testing.T) {
 	tests := []struct {
 		Name      string
@@ -250,6 +251,7 @@ func TestConfigPrecedence(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level branch protection and configuration mocks.
 func TestGetSignatureProtectionEnabled(t *testing.T) {
 	error403 := errors.New("403")
 	tests := []struct {
@@ -310,6 +312,7 @@ func TestGetSignatureProtectionEnabled(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level branch protection and configuration mocks.
 func TestCheck(t *testing.T) {
 	tests := []struct {
 		Name          string
@@ -1363,6 +1366,7 @@ func TestCheck(t *testing.T) {
 	})
 }
 
+//nolint:paralleltest // Replaces package-level branch protection and configuration mocks.
 func TestFix(t *testing.T) {
 	tests := []struct {
 		Name                 string
@@ -2124,32 +2128,123 @@ func TestFix(t *testing.T) {
 				t.Fatalf("Unexpected error: %v", err)
 			}
 
-			// Sort required status checks by context to ensure comparison is consistent.
-			for _, pr := range got {
-				if pr.RequiredStatusChecks == nil {
-					continue
-				}
-				sc := make([]*github.RequiredStatusCheck, 0)
-				cm := make(map[string][]*github.RequiredStatusCheck)
-				for _, check := range pr.RequiredStatusChecks.GetChecks() {
-					cm[check.Context] = append(cm[check.Context], check)
-				}
-				ctx := make([]string, 0)
-				for c := range cm {
-					ctx = append(ctx, c)
-				}
-				sort.Strings(ctx)
-				for _, c := range ctx {
-					sc = append(sc, cm[c]...)
-				}
-				pr.RequiredStatusChecks.Checks = github.Ptr(sc)
-			}
+			sortProtectionStatusChecks(got)
 
 			if diff := cmp.Diff(test.Exp, got); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 			}
 			if diff := cmp.Diff(test.ExpSignatureRequests, requireSignatureRequests); diff != "" {
 				t.Errorf("Unexpected results. (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func sortProtectionStatusChecks(requests map[string]github.ProtectionRequest) {
+	// Sort required status checks by context to ensure comparison is consistent.
+	for _, pr := range requests {
+		if pr.RequiredStatusChecks == nil {
+			continue
+		}
+		sc := make([]*github.RequiredStatusCheck, 0)
+		cm := make(map[string][]*github.RequiredStatusCheck)
+		for _, check := range pr.RequiredStatusChecks.GetChecks() {
+			cm[check.Context] = append(cm[check.Context], check)
+		}
+		ctx := make([]string, 0)
+		for c := range cm {
+			ctx = append(ctx, c)
+		}
+		sort.Strings(ctx)
+		for _, c := range ctx {
+			sc = append(sc, cm[c]...)
+		}
+		pr.RequiredStatusChecks.Checks = github.Ptr(sc)
+	}
+}
+
+// A failed update must stop the entire fix run, including signature changes and
+// later branches. Forbidden responses are handled without returning an error.
+func TestFixStopsAfterProtectionUpdateFailure(t *testing.T) {
+	oldGet, oldGetProtection := get, getBranchProtection
+	oldUpdate, oldGetSignatures := updateBranchProtection, getSignaturesProtectedBranch
+	oldFetchConfig, oldIsEnabled := configFetchConfig, configIsEnabled
+	t.Cleanup(func() {
+		get, getBranchProtection = oldGet, oldGetProtection
+		updateBranchProtection, getSignaturesProtectedBranch = oldUpdate, oldGetSignatures
+		configFetchConfig, configIsEnabled = oldFetchConfig, oldIsEnabled
+	})
+
+	get = func(context.Context, string, string) (*github.Repository, *github.Response, error) {
+		return &github.Repository{}, nil, nil
+	}
+	configIsEnabled = func(context.Context, config.OrgOptConfig, config.RepoOptConfig,
+		config.RepoOptConfig, *github.Client, string, string,
+	) (bool, error) {
+		return true, nil
+	}
+	configFetchConfig = func(_ context.Context, _ *github.Client, _, _, _ string,
+		level config.ConfigLevel, out interface{},
+	) error {
+		if level == config.OrgLevel {
+			*out.(*OrgConfig) = OrgConfig{
+				EnforceBranches: map[string][]string{"thisrepo": {"first", "second"}},
+				RequireApproval: true,
+			}
+		}
+		return nil
+	}
+	getSignaturesProtectedBranch = func(context.Context, string, string, string) (
+		*github.SignaturesProtectedBranch, *github.Response, error,
+	) {
+		t.Fatal("signature checks must not run after a failed protection update")
+		return nil, nil, nil
+	}
+
+	tests := []struct {
+		name     string
+		existing bool
+		status   int
+	}{
+		{name: "create forbidden", status: http.StatusForbidden},
+		{name: "update forbidden", existing: true, status: http.StatusForbidden},
+		{name: "create server error", status: http.StatusInternalServerError},
+		{name: "update server error", existing: true, status: http.StatusInternalServerError},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			getBranchProtection = func(_ context.Context, _, _, branch string) (
+				*github.Protection, *github.Response, error,
+			) {
+				if branch != "first" {
+					t.Fatal("fix continued to another branch after a failed update")
+				}
+				if tt.existing {
+					return &github.Protection{
+						EnforceAdmins:    &github.AdminEnforcement{},
+						AllowForcePushes: &github.AllowForcePushes{},
+					}, nil, nil
+				}
+				return nil, &github.Response{Response: &http.Response{StatusCode: http.StatusNotFound}}, errors.New("not found")
+			}
+			updateErr := errors.New("protection update failed")
+			updates := 0
+			updateBranchProtection = func(context.Context, string, string, string, *github.ProtectionRequest) (
+				*github.Protection, *github.Response, error,
+			) {
+				updates++
+				return nil, &github.Response{Response: &http.Response{StatusCode: tt.status}}, updateErr
+			}
+			err := fix(context.Background(), mockRepos{}, nil, "owner", "thisrepo")
+			var wantErr error
+			if tt.status != http.StatusForbidden {
+				wantErr = updateErr
+			}
+			if !errors.Is(err, wantErr) {
+				t.Errorf("fix() error = %v, want %v", err, wantErr)
+			}
+			if updates != 1 {
+				t.Errorf("protection updates = %d, want 1", updates)
 			}
 		})
 	}

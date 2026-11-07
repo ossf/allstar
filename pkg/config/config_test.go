@@ -29,29 +29,33 @@ import (
 	"github.com/ossf/allstar/pkg/config/operator"
 )
 
-var getContents func(context.Context, string, string, string,
-	*github.RepositoryContentGetOptions) (*github.RepositoryContent,
-	[]*github.RepositoryContent, *github.Response, error)
+type mockRepos struct {
+	getContents func(context.Context, string, string, string,
+		*github.RepositoryContentGetOptions) (*github.RepositoryContent,
+		[]*github.RepositoryContent, *github.Response, error)
 
-var get func(context.Context, string, string) (*github.Repository,
-	*github.Response, error)
-
-type mockRepos struct{}
+	get func(context.Context, string, string) (*github.Repository,
+		*github.Response, error)
+}
 
 func (m mockRepos) GetContents(ctx context.Context, owner, repo, path string,
 	opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
 	[]*github.RepositoryContent, *github.Response, error,
 ) {
-	return getContents(ctx, owner, repo, path, opts)
+	return m.getContents(ctx, owner, repo, path, opts)
 }
 
 func (m mockRepos) Get(ctx context.Context, owner, repo string) (*github.Repository,
 	*github.Response, error,
 ) {
-	return get(ctx, owner, repo)
+	return m.get(ctx, owner, repo)
 }
 
+//nolint:paralleltest // Replaces walkGC and shares the installation cache.
 func TestFetchConfig(t *testing.T) {
+	oldWalkGC := walkGC
+	ClearInstLoc("")
+	t.Cleanup(func() { walkGC = oldWalkGC; ClearInstLoc("") })
 	tests := []struct {
 		Name   string
 		Input  string
@@ -182,12 +186,12 @@ issueDetails: test Issue Detail
 					Content:  &c,
 				}, nil, nil, nil
 			}
-			get = func(ctx context.Context, owner, repo string) (*github.Repository,
+			get := func(ctx context.Context, owner, repo string) (*github.Repository,
 				*github.Response, error,
 			) {
 				return nil, nil, nil
 			}
-			err := fetchConfig(context.Background(), mockRepos{}, "", "", "", OrgLevel, test.Got)
+			err := fetchConfig(context.Background(), mockRepos{get: get}, "", "", "", OrgLevel, test.Got)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -198,6 +202,7 @@ issueDetails: test Issue Detail
 	}
 }
 
+//nolint:paralleltest // Writes the shared glob cache.
 func TestIsEnabled(t *testing.T) {
 	tests := []struct {
 		Name           string
@@ -464,7 +469,7 @@ func TestIsEnabled(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			get = func(context.Context, string, string) (*github.Repository,
+			get := func(context.Context, string, string) (*github.Repository,
 				*github.Response, error,
 			) {
 				return &github.Repository{
@@ -473,7 +478,7 @@ func TestIsEnabled(t *testing.T) {
 					Fork:     &test.IsForkedRepo,
 				}, nil, nil
 			}
-			got, _ := isEnabled(context.Background(), test.Org, test.OrgRepo, test.Repo, mockRepos{}, "thisorg", "thisrepo")
+			got, _ := isEnabled(context.Background(), test.Org, test.OrgRepo, test.Repo, mockRepos{get: get}, "thisorg", "thisrepo")
 			if got != test.Expect {
 				t.Errorf("Unexpected results on %v. Expected: %v", test.Name, test.Expect)
 			}
@@ -481,7 +486,14 @@ func TestIsEnabled(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces walkGC and shares the installation cache.
 func TestIsBotEnabled(t *testing.T) {
+	oldWalkGC := walkGC
+	ClearInstLoc("")
+	t.Cleanup(func() { walkGC = oldWalkGC; ClearInstLoc("") })
+	get := func(context.Context, string, string) (*github.Repository, *github.Response, error) {
+		return &github.Repository{}, nil, nil
+	}
 	// FetchConfig and IsEnabled are both tested, just do one test case here
 	orgIn := `
 optConfig:
@@ -512,12 +524,14 @@ optConfig:
 		}, nil, nil, nil
 	}
 
-	if !isBotEnabled(context.Background(), mockRepos{}, "", "thisrepo") {
+	if !isBotEnabled(context.Background(), mockRepos{get: get}, "", "thisrepo") {
 		t.Error("Expected repo to be enabled")
 	}
 }
 
 func TestCreateIL(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		Name       string
 		DotAllstar bool
@@ -565,7 +579,9 @@ func TestCreateIL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			get = func(ctx context.Context, owner, repo string) (*github.Repository,
+			t.Parallel()
+
+			get := func(ctx context.Context, owner, repo string) (*github.Repository,
 				*github.Response, error,
 			) {
 				if repo == operator.OrgConfigRepo && test.DotAllstar {
@@ -576,7 +592,7 @@ func TestCreateIL(t *testing.T) {
 				}
 				return nil, &github.Response{Response: &http.Response{StatusCode: http.StatusNotFound}}, errors.New("Not found")
 			}
-			got, err := createIl(context.Background(), mockRepos{}, "")
+			got, err := createIl(context.Background(), mockRepos{get: get}, "")
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
@@ -588,37 +604,41 @@ func TestCreateIL(t *testing.T) {
 }
 
 func TestGetIL(t *testing.T) {
+	t.Parallel()
+
+	owner, otherOwner := t.Name(), t.Name()+"-other"
+	t.Cleanup(func() { ClearInstLoc(owner); ClearInstLoc(otherOwner) })
 	var getCalled bool
-	get = func(ctx context.Context, owner, repo string) (*github.Repository,
+	get := func(ctx context.Context, owner, repo string) (*github.Repository,
 		*github.Response, error,
 	) {
 		getCalled = true
 		return nil, nil, nil
 	}
 	getCalled = false
-	if _, err := getInstLoc(context.Background(), mockRepos{}, "foo"); err != nil {
+	if _, err := getInstLoc(context.Background(), mockRepos{get: get}, owner); err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 	if !getCalled {
 		t.Errorf("Get not called")
 	}
 	getCalled = false
-	if _, err := getInstLoc(context.Background(), mockRepos{}, "foo"); err != nil {
+	if _, err := getInstLoc(context.Background(), mockRepos{get: get}, owner); err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 	if getCalled {
 		t.Errorf("Get called on second lookup")
 	}
-	ClearInstLoc("foo")
+	ClearInstLoc(owner)
 	getCalled = false
-	if _, err := getInstLoc(context.Background(), mockRepos{}, "foo"); err != nil {
+	if _, err := getInstLoc(context.Background(), mockRepos{get: get}, owner); err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 	if !getCalled {
 		t.Errorf("Get not called after clear")
 	}
 	getCalled = false
-	if _, err := getInstLoc(context.Background(), mockRepos{}, "bar"); err != nil {
+	if _, err := getInstLoc(context.Background(), mockRepos{get: get}, otherOwner); err != nil {
 		t.Fatalf("Unexpected error: %v", err)
 	}
 	if !getCalled {
@@ -627,10 +647,12 @@ func TestGetIL(t *testing.T) {
 }
 
 func TestWalkGetContents(t *testing.T) {
+	t.Parallel()
+
 	p := "long/path/file.yaml"
 	expect := []string{"", "long/", "long/path/", "long/path/file.yaml"}
 	var got []string
-	getContents = func(ctx context.Context, owner, repo, pt string,
+	getContents := func(ctx context.Context, owner, repo, pt string,
 		opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
 		[]*github.RepositoryContent, *github.Response, error,
 	) {
@@ -650,7 +672,7 @@ func TestWalkGetContents(t *testing.T) {
 			}, nil, nil
 		}
 	}
-	_, _, _, _ = walkGetContents(context.Background(), mockRepos{}, "", "", p, nil)
+	_, _, _, _ = walkGetContents(context.Background(), mockRepos{getContents: getContents}, "", "", p, nil)
 	if diff := cmp.Diff(expect, got); diff != "" {
 		t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 	}
@@ -676,7 +698,7 @@ func TestWalkGetContents(t *testing.T) {
 			}, nil, nil
 		}
 	}
-	_, _, rsp, _ := walkGetContents(context.Background(), mockRepos{}, "", "", p, nil)
+	_, _, rsp, _ := walkGetContents(context.Background(), mockRepos{getContents: getContents}, "", "", p, nil)
 	if diff := cmp.Diff(expect2, got2); diff != "" {
 		t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 	}
@@ -686,6 +708,8 @@ func TestWalkGetContents(t *testing.T) {
 }
 
 func TestMerge(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		Name   string
 		Input  string
@@ -760,7 +784,9 @@ foo: asdf
 	}
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
-			getContents = func(ctx context.Context, owner, repo, path string,
+			t.Parallel()
+
+			getContents := func(ctx context.Context, owner, repo, path string,
 				opts *github.RepositoryContentGetOptions) (*github.RepositoryContent,
 				[]*github.RepositoryContent, *github.Response, error,
 			) {
@@ -776,7 +802,7 @@ foo: asdf
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
-			got, err := checkAndMergeBase(context.Background(), mockRepos{}, "path", conJSON)
+			got, err := checkAndMergeBase(context.Background(), mockRepos{getContents: getContents}, "path", conJSON)
 			if err != nil {
 				t.Fatalf("Unexpected error: %v", err)
 			}
