@@ -23,8 +23,7 @@ linters:
     - gocognit
     - goconst
     - gocritic
-    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
-    #- gocyclo
+    - gocyclo
     - godot
     - godox
     - goheader
