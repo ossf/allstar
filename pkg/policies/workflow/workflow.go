@@ -97,7 +97,11 @@ func (b Workflow) Name() string {
 // Check whether this policy is enabled or not.
 func (b Workflow) IsEnabled(ctx context.Context, c *github.Client, owner, repo string) (bool, error) {
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
-	return config.IsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
+	enabled, err := config.IsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
+	if err != nil {
+		return enabled, fmt.Errorf("checking workflow policy enablement for %s/%s: %w", owner, repo, err)
+	}
+	return enabled, nil
 }
 
 // Check performs the policy check for this policy based on the
@@ -108,7 +112,7 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 	oc, orc, rc := getConfig(ctx, c, owner, repo)
 	enabled, err := config.IsEnabled(ctx, oc.OptConfig, orc.OptConfig, rc.OptConfig, c, owner, repo)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("checking workflow policy enablement for %s/%s: %w", owner, repo, err)
 	}
 	log.Info().
 		Str("org", owner).
@@ -121,15 +125,12 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 	tr := c.Client().Transport
 	scc, err := scorecard.Get(ctx, fullName, true, tr)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting Scorecard client for %s: %w", fullName, err)
 	}
 
 	// Use configured branches if they are set.
 	var branches []string
 	configBranches := configParseBranches(oc.BranchList, orc.BranchList, rc.BranchList)
-	if err != nil {
-		return nil, err
-	}
 
 	// Fetch branches from the repo if we did not configure any branches
 	if len(configBranches) > 0 {
@@ -138,7 +139,7 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 		// replace any instance of "default" with the actual default branch name
 		defaultBranchName, err := scc.GetDefaultBranchName()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("getting default branch of %s: %w", fullName, err)
 		}
 		for i, branch := range branches {
 			if strings.ToLower(branch) == "default" {
@@ -148,7 +149,7 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 	} else {
 		branches, err = scc.FetchBranches()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("fetching branches of %s: %w", fullName, err)
 		}
 	}
 	log.Debug().
@@ -162,7 +163,7 @@ func (b Workflow) Check(ctx context.Context, c *github.Client, owner,
 	for _, branch := range branches {
 		err = scc.SwitchLocalBranch(branch)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("switching %s to branch %s: %w", fullName, branch, err)
 		}
 
 		allRes, err := sc.Run(ctx, scc.ScRepo,

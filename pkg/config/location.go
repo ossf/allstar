@@ -16,6 +16,7 @@ package config
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 
@@ -108,10 +109,10 @@ func createIl(ctx context.Context, r repositories, owner string) (*instLoc, erro
 			}, nil
 		default:
 			// Unknown error getting ".github" repo
-			return nil, err
+			return nil, fmt.Errorf("getting configuration repository %s/%s: %w", owner, githubConfRepo, err)
 		}
 	default:
 		// Unknown error getting ".allstar" repo
-		return nil, err
+		return nil, fmt.Errorf("getting configuration repository %s/%s: %w", owner, operator.OrgConfigRepo, err)
 	}
 }

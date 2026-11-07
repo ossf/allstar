@@ -70,7 +70,10 @@ func resultToSARIF(
 
 	opts := &options.Options{}
 
-	return result.AsSARIF(true, sclog.DefaultLevel, writer, checkDocs, policy, opts)
+	if err := result.AsSARIF(true, sclog.DefaultLevel, writer, checkDocs, policy, opts); err != nil {
+		return fmt.Errorf("encoding Scorecard results as SARIF: %w", err)
+	}
+	return nil
 }
 
 // buildPolicy constructs a ScorecardPolicy from Allstar's check names and
@@ -124,7 +127,11 @@ func codeScanningUploadReal(
 	owner, repo string,
 	analysis *github.SarifAnalysis,
 ) (*github.SarifID, *github.Response, error) {
-	return c.CodeScanning.UploadSarif(ctx, owner, repo, analysis)
+	id, rsp, err := c.CodeScanning.UploadSarif(ctx, owner, repo, analysis)
+	if err != nil {
+		return id, rsp, fmt.Errorf("uploading SARIF to %s/%s: %w", owner, repo, err)
+	}
+	return id, rsp, nil
 }
 
 // getDefaultBranchRefReal gets the default branch ref and HEAD commit SHA
@@ -158,10 +165,10 @@ func compressAndEncode(data []byte) (string, error) {
 	writer := gzip.NewWriter(&buf)
 
 	if _, err := writer.Write(data); err != nil {
-		return "", err
+		return "", fmt.Errorf("writing compressed SARIF: %w", err)
 	}
 	if err := writer.Close(); err != nil {
-		return "", err
+		return "", fmt.Errorf("closing compressed SARIF: %w", err)
 	}
 
 	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil

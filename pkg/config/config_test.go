@@ -816,3 +816,55 @@ foo: asdf
 		})
 	}
 }
+
+func TestWalkGetContentsPreservesResponseAndError(t *testing.T) {
+	t.Parallel()
+	for _, failDirectory := range []bool{true, false} {
+		name := "file"
+		if failDirectory {
+			name = "directory"
+		}
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			rsp := &github.Response{Response: &http.Response{StatusCode: http.StatusInternalServerError}}
+			apiErr := &github.ErrorResponse{Response: rsp.Response, Message: "unavailable"}
+			partial := &github.RepositoryContent{Name: github.Ptr("file.yaml")}
+			r := mockRepos{getContents: func(_ context.Context, _, _, p string,
+				_ *github.RepositoryContentGetOptions,
+			) (*github.RepositoryContent, []*github.RepositoryContent, *github.Response, error) {
+				if p == "" && !failDirectory {
+					return nil, []*github.RepositoryContent{partial}, nil, nil
+				}
+				return partial, nil, rsp, apiErr
+			}}
+			content, _, gotRsp, err := walkGetContents(t.Context(), r, "owner", "repo", "file.yaml", nil)
+			if !errors.Is(err, apiErr) || errors.Unwrap(err) == nil {
+				t.Fatalf("error = %v, want wrapped API error", err)
+			}
+			var gotAPIError *github.ErrorResponse
+			if !errors.As(err, &gotAPIError) || gotAPIError != apiErr {
+				t.Errorf("error does not preserve the GitHub error type: %v", err)
+			}
+			if gotRsp != rsp {
+				t.Error("GitHub response was not preserved")
+			}
+			if !failDirectory && content != partial {
+				t.Error("partial file content was not preserved")
+			}
+		})
+	}
+}
+
+func TestWalkGetContentsEmptyDirectory(t *testing.T) {
+	t.Parallel()
+	rsp := &github.Response{Response: &http.Response{StatusCode: http.StatusOK}}
+	r := mockRepos{getContents: func(context.Context, string, string, string,
+		*github.RepositoryContentGetOptions,
+	) (*github.RepositoryContent, []*github.RepositoryContent, *github.Response, error) {
+		return nil, nil, rsp, nil
+	}}
+	_, _, gotRsp, err := walkGetContents(t.Context(), r, "owner", "repo", "file.yaml", nil)
+	if err != nil || gotRsp != rsp {
+		t.Errorf("empty directory response = %v, error = %v; want original response and nil error", gotRsp, err)
+	}
+}

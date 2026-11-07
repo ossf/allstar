@@ -18,9 +18,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/gobwas/glob"
@@ -1424,4 +1428,50 @@ func setupActionCheck(t *testing.T, test *actionCheckTest) *int {
 		return tags, nil
 	}
 	return &hashCalls
+}
+
+func TestListWorkflowRunsByFilenameReal(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		status int
+		body   string
+	}{
+		{name: "success", status: http.StatusOK, body: `{"workflow_runs":[{"id":123}]}`},
+		{name: "API failure", status: http.StatusInternalServerError, body: `{"message":"unavailable"}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(tt.status)
+				_, _ = w.Write([]byte(tt.body))
+			}))
+			defer server.Close()
+			client := github.NewClient(server.Client())
+			baseURL, err := url.Parse(server.URL + "/")
+			if err != nil {
+				t.Fatal(err)
+			}
+			client.BaseURL = baseURL
+			runs, err := listWorkflowRunsByFilenameReal(t.Context(), client, "owner", "repo", "ci.yaml")
+			if tt.status != http.StatusOK {
+				var apiErr *github.ErrorResponse
+				if !errors.As(err, &apiErr) || apiErr.Response.StatusCode != tt.status {
+					t.Fatalf("error = %v, want wrapped GitHub API error with status %d", err, tt.status)
+				}
+				if !strings.Contains(err.Error(), "ci.yaml") || runs != nil {
+					t.Errorf("runs = %v, error = %v; want nil runs and workflow error context", runs, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("successful response returned an error: %v", err)
+			}
+			if len(runs) != 1 || runs[0].GetID() != 123 {
+				t.Errorf("workflow runs = %v, want run 123", runs)
+			}
+		})
+	}
 }

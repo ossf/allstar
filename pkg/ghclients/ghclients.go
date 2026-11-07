@@ -18,6 +18,7 @@ package ghclients
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -116,7 +117,7 @@ func (g *GHClients) Get(i int64) (*github.Client, error) {
 	if operator.GitHubEnterpriseUrl != "" {
 		newC, err := c.WithEnterpriseURLs(operator.GitHubEnterpriseUrl, operator.GitHubEnterpriseUrl)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("configuring GitHub Enterprise client URLs: %w", err)
 		}
 		c = newC
 	}
@@ -140,12 +141,12 @@ func fullEnterpriseApiUrl(baseUrl string) string {
 func getKeyFromSecretReal(ctx context.Context, keySecretVal string) ([]byte, error) {
 	v, err := runtimevar.OpenVariable(ctx, keySecretVal)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("opening private key secret: %w", err)
 	}
 	defer v.Close()
 	s, err := v.Latest(ctx)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading private key secret: %w", err)
 	}
 	// TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
 	return s.Value.([]byte), nil //nolint:errcheck

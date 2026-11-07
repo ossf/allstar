@@ -142,7 +142,7 @@ func check(ctx context.Context, c *github.Client, v4c v4client, owner,
 		"name":  githubv4.String(repo),
 	}
 	if err := v4c.Query(ctx, &q, variables); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("querying security policy in %s/%s: %w", owner, repo, err)
 	}
 	if !q.Repository.IsSecurityPolicyEnabled {
 		return &policydef.Result{

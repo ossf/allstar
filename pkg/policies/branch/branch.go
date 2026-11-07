@@ -245,7 +245,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 
 	r, _, err := rep.Get(ctx, owner, repo)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting repository %s/%s for branch protection: %w", owner, repo, err)
 	}
 
 	opt := &github.BranchListOptions{
@@ -257,7 +257,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	for {
 		bs, resp, err := rep.ListBranches(ctx, owner, repo, opt)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("listing branches in %s/%s: %w", owner, repo, err)
 		}
 		branches = append(branches, bs...)
 		if resp.NextPage == 0 {
@@ -314,7 +314,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 				ds[b] = details{}
 				break
 			}
-			return nil, err
+			return nil, fmt.Errorf("getting protection for branch %s in %s/%s: %w", b, owner, repo, err)
 		}
 
 		d, branchText, branchPass, err := checkBranchProtection(ctx, rep, owner, repo, b, p, mc)
@@ -355,7 +355,7 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 
 	r, _, err := rep.Get(ctx, owner, repo)
 	if err != nil {
-		return err
+		return fmt.Errorf("getting repository %s/%s for branch protection fix: %w", owner, repo, err)
 	}
 	allBranches := mc.EnforceBranches
 	if mc.EnforceDefault {
@@ -382,7 +382,7 @@ func fix(ctx context.Context, rep repositories, c *github.Client,
 				// no sense to continue, just return
 				return nil
 			}
-			return err
+			return fmt.Errorf("getting protection for branch %s in %s/%s: %w", b, owner, repo, err)
 		}
 		// Got existing protection, modify from existing
 		pr, update := updatedProtectionRequest(p, mc)
@@ -415,9 +415,9 @@ func getSignatureProtectionEnabled(ctx context.Context, rep repositories, owner,
 			return false, nil
 		}
 		if rsp != nil && rsp.StatusCode == http.StatusForbidden {
-			err = fmt.Errorf("access denied to commit signing settings for %v: %w", repo, err)
+			return false, fmt.Errorf("access denied to commit signing settings for %v: %w", repo, err)
 		}
-		return false, err
+		return false, fmt.Errorf("getting signed-commit protection for branch %s in %s/%s: %w", branch, owner, repo, err)
 	}
 	return sp.GetEnabled(), nil
 }
@@ -849,7 +849,10 @@ func applyBranchProtection(ctx context.Context, rep repositories, owner, repo, b
 			Msg("Action set to fix, but did not accept admin:write permissions update.")
 		return false, nil
 	}
-	return err == nil, err
+	if err != nil {
+		return false, fmt.Errorf("updating protection for branch %s in %s/%s: %w", branch, owner, repo, err)
+	}
+	return true, nil
 }
 
 // ensureSignedCommits reports whether enforcement can continue for the next branch.
@@ -870,7 +873,7 @@ func ensureSignedCommits(ctx context.Context, rep repositories, owner, repo, b s
 					Msg("Action set to fix, but did not accept admin:write update to make signed commits required.")
 				return false, nil
 			}
-			return false, err
+			return false, fmt.Errorf("requiring signed commits on branch %s in %s/%s: %w", b, owner, repo, err)
 		}
 		log.Info().
 			Str("org", owner).

@@ -17,6 +17,7 @@ package config
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"path"
 
@@ -33,15 +34,22 @@ func walkGetContents(ctx context.Context, r repositories, owner, repo, p string,
 	for _, v := range paths {
 		dir, file := path.Split(v)
 		_, rcs, rsp, err := r.GetContents(ctx, owner, repo, dir, opt)
-		if rcs == nil || err != nil {
-			return nil, nil, rsp, err
+		if err != nil {
+			return nil, nil, rsp, fmt.Errorf("getting directory %s in %s/%s: %w", dir, owner, repo, err)
+		}
+		if rcs == nil {
+			return nil, nil, rsp, nil
 		}
 		if !fileExists(file, rcs) {
 			return nil, nil, &github.Response{Response: &http.Response{StatusCode: http.StatusNotFound}}, errContentNotFound
 		}
 	}
 	// File should exist
-	return r.GetContents(ctx, owner, repo, p, opt)
+	content, entries, rsp, err := r.GetContents(ctx, owner, repo, p, opt)
+	if err != nil {
+		return content, entries, rsp, fmt.Errorf("getting contents %s in %s/%s: %w", p, owner, repo, err)
+	}
+	return content, entries, rsp, nil
 }
 
 func makePaths(p string) []string {

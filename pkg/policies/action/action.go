@@ -596,7 +596,7 @@ func (s sortableRules) Swap(i, j int) {
 func getLatestCommitHashReal(ctx context.Context, c *github.Client, owner, repo string) (string, error) {
 	commits, _, err := c.Repositories.ListCommits(ctx, owner, repo, &github.CommitsListOptions{})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("listing commits in %s/%s: %w", owner, repo, err)
 	}
 	if len(commits) > 0 && commits[0].SHA != nil {
 		return *commits[0].SHA, nil
@@ -615,14 +615,20 @@ func listWorkflowRunsByFilenameReal(ctx context.Context, c *github.Client,
 		&github.ListWorkflowRunsOptions{
 			Event: "push",
 		})
-	return runs.WorkflowRuns, err
+	if err != nil {
+		return nil, fmt.Errorf("listing runs for workflow %s in %s/%s: %w", workflowFilename, owner, repo, err)
+	}
+	return runs.WorkflowRuns, nil
 }
 
 // listLanguagesReal uses the GitHub API to list languages.
 // Docs: https://docs.github.com/en/rest/repos/repos#list-repository-languages
 func listLanguagesReal(ctx context.Context, c *github.Client, owner, repo string) (map[string]int, error) {
 	l, _, err := c.Repositories.ListLanguages(ctx, owner, repo)
-	return l, err
+	if err != nil {
+		return l, fmt.Errorf("listing languages in %s/%s: %w", owner, repo, err)
+	}
+	return l, nil
 }
 
 // listWorkflowsReal returns workflows for a repo. If on is specified, will
@@ -640,7 +646,7 @@ func listWorkflowsReal(ctx context.Context, c *github.Client, owner, repo string
 			// No workflows dir should yield no workflows
 			return []*workflowMetadata{}, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("listing workflows in %s/%s: %w", owner, repo, err)
 	}
 	// Limit number of considered workflows to maxWorkflows
 	if len(workflowDirContents) > maxWorkflows {
@@ -650,7 +656,7 @@ func listWorkflowsReal(ctx context.Context, c *github.Client, owner, repo string
 	for _, wff := range workflowDirContents {
 		fc, _, _, err := c.Repositories.GetContents(ctx, owner, repo, wff.GetPath(), &github.RepositoryContentGetOptions{})
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("fetching workflow %s in %s/%s: %w", wff.GetPath(), owner, repo, err)
 		}
 		if fc == nil {
 			// skip directories
@@ -658,7 +664,7 @@ func listWorkflowsReal(ctx context.Context, c *github.Client, owner, repo string
 		}
 		content, err := fc.GetContent()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("decoding workflow %s: %w", wff.GetPath(), err)
 		}
 		wff.Content = &content
 	}
@@ -717,7 +723,7 @@ func listWorkflowsReal(ctx context.Context, c *github.Client, owner, repo string
 func listTagsReal(ctx context.Context, c *github.Client, owner, repo string) ([]*github.RepositoryTag, error) {
 	tags, _, err := c.Repositories.ListTags(ctx, owner, repo, &github.ListOptions{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing tags in %s/%s: %w", owner, repo, err)
 	}
 	return tags, nil
 }

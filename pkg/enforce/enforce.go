@@ -67,7 +67,7 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface,
 	enforceAllResults := make(EnforceAllResults)
 	ac, err := ghc.Get(0)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting app client: %w", err)
 	}
 	insts, err := getAppInstallations(ctx, ac)
 	if err != nil {
@@ -102,7 +102,7 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface,
 				Int64("instId", i.GetID()).
 				Str("instTarget", i.GetAccount().GetLogin()).
 				Msg("Unexpected error getting installation client.")
-			return nil, err
+			return nil, fmt.Errorf("getting client for installation %d: %w", i.GetID(), err)
 		}
 		iid := i.GetID()
 
@@ -157,7 +157,7 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface,
 		})
 	}
 	if err := g.Wait(); err != nil {
-		return enforceAllResults, err
+		return enforceAllResults, fmt.Errorf("waiting for installation enforcement: %w", err)
 	}
 	log.Info().
 		Str("area", "bot").
@@ -207,7 +207,7 @@ func listInstallationsReal(ctx context.Context, ac *github.Client) ([]*github.In
 	for {
 		is, resp, err := ac.Apps.ListInstallations(ctx, opts)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("listing app installations: %w", err)
 		}
 
 		insts = append(insts, is...)
@@ -264,7 +264,10 @@ func getAppInstallationsReal(ctx context.Context, ac *github.Client) ([]*github.
 
 func deleteInstallationReal(ctx context.Context, ic *github.Client, instID int64) (*github.Response, error) {
 	resp, err := ic.Apps.DeleteInstallation(ctx, instID)
-	return resp, err
+	if err != nil {
+		return resp, fmt.Errorf("deleting installation %d: %w", instID, err)
+	}
+	return resp, nil
 }
 
 func getAppInstallationReposReal(ctx context.Context, ic *github.Client) ([]*github.Repository,
@@ -288,7 +291,10 @@ func getAppInstallationReposReal(ctx context.Context, ic *github.Client) ([]*git
 		}
 		opt.Page = resp.NextPage
 	}
-	return repos, resp, err
+	if err != nil {
+		return repos, resp, fmt.Errorf("listing installation repositories: %w", err)
+	}
+	return repos, resp, nil
 }
 
 // EnforceJob is a reconciliation job that enforces policies on all repos every
@@ -305,7 +311,7 @@ func EnforceJob(ctx context.Context, ghc *ghclients.GHClients, d time.Duration,
 		}
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return fmt.Errorf("enforcement job canceled: %w", ctx.Err())
 		case <-time.After(d):
 		}
 	}
@@ -335,7 +341,7 @@ func runPoliciesReal(ctx context.Context, c *github.Client, owner, repo string, 
 	for _, p := range ps {
 		repo_enabled, err := p.IsEnabled(ctx, c, owner, repo)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("checking enablement of policy %s for %s/%s: %w", p.Name(), owner, repo, err)
 		}
 		if (!repo_enabled || !enabled) && doNothingOnOptOut {
 			log.Info().
@@ -348,7 +354,7 @@ func runPoliciesReal(ctx context.Context, c *github.Client, owner, repo string, 
 
 		r, err := p.Check(ctx, c, owner, repo)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("checking policy %s for %s/%s: %w", p.Name(), owner, repo, err)
 		}
 		log.Info().
 			Str("org", owner).
@@ -412,7 +418,7 @@ func handlePolicyFailure(ctx context.Context, c *github.Client, owner, repo stri
 	case "fix":
 		err := p.Fix(ctx, c, owner, repo)
 		if err != nil {
-			return err
+			return fmt.Errorf("fixing policy %s for %s/%s: %w", p.Name(), owner, repo, err)
 		}
 	default:
 		log.Warn().
