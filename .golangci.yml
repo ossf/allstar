@@ -42,8 +42,7 @@ linters:
     - misspell
     - musttag
     - nakedret
-    # TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
-    #- nestif
+    - nestif
     - nilerr
     - nilnesserr
     - noctx

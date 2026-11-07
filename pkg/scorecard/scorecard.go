@@ -82,18 +82,17 @@ func Get(ctx context.Context, fullRepo string, local bool, tr http.RoundTripper)
 		}
 		scClientsLocal[fullRepo] = scc
 		return scc, nil
-	} else {
-		// remote
-		if scc, ok := scClientsRemote[fullRepo]; ok {
-			return scc, nil
-		}
-		scc, err := createRemote(ctx, fullRepo, tr)
-		if err != nil {
-			return nil, err
-		}
-		scClientsRemote[fullRepo] = scc
+	}
+	// remote
+	if scc, ok := scClientsRemote[fullRepo]; ok {
 		return scc, nil
 	}
+	scc, err := createRemote(ctx, fullRepo, tr)
+	if err != nil {
+		return nil, err
+	}
+	scClientsRemote[fullRepo] = scc
+	return scc, nil
 }
 
 // Switch the local repo between branches.
