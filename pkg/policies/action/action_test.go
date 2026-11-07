@@ -23,9 +23,9 @@ import (
 	"sort"
 	"testing"
 
+	"actionlint.kjanat.dev"
 	"github.com/gobwas/glob"
 	"github.com/google/go-github/v84/github"
-	"github.com/rhysd/actionlint"
 
 	"github.com/ossf/allstar/pkg/config"
 )

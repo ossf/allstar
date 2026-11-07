@@ -2165,7 +2165,7 @@ func sortProtectionStatusChecks(requests map[string]github.ProtectionRequest) {
 
 // A failed update must stop the entire fix run, including signature changes and
 // later branches. Forbidden responses are handled without returning an error.
-func TestFixStopsAfterProtectionUpdateFailure(t *testing.T) {
+func TestFixStopsAfterProtectionUpdateFailure(t *testing.T) { //nolint:paralleltest // Uses package-level mocks.
 	oldGet, oldGetProtection := get, getBranchProtection
 	oldUpdate, oldGetSignatures := updateBranchProtection, getSignaturesProtectedBranch
 	oldFetchConfig, oldIsEnabled := configFetchConfig, configIsEnabled
@@ -2211,7 +2211,7 @@ func TestFixStopsAfterProtectionUpdateFailure(t *testing.T) {
 		{name: "create server error", status: http.StatusInternalServerError},
 		{name: "update server error", existing: true, status: http.StatusInternalServerError},
 	}
-	for _, tt := range tests {
+	for _, tt := range tests { //nolint:paralleltest // Shares package-level mocks.
 		t.Run(tt.name, func(t *testing.T) {
 			getBranchProtection = func(_ context.Context, _, _, branch string) (
 				*github.Protection, *github.Response, error,
