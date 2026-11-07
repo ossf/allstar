@@ -106,12 +106,13 @@ func main() {
 				Err(err).
 				Msg("Unexpected error enforcing policies.")
 		}
-		if *resultsFileArg != "" {
-			if err := scorecardPolicy.WriteResults(*resultsFileArg); err != nil {
-				log.Error().
-					Err(err).
-					Msg("Failed to write results file.")
-			}
+		if *resultsFileArg == "" {
+			return
+		}
+		if err := scorecardPolicy.WriteResults(*resultsFileArg); err != nil {
+			log.Error().
+				Err(err).
+				Msg("Failed to write results file.")
 		}
 		return
 	}
