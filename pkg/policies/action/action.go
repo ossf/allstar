@@ -23,9 +23,9 @@ import (
 	"sort"
 	"strings"
 
+	"actionlint.kjanat.dev"
 	"github.com/Masterminds/semver/v3"
 	"github.com/google/go-github/v84/github"
-	"github.com/rhysd/actionlint"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ossf/allstar/pkg/config"

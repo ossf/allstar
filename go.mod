@@ -3,16 +3,16 @@ module github.com/ossf/allstar
 go 1.26.5
 
 require (
+	actionlint.kjanat.dev v1.17.0
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/bradleyfalzon/ghinstallation/v2 v2.19.0
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/go-git/go-git/v5 v5.19.3
-	github.com/gobwas/glob v1.1.0
+	github.com/gobwas/glob v0.2.3
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-github/v84 v84.0.0
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79
 	github.com/ossf/scorecard/v5 v5.6.0
-	github.com/rhysd/actionlint v1.7.12
 	github.com/rs/zerolog v1.35.1
 	github.com/shurcooL/githubv4 v0.0.0-20210725200734-83ba7b4c9228
 	gocloud.dev v0.47.0
@@ -21,7 +21,6 @@ require (
 )
 
 require (
-	actionlint.kjanat.dev v1.17.0 // indirect
 	bitbucket.org/creachadair/stringset v0.0.14 // indirect
 	cel.dev/expr v0.25.3 // indirect
 	cloud.google.com/go v0.123.0 // indirect
@@ -109,7 +108,7 @@ require (
 	github.com/go-errors/errors v1.5.1 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.9.2 // indirect
-	github.com/go-jose/go-jose/v4 v4.1.5 // indirect
+	github.com/go-jose/go-jose/v4 v4.1.9 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
