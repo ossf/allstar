@@ -1475,3 +1475,37 @@ func TestListWorkflowRunsByFilenameReal(t *testing.T) {
 		})
 	}
 }
+
+func TestActionSelectorVersionMatching(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name        string
+		selector    string
+		version     string
+		wantMatch   bool
+		wantVersion bool
+	}{
+		{name: "no version restriction", version: "main", wantMatch: true, wantVersion: true},
+		{name: "matching branch", selector: "main", version: "main", wantMatch: true, wantVersion: true},
+		{name: "different branch", selector: "main", version: "develop"},
+		{name: "matching commit", selector: "commit-sha", version: "commit-sha", wantMatch: true, wantVersion: true},
+		{name: "different commit", selector: "commit-sha", version: "other-sha"},
+		{name: "satisfied constraint", selector: ">= 2", version: "v2.1.0", wantMatch: true, wantVersion: true},
+		{name: "unsatisfied constraint", selector: ">= 2", version: "v1.0.0"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			selector := &ActionSelector{Name: "owner/action", Version: tt.selector}
+			metadata := &actionMetadata{name: "owner/action", version: tt.version}
+			match, name, version, err := selector.match(t.Context(), nil, metadata, newGlobCache(), newSemverCache())
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if match != tt.wantMatch || !name || version != tt.wantVersion {
+				t.Errorf("match = %t, name = %t, version = %t; want %t, true, %t",
+					match, name, version, tt.wantMatch, tt.wantVersion)
+			}
+		})
+	}
+}
