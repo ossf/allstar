@@ -111,16 +111,8 @@ func EnforceAll(ctx context.Context, ghc ghclients.GhClientsInterface,
 
 			repos = filterInstallationRepos(repos, specificRepoArg)
 
-			//nolint:godox // TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
-			// FIXME, not getting a rsp for this one, instead I think it is a special
-			// error that I need to introspect. just continue on all errors here
-			// temporarily to fix prod.
-			// if err != nil && rsp != nil && rsp.StatusCode == http.StatusForbidden {
-			// 	log.Error().
-			// 		Err(err).
-			// 		Msg("Skip installation, forbidden.")
-			// 	continue
-			// }
+			// Skip this installation on any listing error, including errors without
+			// an HTTP response, so other installations can still be enforced.
 			if err != nil {
 				log.Error().
 					Err(err).
