@@ -71,16 +71,16 @@ func (c semverCache) compileVersion(s string) (*semver.Version, error) {
 	return nv, nil
 }
 
-// compileVersion returns cached Constraints if present, otherwise attempts
-// semver.NewConstraint.
-func (c semverCache) compileConstraints(s string) (*semver.Constraints, error) {
+// compileConstraints recognizes semantic version constraints and caches them.
+// Other selectors are literal Git refs, so a parse failure is a normal non-match.
+func (c semverCache) compileConstraints(s string) (*semver.Constraints, bool) {
 	if v, ok := c.constraints[s]; ok {
-		return v, nil
+		return v, true
 	}
 	nc, err := semver.NewConstraint(s)
 	if err != nil {
-		return nil, fmt.Errorf("parsing action version constraint %q: %w", s, err)
+		return nil, false
 	}
 	c.constraints[s] = nc
-	return nc, nil
+	return nc, true
 }

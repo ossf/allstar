@@ -473,12 +473,10 @@ func (as *ActionSelector) match(ctx context.Context, c *github.Client, m *action
 		return true, true, true, nil
 	}
 	if as.Version != "" {
-		constraint, err := sc.compileConstraints(as.Version)
-		if err != nil {
-			// on error, assume this is a ref
-			// (we know it doesn't match because not equal above)
-			// TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
-			return false, true, false, nil //nolint:nilerr
+		constraint, isConstraint := sc.compileConstraints(as.Version)
+		if !isConstraint {
+			// Literal Git refs were compared above, so this ref does not match.
+			return false, true, false, nil
 		}
 		version, err := resolveVersion(ctx, c, m, gc, sc)
 		if err != nil {

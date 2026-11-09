@@ -30,7 +30,6 @@ import (
 
 	"github.com/ossf/scorecard/v5/checker"
 	"github.com/ossf/scorecard/v5/checks"
-	sc "github.com/ossf/scorecard/v5/pkg/scorecard"
 )
 
 const (
@@ -129,56 +128,9 @@ func (b Binary) Check(ctx context.Context, c *github.Client, owner,
 		return nil, fmt.Errorf("getting Scorecard client for %s: %w", fullName, err)
 	}
 
-	allRes, err := sc.Run(ctx, scc.ScRepo,
-		sc.WithRepoClient(scc.ScRepoClient),
-		sc.WithChecks([]string{checks.CheckBinaryArtifacts}),
-	)
+	res, err := scorecard.RunCheck(ctx, scc, checks.CheckBinaryArtifacts)
 	if err != nil {
-		msg := "Error while running checks.BinaryArtifacts"
-		log.Warn().
-			Str("org", owner).
-			Str("repo", repo).
-			Str("area", polName).
-			Err(err).
-			Msg(msg)
-		return &policydef.Result{
-			Enabled:    enabled,
-			Pass:       true,
-			NotifyText: fmt.Sprintf("%s: %v", msg, err),
-			Details:    details{},
-		}, nil
-	}
-	if len(allRes.Checks) != 1 {
-		msg := "Error while running checks.BinaryArtifacts : did not get expected checks"
-		log.Warn().
-			Str("org", owner).
-			Str("repo", repo).
-			Str("area", polName).
-			Int("chk_len", len(allRes.Checks)).
-			Msg(msg)
-		return &policydef.Result{
-			Enabled:    enabled,
-			Pass:       true,
-			NotifyText: msg,
-			Details:    details{},
-		}, nil
-	}
-	res := allRes.Checks[0]
-
-	if res.Error != nil {
-		msg := "Error while running checks.BinaryArtifacts"
-		log.Warn().
-			Str("org", owner).
-			Str("repo", repo).
-			Str("area", polName).
-			Err(res.Error).
-			Msg(msg)
-		return &policydef.Result{ //nolint:nilerr // TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
-			Enabled:    enabled,
-			Pass:       true,
-			NotifyText: fmt.Sprintf("%s: %v", msg, res.Error),
-			Details:    details{},
-		}, nil
+		return nil, fmt.Errorf("running Binary Artifacts check for %s: %w", fullName, err)
 	}
 
 	logs := convertAndFilterLogs(res.Details, mc)
