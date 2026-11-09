@@ -31,6 +31,7 @@ import (
 	"github.com/gobwas/glob"
 	"github.com/google/go-github/v84/github"
 
+	"github.com/ossf/allstar/internal/testutil"
 	"github.com/ossf/allstar/pkg/config"
 )
 
@@ -1279,7 +1280,7 @@ func TestCheck(t *testing.T) {
 			}
 
 			if !res.Pass {
-				checkFailedRules(t, res.Details.(details).FailedRules)
+				checkFailedRules(t, testutil.RequireType[details](t, res.Details).FailedRules)
 			}
 
 			for _, message := range test.ExpectMessage {
@@ -1382,7 +1383,7 @@ func setupActionCheck(t *testing.T, test *actionCheckTest) *int {
 		ol config.ConfigLevel, out interface{},
 	) error {
 		if ol == config.OrgLevel {
-			oc := out.(*OrgConfig)
+			oc := testutil.RequireType[*OrgConfig](t, out)
 			*oc = test.Org
 		}
 		return nil
@@ -1446,7 +1447,9 @@ func TestListWorkflowRunsByFilenameReal(t *testing.T) {
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(tt.status)
-				_, _ = w.Write([]byte(tt.body))
+				if _, err := w.Write([]byte(tt.body)); err != nil {
+					t.Errorf("Failed to write test response: %v", err)
+				}
 			}))
 			defer server.Close()
 			client := github.NewClient(server.Client())

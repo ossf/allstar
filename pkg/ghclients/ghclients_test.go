@@ -16,8 +16,12 @@ package ghclients
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -208,4 +212,47 @@ func setupGHClientTest(t *testing.T) {
 		return &ghinstallation.Transport{BaseURL: fmt.Sprint(i)}, nil
 	}
 	getKeyFromSecret = func(_ context.Context, secret string) ([]byte, error) { return []byte(secret), nil }
+}
+
+func TestGetKeyFromSecretReal(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		decoder string
+		wantErr error
+	}{
+		{name: "bytes", decoder: "bytes"},
+		{name: "string rejected", decoder: "string", wantErr: errUnexpectedSecretType},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			secret := "test-private-key"
+			secretPath := filepath.Join(t.TempDir(), "key")
+			if err := os.WriteFile(secretPath, []byte(secret), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			secretURL := &url.URL{
+				Scheme:   "file",
+				Path:     secretPath,
+				RawQuery: url.Values{"decoder": {tt.decoder}}.Encode(),
+			}
+			key, err := getKeyFromSecretReal(t.Context(), secretURL.String())
+			if tt.wantErr != nil {
+				if !errors.Is(err, tt.wantErr) {
+					t.Fatalf("Error = %v, want %v", err, tt.wantErr)
+				}
+				if key != nil {
+					t.Error("Expected no key for an invalid secret type")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+			if diff := cmp.Diff([]byte(secret), key); diff != "" {
+				t.Errorf("Unexpected key. (-want +got):\n%s", diff)
+			}
+		})
+	}
 }

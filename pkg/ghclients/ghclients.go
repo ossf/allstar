@@ -18,6 +18,7 @@ package ghclients
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -36,6 +37,8 @@ import (
 var ghinstallationNewAppsTransport = ghinstallation.NewAppsTransport
 
 var ghinstallationNew = ghinstallation.New
+
+var errUnexpectedSecretType = errors.New("private key secret must decode to []byte")
 
 var (
 	getKey           = getKeyReal
@@ -131,8 +134,11 @@ func getKeyFromSecretReal(ctx context.Context, keySecretVal string) ([]byte, err
 	if err != nil {
 		return nil, fmt.Errorf("reading private key secret: %w", err)
 	}
-	// TODO(lint): Re-enable linter (https://github.com/ossf/allstar/issues/716)
-	return s.Value.([]byte), nil //nolint:errcheck
+	key, ok := s.Value.([]byte)
+	if !ok {
+		return nil, fmt.Errorf("%w (got %T)", errUnexpectedSecretType, s.Value)
+	}
+	return key, nil
 }
 
 func getKeyReal(ctx context.Context) ([]byte, error) {

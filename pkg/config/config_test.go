@@ -478,7 +478,10 @@ func TestIsEnabled(t *testing.T) {
 					Fork:     &test.IsForkedRepo,
 				}, nil, nil
 			}
-			got, _ := isEnabled(context.Background(), test.Org, test.OrgRepo, test.Repo, mockRepos{get: get}, "thisorg", "thisrepo")
+			got, err := isEnabled(context.Background(), test.Org, test.OrgRepo, test.Repo, mockRepos{get: get}, "thisorg", "thisrepo")
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
 			if got != test.Expect {
 				t.Errorf("Unexpected results on %v. Expected: %v", test.Name, test.Expect)
 			}
@@ -672,7 +675,13 @@ func TestWalkGetContents(t *testing.T) {
 			}, nil, nil
 		}
 	}
-	_, _, _, _ = walkGetContents(context.Background(), mockRepos{getContents: getContents}, "", "", p, nil)
+	content, _, _, err := walkGetContents(context.Background(), mockRepos{getContents: getContents}, "", "", p, nil)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+	if content == nil {
+		t.Fatal("Expected file content")
+	}
 	if diff := cmp.Diff(expect, got); diff != "" {
 		t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 	}
@@ -698,7 +707,10 @@ func TestWalkGetContents(t *testing.T) {
 			}, nil, nil
 		}
 	}
-	_, _, rsp, _ := walkGetContents(context.Background(), mockRepos{getContents: getContents}, "", "", p, nil)
+	_, _, rsp, err := walkGetContents(context.Background(), mockRepos{getContents: getContents}, "", "", p, nil)
+	if !errors.Is(err, errContentNotFound) {
+		t.Errorf("Expected content-not-found error, got: %v", err)
+	}
 	if diff := cmp.Diff(expect2, got2); diff != "" {
 		t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 	}
