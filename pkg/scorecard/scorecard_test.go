@@ -154,7 +154,9 @@ func TestGetNew(t *testing.T) {
 	closeRepo = func() error {
 		return nil
 	}
-	_, _ = Get(context.Background(), "org/repo", false, nil)
+	if _, err := Get(context.Background(), "org/repo", false, nil); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 	if !makeCalled {
 		t.Error("githubrepo.MakeGithubRepo not called for new repo")
 	}
@@ -185,9 +187,13 @@ func TestGetExisting(t *testing.T) {
 	closeRepo = func() error {
 		return nil
 	}
-	_, _ = Get(context.Background(), "org/repo", false, nil)
+	if _, err := Get(context.Background(), "org/repo", false, nil); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 	makeCalled, createCalled, initCalled = false, false, false
-	_, _ = Get(context.Background(), "org/repo", false, nil)
+	if _, err := Get(context.Background(), "org/repo", false, nil); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 	if makeCalled {
 		t.Error("githubrepo.MakeGithubRepo called for existing repo")
 	}
@@ -216,7 +222,9 @@ func TestClose(t *testing.T) {
 		closeCalled = true
 		return nil
 	}
-	_, _ = Get(context.Background(), "org/repo", false, nil)
+	if _, err := Get(context.Background(), "org/repo", false, nil); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 	Close("org/repo")
 	if !closeCalled {
 		t.Error("repoclient.Close not called for Close")
@@ -241,10 +249,14 @@ func TestRecreate(t *testing.T) {
 	closeRepo = func() error {
 		return nil
 	}
-	_, _ = Get(context.Background(), "org/repo", false, nil)
+	if _, err := Get(context.Background(), "org/repo", false, nil); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 	Close("org/repo")
 	makeCalled, createCalled, initCalled = false, false, false
-	_, _ = Get(context.Background(), "org/repo", false, nil)
+	if _, err := Get(context.Background(), "org/repo", false, nil); err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
 	if !makeCalled {
 		t.Error("githubrepo.MakeGithubRepo not called for new repo")
 	}

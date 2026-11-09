@@ -27,6 +27,7 @@ import (
 
 	"github.com/google/go-github/v84/github"
 
+	"github.com/ossf/allstar/internal/testutil"
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/scorecard"
 
@@ -269,7 +270,7 @@ func TestCheckWithSARIFUpload(t *testing.T) {
 				_, _, _ string, ol config.ConfigLevel, out interface{},
 			) error {
 				if ol == config.OrgLevel {
-					oc := out.(*OrgConfig)
+					oc := testutil.RequireType[*OrgConfig](t, out)
 					*oc = OrgConfig{
 						Action:    "issue",
 						Checks:    []string{"Binary-Artifacts"},
@@ -335,7 +336,7 @@ func TestCheckSARIFUploadErrorNonBlocking(t *testing.T) {
 		_, _, _ string, ol config.ConfigLevel, out interface{},
 	) error {
 		if ol == config.OrgLevel {
-			oc := out.(*OrgConfig)
+			oc := testutil.RequireType[*OrgConfig](t, out)
 			*oc = OrgConfig{
 				Action:    "issue",
 				Checks:    []string{"Binary-Artifacts"},

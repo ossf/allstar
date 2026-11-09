@@ -478,7 +478,10 @@ func TestIsEnabled(t *testing.T) {
 					Fork:     &test.IsForkedRepo,
 				}, nil, nil
 			}
-			got, _ := isEnabled(context.Background(), test.Org, test.OrgRepo, test.Repo, mockRepos{get: get}, "thisorg", "thisrepo")
+			got, err := isEnabled(context.Background(), test.Org, test.OrgRepo, test.Repo, mockRepos{get: get}, "thisorg", "thisrepo")
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
 			if got != test.Expect {
 				t.Errorf("Unexpected results on %v. Expected: %v", test.Name, test.Expect)
 			}

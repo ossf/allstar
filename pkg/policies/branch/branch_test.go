@@ -24,6 +24,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v84/github"
 
+	"github.com/ossf/allstar/internal/testutil"
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
 )
@@ -222,13 +223,13 @@ func TestConfigPrecedence(t *testing.T) {
 			) error {
 				switch ol {
 				case config.RepoLevel:
-					rc := out.(*RepoConfig)
+					rc := testutil.RequireType[*RepoConfig](t, out)
 					*rc = test.Repo
 				case config.OrgRepoLevel:
-					orc := out.(*RepoConfig)
+					orc := testutil.RequireType[*RepoConfig](t, out)
 					*orc = test.OrgRepo
 				case config.OrgLevel:
-					oc := out.(*OrgConfig)
+					oc := testutil.RequireType[*OrgConfig](t, out)
 					*oc = test.Org
 				}
 				return nil
@@ -1295,10 +1296,10 @@ func TestCheck(t *testing.T) {
 				owner, repo, path string, ol config.ConfigLevel, out interface{},
 			) error {
 				if repo == "thisrepo" && ol == config.RepoLevel {
-					rc := out.(*RepoConfig)
+					rc := testutil.RequireType[*RepoConfig](t, out)
 					*rc = test.Repo
 				} else if ol == config.OrgLevel {
-					oc := out.(*OrgConfig)
+					oc := testutil.RequireType[*OrgConfig](t, out)
 					*oc = test.Org
 				}
 				return nil
@@ -2076,10 +2077,10 @@ func TestFix(t *testing.T) {
 				owner, repo, path string, ol config.ConfigLevel, out interface{},
 			) error {
 				if repo == "thisrepo" && ol == config.RepoLevel {
-					rc := out.(*RepoConfig)
+					rc := testutil.RequireType[*RepoConfig](t, out)
 					*rc = test.Repo
 				} else if ol == config.OrgLevel {
-					oc := out.(*OrgConfig)
+					oc := testutil.RequireType[*OrgConfig](t, out)
 					*oc = test.Org
 				}
 				return nil
@@ -2189,7 +2190,7 @@ func TestFixStopsAfterProtectionUpdateFailure(t *testing.T) {
 		level config.ConfigLevel, out interface{},
 	) error {
 		if level == config.OrgLevel {
-			*out.(*OrgConfig) = OrgConfig{
+			*testutil.RequireType[*OrgConfig](t, out) = OrgConfig{
 				EnforceBranches: map[string][]string{"thisrepo": {"first", "second"}},
 				RequireApproval: true,
 			}
