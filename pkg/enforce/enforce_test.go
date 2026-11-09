@@ -686,3 +686,81 @@ func TestAllowedRepositories(t *testing.T) {
 		})
 	}
 }
+
+//nolint:paralleltest // Replaces package-level installation and policy mocks and the worker limit.
+func TestEnforceAllContinuesAfterListingError(t *testing.T) {
+	oldInstallations, oldRepos := getAppInstallations, getAppInstallationRepos
+	oldRunPolicies, oldEnabled := runPolicies, configIsBotEnabled
+	oldWorkers := operator.NumWorkers
+	t.Cleanup(func() {
+		getAppInstallations, getAppInstallationRepos = oldInstallations, oldRepos
+		runPolicies, configIsBotEnabled = oldRunPolicies, oldEnabled
+		operator.NumWorkers = oldWorkers
+	})
+	// Process installations in order so the first fails and the second succeeds.
+	operator.NumWorkers = 1
+	getAppInstallations = func(context.Context, *github.Client) ([]*github.Installation, error) {
+		return []*github.Installation{{ID: github.Ptr(int64(1))}, {ID: github.Ptr(int64(2))}}, nil
+	}
+	configIsBotEnabled = func(context.Context, *github.Client, string, string) bool {
+		return true
+	}
+	tests := []struct {
+		name     string
+		response *github.Response
+		err      error
+	}{
+		{
+			name: "forbidden without response",
+			err: &github.ErrorResponse{
+				Response: &http.Response{StatusCode: http.StatusForbidden},
+				Message:  "forbidden",
+			},
+		},
+		{
+			name:     "forbidden with response",
+			response: &github.Response{Response: &http.Response{StatusCode: http.StatusForbidden}},
+			err:      errors.New("forbidden"),
+		},
+		{
+			name:     "server error",
+			response: &github.Response{Response: &http.Response{StatusCode: http.StatusInternalServerError}},
+			err:      errors.New("server unavailable"),
+		},
+		{name: "transport error", err: errors.New("connection failed")},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			listCalls, policyCalls := 0, 0
+			getAppInstallationRepos = func(context.Context, *github.Client) ([]*github.Repository, *github.Response, error) {
+				listCalls++
+				if listCalls == 1 {
+					// Partial repository lists must also be ignored on a listing error.
+					return []*github.Repository{{Name: github.Ptr("partial")}}, tt.response, tt.err
+				}
+				return []*github.Repository{{
+					Name:  github.Ptr("healthy"),
+					Owner: &github.User{Login: github.Ptr("owner")},
+				}}, nil, nil
+			}
+			runPolicies = func(_ context.Context, _ *github.Client, _, repo string, _ bool, _ string) (EnforceRepoResults, error) {
+				policyCalls++
+				if repo != "healthy" {
+					t.Errorf("Policies ran on repository %q from a failed listing", repo)
+				}
+				return EnforceRepoResults{"test policy": false}, nil
+			}
+			got, err := EnforceAll(t.Context(), &MockGhClients{}, "", "")
+			if err != nil {
+				t.Fatalf("Listing failure stopped enforcement: %v", err)
+			}
+			if listCalls != 2 || policyCalls != 1 {
+				t.Errorf("Listing calls = %d, policy calls = %d; want 2 and 1", listCalls, policyCalls)
+			}
+			want := EnforceAllResults{"test policy": {"totalFailed": 1}}
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("Unexpected results from remaining installation. (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
