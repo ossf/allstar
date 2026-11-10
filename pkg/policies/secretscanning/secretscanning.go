@@ -17,6 +17,7 @@ package secretscanning
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/go-github/v84/github"
@@ -31,9 +32,11 @@ const (
 	polName    = "Secret Scanning"
 )
 
-const notifyText = `GitHub secret scanning looks for supported secret formats committed to a repository and creates alerts when it finds them.
+const notifyText = `GitHub secret scanning looks for supported secret formats committed to a repository ` +
+	`and creates alerts when it finds them.
 
-To fix this, enable secret scanning in the repository's security settings. Go to https://github.com/%v/%v/settings/security_analysis to enable it.
+To fix this, enable secret scanning in the repository's security settings. ` +
+	`Go to https://github.com/%v/%v/settings/security_analysis to enable it.
 
 For more information, see https://docs.github.com/en/code-security/secret-scanning/about-secret-scanning.`
 
@@ -42,7 +45,7 @@ type OrgConfig struct {
 	// OptConfig is the standard org-level opt in/out config.
 	OptConfig config.OrgOptConfig `json:"optConfig"`
 
-	// Action defines which action to take, default log, other: issue.
+	// Action defines which action to take, default log, other: issue, fix.
 	Action string `json:"action"`
 }
 
@@ -64,14 +67,11 @@ type details struct {
 	Available bool
 }
 
-var configFetchConfig func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error
+var configFetchConfig = config.FetchConfig
 
-var configIsEnabled func(context.Context, config.OrgOptConfig, config.RepoOptConfig, config.RepoOptConfig, *github.Client, string, string) (bool, error)
+var configIsEnabled = config.IsEnabled
 
-func init() {
-	configFetchConfig = config.FetchConfig
-	configIsEnabled = config.IsEnabled
-}
+var errStatusUnavailable = errors.New("secret scanning status is unavailable")
 
 // SecretScanning implements policydef.Policy.
 type SecretScanning bool
@@ -109,10 +109,13 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner, repo 
 	if err != nil {
 		return nil, err
 	}
+	if !enabled {
+		return &policydef.Result{Enabled: false}, nil
+	}
 
 	repository, _, err := rep.Get(ctx, owner, repo)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("getting secret scanning settings for %s/%s: %w", owner, repo, err)
 	}
 	status, available := secretScanningStatus(repository)
 	log.Info().
@@ -133,7 +136,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner, repo 
 		},
 	}
 	if !available {
-		return result, nil
+		return nil, fmt.Errorf("checking secret scanning for %s/%s: %w", owner, repo, errStatusUnavailable)
 	}
 	if status == "enabled" {
 		return result, nil
@@ -144,10 +147,11 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner, repo 
 }
 
 func secretScanningStatus(repository *github.Repository) (string, bool) {
-	if repository == nil || repository.SecurityAndAnalysis == nil || repository.SecurityAndAnalysis.SecretScanning == nil {
+	status := repository.GetSecurityAndAnalysis().GetSecretScanning().GetStatus()
+	if status != "enabled" && status != "disabled" {
 		return "unavailable", false
 	}
-	return repository.SecurityAndAnalysis.SecretScanning.GetStatus(), true
+	return status, true
 }
 
 // Fix enables GitHub secret scanning for the repository.
@@ -161,7 +165,10 @@ func fix(ctx context.Context, rep repositories, owner, repo string) error {
 			SecretScanning: &github.SecretScanning{Status: github.Ptr("enabled")},
 		},
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("enabling secret scanning for %s/%s: %w", owner, repo, err)
+	}
+	return nil
 }
 
 // GetAction returns the configured action for this policy.
