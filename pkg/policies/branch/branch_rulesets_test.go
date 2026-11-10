@@ -98,6 +98,68 @@ func TestFixContinuesWhenBranchProtectionIsNotAvailable(t *testing.T) {
 	}
 }
 
+func TestFixContinuesWhenUpdatingExistingBranchProtectionIsNotAvailable(t *testing.T) {
+	attempted := make([]string, 0)
+	protection := &github.Protection{
+		AllowForcePushes: &github.AllowForcePushes{Enabled: false},
+		EnforceAdmins:    &github.AdminEnforcement{Enabled: false},
+	}
+
+	get = func(context.Context, string, string) (*github.Repository, *github.Response, error) {
+		return &github.Repository{DefaultBranch: github.Ptr("main")}, nil, nil
+	}
+	configFetchConfig = func(ctx context.Context, c *github.Client,
+		owner, repo, path string, ol config.ConfigLevel, out interface{},
+	) error {
+		if ol == config.OrgLevel {
+			oc := out.(*OrgConfig)
+			*oc = OrgConfig{
+				EnforceDefault:  true,
+				EnforceBranches: map[string][]string{"thisrepo": {"migrated"}},
+				EnforceOnAdmins: true,
+			}
+		}
+		return nil
+	}
+	configIsEnabled = func(ctx context.Context, o config.OrgOptConfig, orc, r config.RepoOptConfig,
+		c *github.Client, owner, repo string,
+	) (bool, error) {
+		return true, nil
+	}
+	getBranchProtection = func(ctx context.Context, owner, repo, branch string) (
+		*github.Protection, *github.Response, error,
+	) {
+		return protection, nil, nil
+	}
+	updateBranchProtection = func(ctx context.Context, owner, repo, branch string,
+		preq *github.ProtectionRequest,
+	) (*github.Protection, *github.Response, error) {
+		attempted = append(attempted, branch)
+		if branch == "migrated" {
+			rsp, err := notFound()
+			return nil, rsp, err
+		}
+		return nil, nil, nil
+	}
+	getSignaturesProtectedBranch = func(ctx context.Context, owner, repo, branch string) (
+		*github.SignaturesProtectedBranch, *github.Response, error,
+	) {
+		return &github.SignaturesProtectedBranch{Enabled: github.Ptr(false)}, nil, nil
+	}
+	requireSignaturesProtectedBranch = func(ctx context.Context, owner, repo, branch string) (
+		*github.SignaturesProtectedBranch, *github.Response, error,
+	) {
+		return nil, nil, nil
+	}
+
+	if err := fix(context.Background(), mockRepos{}, nil, "", "thisrepo"); err != nil {
+		t.Fatalf("a branch with unavailable existing protection must not fail the run: %v", err)
+	}
+	if len(attempted) != 2 || attempted[0] != "migrated" || attempted[1] != "main" {
+		t.Errorf("protection updates were attempted for %v, want [migrated main]", attempted)
+	}
+}
+
 // The same applies to the signed commits call: it is made per branch on protection that
 // is not there either, so its 404 used to end the run just as effectively.
 func TestFixContinuesWhenSignedCommitsCannotBeRequired(t *testing.T) {
