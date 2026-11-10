@@ -16,11 +16,15 @@ package secretscanning
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-github/v84/github"
 
+	"github.com/ossf/allstar/internal/testutil"
 	"github.com/ossf/allstar/pkg/config"
 	"github.com/ossf/allstar/pkg/policydef"
 )
@@ -34,11 +38,12 @@ func (m *mockRepos) Get(context.Context, string, string) (*github.Repository, *g
 	return m.repository, nil, nil
 }
 
-func (m *mockRepos) Edit(_ context.Context, _ string, _ string, repository *github.Repository) (*github.Repository, *github.Response, error) {
+func (m *mockRepos) Edit(_ context.Context, _, _ string, repository *github.Repository) (*github.Repository, *github.Response, error) {
 	m.edited = repository
 	return repository, nil, nil
 }
 
+//nolint:paralleltest // Replaces package-level configuration mocks.
 func TestConfigPrecedence(t *testing.T) {
 	originalFetch := configFetchConfig
 	t.Cleanup(func() { configFetchConfig = originalFetch })
@@ -82,11 +87,11 @@ func TestConfigPrecedence(t *testing.T) {
 			configFetchConfig = func(_ context.Context, _ *github.Client, _, _ string, _ string, level config.ConfigLevel, out interface{}) error {
 				switch level {
 				case config.OrgLevel:
-					*out.(*OrgConfig) = test.org
+					*testutil.RequireType[*OrgConfig](t, out) = test.org
 				case config.OrgRepoLevel:
-					*out.(*RepoConfig) = test.orgRepo
+					*testutil.RequireType[*RepoConfig](t, out) = test.orgRepo
 				case config.RepoLevel:
-					*out.(*RepoConfig) = test.repo
+					*testutil.RequireType[*RepoConfig](t, out) = test.repo
 				}
 				return nil
 			}
@@ -99,6 +104,7 @@ func TestConfigPrecedence(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level configuration mocks.
 func TestCheck(t *testing.T) {
 	originalFetch := configFetchConfig
 	originalEnabled := configIsEnabled
@@ -114,14 +120,9 @@ func TestCheck(t *testing.T) {
 		expected   policydef.Result
 	}{
 		{
-			name:       "policy disabled",
-			enabled:    false,
-			repository: repositoryWithStatus("enabled"),
-			expected: policydef.Result{
-				Enabled: false,
-				Pass:    true,
-				Details: details{Status: "enabled", Available: true},
-			},
+			name:     "policy disabled without status",
+			enabled:  false,
+			expected: policydef.Result{Enabled: false},
 		},
 		{
 			name:       "secret scanning enabled",
@@ -140,18 +141,8 @@ func TestCheck(t *testing.T) {
 			expected: policydef.Result{
 				Enabled:    true,
 				Pass:       false,
-				NotifyText: "Secret scanning not enabled.\nGitHub secret scanning looks for supported secret formats committed to a repository and creates alerts when it finds them.",
+				NotifyText: "Secret scanning not enabled.\n" + fmt.Sprintf(notifyText, "owner", "repo"),
 				Details:    details{Status: "disabled", Available: true},
-			},
-		},
-		{
-			name:       "status unavailable",
-			enabled:    true,
-			repository: &github.Repository{},
-			expected: policydef.Result{
-				Enabled: true,
-				Pass:    true,
-				Details: details{Status: "unavailable", Available: false},
 			},
 		},
 	}
@@ -169,17 +160,62 @@ func TestCheck(t *testing.T) {
 			if err != nil {
 				t.Fatalf("check() error = %v", err)
 			}
-			comparer := cmp.Comparer(func(left, right string) bool {
-				return truncate(left, 140) == truncate(right, 140)
-			})
-			if diff := cmp.Diff(&test.expected, result, comparer); diff != "" {
+			if diff := cmp.Diff(&test.expected, result); diff != "" {
 				t.Fatalf("check() mismatch (-want +got):\n%s", diff)
 			}
 		})
 	}
 }
 
+//nolint:paralleltest // Replaces package-level configuration mocks.
+func TestCheckUnavailableStatus(t *testing.T) {
+	originalFetch := configFetchConfig
+	originalEnabled := configIsEnabled
+	t.Cleanup(func() {
+		configFetchConfig = originalFetch
+		configIsEnabled = originalEnabled
+	})
+	configFetchConfig = func(context.Context, *github.Client, string, string, string, config.ConfigLevel, interface{}) error {
+		return nil
+	}
+	configIsEnabled = func(context.Context, config.OrgOptConfig, config.RepoOptConfig, config.RepoOptConfig, *github.Client, string, string) (bool, error) {
+		return true, nil
+	}
+
+	tests := []struct {
+		name string
+		body string
+	}{
+		{name: "nil repository", body: `null`},
+		{name: "missing security settings", body: `{}`},
+		{name: "null security settings", body: `{"security_and_analysis":null}`},
+		{name: "missing secret scanning", body: `{"security_and_analysis":{}}`},
+		{name: "null secret scanning", body: `{"security_and_analysis":{"secret_scanning":null}}`},
+		{name: "missing status", body: `{"security_and_analysis":{"secret_scanning":{}}}`},
+		{name: "null status", body: `{"security_and_analysis":{"secret_scanning":{"status":null}}}`},
+		{name: "empty status", body: `{"security_and_analysis":{"secret_scanning":{"status":""}}}`},
+		{name: "unknown status", body: `{"security_and_analysis":{"secret_scanning":{"status":"unknown"}}}`},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var repository *github.Repository
+			if err := json.Unmarshal([]byte(test.body), &repository); err != nil {
+				t.Fatal(err)
+			}
+			result, err := check(context.Background(), &mockRepos{repository: repository}, nil, "owner", "repo")
+			if !errors.Is(err, errStatusUnavailable) {
+				t.Fatalf("check() error = %v, want unavailable status", err)
+			}
+			if result != nil {
+				t.Fatalf("check() result = %+v, want nil for unavailable status", result)
+			}
+		})
+	}
+}
+
 func TestFixEnablesSecretScanning(t *testing.T) {
+	t.Parallel()
+
 	repositories := &mockRepos{}
 
 	err := fix(context.Background(), repositories, "owner", "repo")
@@ -200,11 +236,4 @@ func repositoryWithStatus(status string) *github.Repository {
 			SecretScanning: &github.SecretScanning{Status: github.Ptr(status)},
 		},
 	}
-}
-
-func truncate(value string, length int) string {
-	if len(value) <= length {
-		return value
-	}
-	return value[:length]
 }
