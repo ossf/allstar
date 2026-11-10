@@ -23,6 +23,7 @@ import (
 
 	"github.com/google/go-github/v84/github"
 
+	"github.com/ossf/allstar/internal/testutil"
 	"github.com/ossf/allstar/pkg/config"
 )
 
@@ -50,7 +51,7 @@ func TestFixContinuesWhenBranchProtectionIsNotAvailable(t *testing.T) {
 		owner, repo, path string, ol config.ConfigLevel, out interface{},
 	) error {
 		if ol == config.OrgLevel {
-			oc := out.(*OrgConfig)
+			oc := testutil.RequireType[*OrgConfig](t, out)
 			*oc = OrgConfig{
 				EnforceDefault:  true,
 				EnforceBranches: map[string][]string{"thisrepo": {"migrated"}},
@@ -113,7 +114,7 @@ func TestFixContinuesWhenUpdatingExistingBranchProtectionIsNotAvailable(t *testi
 		owner, repo, path string, ol config.ConfigLevel, out interface{},
 	) error {
 		if ol == config.OrgLevel {
-			oc := out.(*OrgConfig)
+			oc := testutil.RequireType[*OrgConfig](t, out)
 			*oc = OrgConfig{
 				EnforceDefault:  true,
 				EnforceBranches: map[string][]string{"thisrepo": {"migrated"}},
@@ -177,7 +178,7 @@ func TestFixContinuesWhenSignedCommitsCannotBeRequired(t *testing.T) {
 		owner, repo, path string, ol config.ConfigLevel, out interface{},
 	) error {
 		if ol == config.OrgLevel {
-			oc := out.(*OrgConfig)
+			oc := testutil.RequireType[*OrgConfig](t, out)
 			*oc = OrgConfig{
 				EnforceDefault:       true,
 				EnforceBranches:      map[string][]string{"thisrepo": {"migrated"}},
@@ -233,7 +234,7 @@ func TestFixStillFailsOnOtherErrors(t *testing.T) {
 		owner, repo, path string, ol config.ConfigLevel, out interface{},
 	) error {
 		if ol == config.OrgLevel {
-			oc := out.(*OrgConfig)
+			oc := testutil.RequireType[*OrgConfig](t, out)
 			*oc = OrgConfig{EnforceDefault: true, RequireApproval: true, ApprovalCount: 1}
 		}
 		return nil
