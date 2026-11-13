@@ -126,6 +126,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	if err != nil {
 		return nil, err
 	}
+	mc := mergeConfig(oc, orc, rc, repo)
 
 	var d details
 
@@ -167,7 +168,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		// "CODEOWNERS" does not exist, err is also not nil but we don't need it
 
 		// if we require CODEOWNERS on all repositories in the Org
-		if oc.RequireCODEOWNERS {
+		if mc.RequireCODEOWNERS {
 			d.CodeownersFound = false
 			return &policydef.Result{
 				Enabled:    enabled,

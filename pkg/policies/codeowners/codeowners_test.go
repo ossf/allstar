@@ -180,6 +180,60 @@ func TestCheck(t *testing.T) {
 			},
 		},
 		{
+			Name:           "FailNotPresentRequiredByRepo",
+			Org:            OrgConfig{OptConfig: config.OrgOptConfig{OptOutStrategy: true}},
+			Repo:           RepoConfig{RequireCODEOWNERS: github.Ptr(true)},
+			CodeOwnPresent: false,
+			cofigEnabled:   true,
+			ErrorCount:     0,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "CODEOWNERS file not present.\n" + notifyText,
+				Details: details{
+					CodeownersFound: false,
+				},
+			},
+		},
+		{
+			Name:           "PassNotPresentNotRequiredByRepo",
+			Org:            OrgConfig{RequireCODEOWNERS: true, OptConfig: config.OrgOptConfig{OptOutStrategy: true}},
+			Repo:           RepoConfig{RequireCODEOWNERS: github.Ptr(false)},
+			CodeOwnPresent: false,
+			cofigEnabled:   true,
+			ErrorCount:     0,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "CODEOWNERS file not present.\n" + notifyText,
+				Details: details{
+					CodeownersFound: false,
+				},
+			},
+		},
+		{
+			Name: "FailNotPresentRepoOverrideDisabled",
+			Org: OrgConfig{
+				RequireCODEOWNERS: true,
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy:      true,
+					DisableRepoOverride: true,
+				},
+			},
+			Repo:           RepoConfig{RequireCODEOWNERS: github.Ptr(false)},
+			CodeOwnPresent: false,
+			cofigEnabled:   true,
+			ErrorCount:     0,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "CODEOWNERS file not present.\n" + notifyText,
+				Details: details{
+					CodeownersFound: false,
+				},
+			},
+		},
+		{
 			Name: "Pass",
 			Org: OrgConfig{
 				OptConfig: config.OrgOptConfig{
