@@ -508,6 +508,68 @@ func TestCheck(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name: "Repo-level exemption allows push",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+			},
+			Repo: RepoConfig{
+				Exemptions: []*RepoExemption{
+					{
+						User: alice,
+						Push: true,
+					},
+				},
+			},
+			Users: []*github.User{
+				{
+					Login:       &alice,
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(false)},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details:    details{},
+			},
+		},
+		{
+			Name: "Repo-level exemption ignored when repo override is disabled",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy:      true,
+					DisableRepoOverride: true,
+				},
+			},
+			Repo: RepoConfig{
+				Exemptions: []*RepoExemption{
+					{
+						User: alice,
+						Push: true,
+					},
+				},
+			},
+			Users: []*github.User{
+				{
+					Login:       &alice,
+					Permissions: &github.RepositoryPermissions{Push: github.Ptr(true), Admin: github.Ptr(false)},
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "Found 1 outside collaborators with push access.\nThis policy requires users with this access to be members of the organisation.",
+				Details: details{
+					OutsidePushCount: 1,
+					OutsidePushers:   []string{"alice"},
+				},
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -554,4 +616,35 @@ func trunc(s string, n int) string {
 		return s
 	}
 	return s[:n]
+}
+
+func TestMergeConfigRepoExemptions(t *testing.T) {
+	oc := &OrgConfig{
+		Exemptions: make([]*OutsideExemption, 1, 2),
+	}
+	oc.Exemptions[0] = &OutsideExemption{User: "bob", Repo: "*", Push: true}
+	rc := &RepoConfig{
+		Exemptions: []*RepoExemption{{User: "alice", Admin: true}},
+	}
+
+	mc := mergeConfig(oc, &RepoConfig{}, rc, "my-repo[1]")
+
+	want := []*OutsideExemption{
+		{User: "bob", Repo: "*", Push: true},
+		{User: "alice", Repo: `my-repo\[1\]`, Admin: true},
+	}
+	if diff := cmp.Diff(want, mc.Exemptions); diff != "" {
+		t.Errorf("Unexpected exemptions (-want +got):\n%s", diff)
+	}
+	if got := oc.Exemptions[:2][1]; got != nil {
+		t.Errorf("Org-level exemptions were modified: %+v", got)
+	}
+
+	gc := globCache{}
+	if !isExempt("my-repo[1]", "alice", "admin", mc.Exemptions, gc) {
+		t.Error("Expected alice to be exempt in my-repo[1]")
+	}
+	if isExempt("my-repo1", "alice", "admin", mc.Exemptions, gc) {
+		t.Error("Repo-level exemption should not match another repository")
+	}
 }
