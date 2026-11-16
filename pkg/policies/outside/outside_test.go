@@ -619,6 +619,7 @@ func trunc(s string, n int) string {
 }
 
 func TestMergeConfigRepoExemptions(t *testing.T) {
+	t.Parallel()
 	oc := &OrgConfig{
 		Exemptions: make([]*OutsideExemption, 1, 2),
 	}
