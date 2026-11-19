@@ -92,6 +92,10 @@ func (m mockRC) ListReleases() ([]clients.Release, error) {
 	return nil, nil
 }
 
+func (m mockRC) IsReleaseImmutable(owner, repo, tag string) (bool, error) {
+	return false, nil
+}
+
 func (m mockRC) ListContributors() ([]clients.User, error) {
 	return nil, nil
 }
