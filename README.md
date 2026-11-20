@@ -373,6 +373,26 @@ have either administrator(default) or push(optional) access to the
 repository. Only organization members should have this access, as otherwise
 untrusted members can change admin level settings and commit malicious code.
 
+Specific users can be exempted. In the org-level `outside.yaml`, each exemption
+names a user, a repository glob and the access it allows:
+
+```yaml
+exemptions:
+  - user: octocat
+    repo: docs-*
+    push: true
+```
+
+A repository can also exempt users in its own `.allstar/outside.yaml`, unless
+the org-level config sets `optConfig.disableRepoOverride: true`. Repo-level
+exemptions have no `repo` field and only apply to that repository:
+
+```yaml
+exemptions:
+  - user: octocat
+    push: true
+```
+
 ### SECURITY.md
 
 This policy's config file is named `security.yaml`, and the [config definitions

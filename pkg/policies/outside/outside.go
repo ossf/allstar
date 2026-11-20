@@ -58,7 +58,8 @@ If you don't see the Settings tab you probably don't have administrative access.
 OR
 
 * Exempt the user by adding an exemption to your organization-level Outside Collaborators ` +
-	`configuration file.
+	`configuration file, or to the repository-level one if your organization allows repository ` +
+	`overrides.
 `
 
 // OrgConfig is the org-level config definition for Outside Collaborators
@@ -80,8 +81,6 @@ type OrgConfig struct {
 	AdminAllowed bool `json:"adminAllowed"`
 
 	// Exemptions is a list of user-repo-access pairings to exempt.
-	// Exemptions are only defined at the org level because they should be made
-	// obvious to org security managers.
 	Exemptions []*OutsideExemption `json:"exemptions"`
 }
 
@@ -99,6 +98,24 @@ type RepoConfig struct {
 
 	// AdminAllowed overrides the same setting in org-level, only if present.
 	AdminAllowed *bool `json:"adminAllowed"`
+
+	// Exemptions is a list of users to exempt in this repository. They are
+	// added to the org-level exemptions. Repo-level exemptions are ignored
+	// when the org sets DisableRepoOverride.
+	Exemptions []*RepoExemption `json:"exemptions"`
+}
+
+// RepoExemption is a repo-level exemption entry for the Outside Collaborators
+// policy. It only applies to the repository whose config it is in.
+type RepoExemption struct {
+	// User is a GitHub username
+	User string `json:"user"`
+
+	// Push allows push permission
+	Push bool `json:"push"`
+
+	// Admin allows admin permission
+	Admin bool `json:"admin"`
 }
 
 type mergedConfig struct {
@@ -401,7 +418,7 @@ func mergeConfig(oc *OrgConfig, orc, rc *RepoConfig, repo string) *mergedConfig 
 		Action:       oc.Action,
 		PushAllowed:  oc.PushAllowed,
 		AdminAllowed: oc.AdminAllowed,
-		Exemptions:   oc.Exemptions,
+		Exemptions:   append([]*OutsideExemption(nil), oc.Exemptions...),
 	}
 	mc = mergeInRepoConfig(mc, orc, repo)
 
@@ -420,6 +437,14 @@ func mergeInRepoConfig(mc *mergedConfig, rc *RepoConfig, repo string) *mergedCon
 	}
 	if rc.AdminAllowed != nil {
 		mc.AdminAllowed = *rc.AdminAllowed
+	}
+	for _, e := range rc.Exemptions {
+		mc.Exemptions = append(mc.Exemptions, &OutsideExemption{
+			User:  e.User,
+			Repo:  glob.QuoteMeta(repo),
+			Push:  e.Push,
+			Admin: e.Admin,
+		})
 	}
 	return mc
 }
