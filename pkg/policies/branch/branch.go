@@ -189,6 +189,8 @@ const enforceOnAdminsRulesetGuidance = "\nAllstar cannot verify admin enforcemen
 	"To pass Allstar's enforceOnAdmins check, configure the required protections in classic branch protection " +
 	"and enable \"Include administrators\".\n"
 
+var errRulesetAlwaysBypass = errors.New("ruleset has an always bypass actor")
+
 var (
 	configFetchConfig = config.FetchConfig
 	configIsEnabled   = config.IsEnabled
@@ -422,7 +424,9 @@ func getRulesetDetails(ctx context.Context, rep repositories, owner, repo, branc
 
 // ensureRulesetsHaveNoAlwaysBypass fails closed: a ruleset with an Always
 // bypass cannot establish that its protections apply to all repository writers.
-func ensureRulesetsHaveNoAlwaysBypass(ctx context.Context, rep repositories, owner, repo string, rules *github.BranchRules) error {
+func ensureRulesetsHaveNoAlwaysBypass(ctx context.Context, rep repositories,
+	owner, repo string, rules *github.BranchRules,
+) error {
 	for id := range rulesetIDs(rules) {
 		ruleset, _, err := rep.GetRuleset(ctx, owner, repo, id, true)
 		if err != nil {
@@ -430,7 +434,7 @@ func ensureRulesetsHaveNoAlwaysBypass(ctx context.Context, rep repositories, own
 		}
 		for _, actor := range ruleset.BypassActors {
 			if actor.BypassMode != nil && *actor.BypassMode == github.BypassModeAlways {
-				return fmt.Errorf("ruleset %d has an always bypass actor", id)
+				return fmt.Errorf("ruleset %d: %w", id, errRulesetAlwaysBypass)
 			}
 		}
 	}

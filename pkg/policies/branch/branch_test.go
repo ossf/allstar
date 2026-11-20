@@ -1670,6 +1670,7 @@ func TestGetRulesetDetailsPagination(t *testing.T) {
 }
 
 func TestGetRulesetDetailsEscapesBranch(t *testing.T) {
+	t.Parallel()
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got, want := r.URL.EscapedPath(), "/repos/owner/repo/rules/branches/release%2F%2342"; got != want {
 			t.Errorf("request path = %q, want %q", got, want)
