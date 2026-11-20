@@ -334,7 +334,7 @@ here](https://pkg.go.dev/github.com/ossf/allstar/pkg/policies/branch#OrgConfig).
 
 The branch protection policy checks that GitHub's [branch protection
 settings](https://docs.github.com/en/github/administering-a-repository/defining-the-mergeability-of-pull-requests/about-protected-branches)
-or active repository rulesets are setup correctly according to the specified
+or active repository rulesets are set up correctly according to the specified
 configuration. The issue text will describe which setting is incorrect. See
 [GitHub's
 documentation](https://docs.github.com/en/github/administering-a-repository/defining-the-mergeability-of-pull-requests/about-protected-branches)
@@ -344,12 +344,12 @@ Rulesets are checked for requirements that directly map to branch protection
 configuration, such as pull request reviews, required status checks, signed
 commits, and non-fast-forward protection. Rulesets are not used to satisfy
 `enforceOnAdmins`, because rulesets model bypass differently than classic
-branch protection. When a branch is covered by a ruleset but `enforceOnAdmins`
-is set in policy, the generated issue includes guidance on removing admin
-bypass actors from the ruleset (or enabling classic "Include administrators")
-to satisfy the policy. The `fix` action changes classic branch protection
-settings to be in compliance with the specified policy configuration; it does
-not create or update rulesets.
+branch protection. Remove admin bypass access from applicable rulesets,
+including pull-request-only bypass, to apply those rules to admins. Allstar
+still requires the policy's protections to be configured in classic branch
+protection with "Include administrators" enabled to pass `enforceOnAdmins`.
+The `fix` action changes classic branch protection settings to match the
+specified policy configuration; it does not create or update rulesets.
 
 ### Binary Artifacts
 
