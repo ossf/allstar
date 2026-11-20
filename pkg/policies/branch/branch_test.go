@@ -17,7 +17,10 @@ package branch
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"sort"
 	"testing"
 
@@ -1562,6 +1565,93 @@ func TestCheck(t *testing.T) {
 			t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 		}
 	})
+}
+
+func TestGetRulesetDetailsPagination(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name                 string
+		lastPage404          bool
+		firstPageRateLimited bool
+	}{
+		{name: "combines rules across pages"},
+		{name: "returns an error when a later page fails", lastPage404: true},
+		{name: "does not swallow a first-page rate limit", firstPageRateLimited: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				var body string
+				switch page := r.URL.Query().Get("page"); page {
+				case "":
+					if tt.firstPageRateLimited {
+						w.Header().Set("X-RateLimit-Remaining", "0")
+						w.WriteHeader(http.StatusForbidden)
+						return
+					}
+					w.Header().Set("Link", fmt.Sprintf("<http://%s%s?page=2>; rel=\"next\"", r.Host, r.URL.Path))
+					body = `[{"type":"pull_request","parameters":{"required_approving_review_count":2}},{"type":"required_status_checks","parameters":{"required_status_checks":[{"context":"build","integration_id":42}]}}]`
+				case "2":
+					if tt.lastPage404 {
+						http.NotFound(w, r)
+						return
+					}
+					body = `[{"type":"pull_request","parameters":{"required_approving_review_count":1,"dismiss_stale_reviews_on_push":true}},{"type":"required_status_checks","parameters":{"strict_required_status_checks_policy":true,"required_status_checks":[{"context":"lint"}]}},{"type":"required_signatures"},{"type":"non_fast_forward"}]`
+				default:
+					t.Errorf("unexpected page: %q", page)
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				if _, err := fmt.Fprint(w, body); err != nil {
+					t.Errorf("write rules response: %v", err)
+				}
+			}))
+			defer server.Close()
+			client := github.NewClient(server.Client())
+			base, err := url.Parse(server.URL + "/")
+			if err != nil {
+				t.Fatal(err)
+			}
+			client.BaseURL = base
+
+			got, err := getRulesetDetails(t.Context(), client.Repositories, "owner", "repo", "main")
+			if tt.firstPageRateLimited {
+				var limitErr *github.RateLimitError
+				if !errors.As(err, &limitErr) {
+					t.Fatalf("want a rate-limit error from page 1, got %v", err)
+				}
+				return
+			}
+			if tt.lastPage404 {
+				var responseErr *github.ErrorResponse
+				if !errors.As(err, &responseErr) || responseErr.Response.StatusCode != http.StatusNotFound {
+					t.Fatalf("want a 404 error from page 2, got %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := details{
+				PRReviews:             true,
+				NumReviews:            2,
+				DismissStale:          true,
+				BlockForce:            true,
+				RequireUpToDateBranch: true,
+				RequireStatusChecks: []StatusCheck{
+					{Context: "build", AppID: github.Ptr(int64(42))},
+					{Context: "lint"},
+				},
+				RequireSignedCommits: true,
+				ViaRuleset:           true,
+			}
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("unexpected ruleset details (-want +got):\n%s", diff)
+			}
+		})
+	}
 }
 
 //nolint:paralleltest // Replaces package-level branch protection and configuration mocks.
