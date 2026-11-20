@@ -329,7 +329,6 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 					"If this is not feasible, then disable Branch Protection policy enforcement for this " +
 					"repository in Allstar configuration."
 				ds[b] = details{}
-				break
 			default:
 				return nil, fmt.Errorf("getting protection for branch %s in %s/%s: %w", b, owner, repo, err)
 			}
