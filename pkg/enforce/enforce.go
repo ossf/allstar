@@ -196,7 +196,8 @@ func runPoliciesOnInstRepos(ctx context.Context, repos []*github.Repository,
 		return instResults, repoLoopErrs[0]
 	}
 	if len(repoLoopErrs) > 1 {
-		return instResults, fmt.Errorf("encountered errors running policies on %d repos: %w", len(repoLoopErrs), errors.Join(repoLoopErrs...))
+		return instResults, fmt.Errorf("encountered errors running policies on %d repos: %w",
+			len(repoLoopErrs), errors.Join(repoLoopErrs...))
 	}
 	return instResults, nil
 }
