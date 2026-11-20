@@ -238,6 +238,7 @@ func (b Branch) Check(ctx context.Context, c *github.Client, owner,
 	return check(ctx, c.Repositories, c, owner, repo)
 }
 
+//nolint:gocognit,nestif // Evaluates every configured protection dimension and its ruleset equivalent together.
 func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	repo string,
 ) (*policydef.Result, error) {
@@ -308,10 +309,15 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		var d details
 		protected := true
 		if err != nil {
-			if rsp != nil && rsp.StatusCode == http.StatusNotFound {
+			statusCode := http.StatusInternalServerError
+			if rsp != nil {
+				statusCode = rsp.StatusCode
+			}
+			switch statusCode {
+			case http.StatusNotFound:
 				// Rulesets may provide equivalent coverage when classic protection is absent.
 				protected = false
-			} else if rsp != nil && rsp.StatusCode == http.StatusForbidden {
+			case http.StatusForbidden:
 				// Protection not available
 				pass = false
 				text += "Branch Protection enforcement is configured in Allstar, however Branch Protection is not " +
@@ -324,7 +330,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 					"repository in Allstar configuration."
 				ds[b] = details{}
 				break
-			} else {
+			default:
 				return nil, fmt.Errorf("getting protection for branch %s in %s/%s: %w", b, owner, repo, err)
 			}
 		}
@@ -459,6 +465,7 @@ func mergeDetails(a, b details) details {
 	return a
 }
 
+//nolint:gocognit,nestif // Each independent policy setting contributes its own actionable failure text.
 func evaluateBranchDetails(branch string, d details, mc *mergedConfig, protected bool) (bool, string) {
 	if !protected {
 		return false, fmt.Sprintf("No protection found for branch %v\n", branch)

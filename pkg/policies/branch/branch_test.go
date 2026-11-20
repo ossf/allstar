@@ -325,7 +325,7 @@ func TestGetSignatureProtectionEnabled(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest // Replaces package-level branch protection and configuration mocks.
+//nolint:paralleltest,gocognit // Replaces package-level branch protection and configuration mocks.
 func TestCheck(t *testing.T) {
 	tests := []struct {
 		Name          string
@@ -1567,6 +1567,7 @@ func TestCheck(t *testing.T) {
 	})
 }
 
+//nolint:gocognit // Exercises three HTTP pagination/error flows against a real go-github client.
 func TestGetRulesetDetailsPagination(t *testing.T) {
 	t.Parallel()
 
