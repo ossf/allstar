@@ -97,7 +97,7 @@ type Rule struct {
 	Method string `json:"method"`
 
 	// Priority is the priority tier identifier applied to the rule.
-	// Options are "urgent", "high", "medium", and "low"
+	// Options are "critical", "high", "medium", and "low"
 	Priority string `json:"priority"`
 
 	// Actions is a set of ActionSelectors.
