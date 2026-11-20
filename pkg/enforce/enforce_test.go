@@ -350,6 +350,8 @@ func TestRunPoliciesOnInstReposContinuesAfterError(t *testing.T) {
 // TestRunPoliciesOnInstReposAggregatesMultipleErrors verifies that errors from
 // more than one repo are aggregated into a single summary error rather than
 // only surfacing the first repo's error.
+//
+//nolint:paralleltest // Replaces package-level policy and GitHub mocks.
 func TestRunPoliciesOnInstReposAggregatesMultipleErrors(t *testing.T) {
 	configIsBotEnabled = func(ctx context.Context, c *github.Client, owner, repo string) bool {
 		return true
@@ -381,6 +383,7 @@ func TestRunPoliciesOnInstReposAggregatesMultipleErrors(t *testing.T) {
 	}
 }
 
+//nolint:paralleltest // Replaces package-level policy and GitHub mocks.
 func TestDoNothingOnOptOut(t *testing.T) {
 	policiesGetPolicies = func() []policydef.Policy {
 		return []policydef.Policy{
