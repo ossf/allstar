@@ -44,6 +44,9 @@ var getBranchProtection func(context.Context, string, string, string) (
 var getRulesForBranch func(context.Context, string, string, string, *github.ListOptions) (
 	*github.BranchRules, *github.Response, error)
 
+var getRuleset func(context.Context, string, string, int64, bool) (
+	*github.RepositoryRuleset, *github.Response, error)
+
 var updateBranchProtection func(context.Context, string, string, string,
 	*github.ProtectionRequest) (*github.Protection, *github.Response, error)
 
@@ -77,6 +80,12 @@ func (m mockRepos) GetRulesForBranch(ctx context.Context, o string, r string,
 	b string, opt *github.ListOptions,
 ) (*github.BranchRules, *github.Response, error) {
 	return getRulesForBranch(ctx, o, r, b, opt)
+}
+
+func (m mockRepos) GetRuleset(ctx context.Context, o, r string, id int64, includesParents bool) (
+	*github.RepositoryRuleset, *github.Response, error,
+) {
+	return getRuleset(ctx, o, r, id, includesParents)
 }
 
 func (m mockRepos) UpdateBranchProtection(ctx context.Context, owner, repo,
@@ -1518,6 +1527,11 @@ func TestCheck(t *testing.T) {
 					},
 				}, errors.New("404")
 			}
+			getRuleset = func(context.Context, string, string, int64, bool) (
+				*github.RepositoryRuleset, *github.Response, error,
+			) {
+				return &github.RepositoryRuleset{}, nil, nil
+			}
 			getSignaturesProtectedBranch = func(ctx context.Context, o string, r string, b string) (
 				*github.SignaturesProtectedBranch, *github.Response, error,
 			) {
@@ -1652,6 +1666,44 @@ func TestGetRulesetDetailsPagination(t *testing.T) {
 				t.Errorf("unexpected ruleset details (-want +got):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestGetRulesetDetailsEscapesBranch(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.URL.EscapedPath(), "/repos/owner/repo/rules/branches/release%2F%2342"; got != want {
+			t.Errorf("request path = %q, want %q", got, want)
+		}
+		if _, err := fmt.Fprint(w, `[]`); err != nil {
+			t.Errorf("write rules response: %v", err)
+		}
+	}))
+	defer server.Close()
+	client := github.NewClient(server.Client())
+	base, err := url.Parse(server.URL + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.BaseURL = base
+
+	if _, err := getRulesetDetails(t.Context(), client.Repositories, "owner", "repo", "release/#42"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+//nolint:paralleltest // Replaces the package-level ruleset mock.
+func TestRulesetAlwaysBypassFailsClosed(t *testing.T) {
+	mode := github.BypassModeAlways
+	getRuleset = func(context.Context, string, string, int64, bool) (
+		*github.RepositoryRuleset, *github.Response, error,
+	) {
+		return &github.RepositoryRuleset{BypassActors: []*github.BypassActor{{BypassMode: &mode}}}, nil, nil
+	}
+	rules := &github.BranchRules{
+		NonFastForward: []*github.BranchRuleMetadata{{RulesetID: 1}},
+	}
+	if err := ensureRulesetsHaveNoAlwaysBypass(t.Context(), mockRepos{}, "owner", "repo", rules); err == nil {
+		t.Fatal("expected an always bypass actor to prevent ruleset compliance")
 	}
 }
 

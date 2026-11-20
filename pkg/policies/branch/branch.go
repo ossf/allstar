@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/google/go-github/v84/github"
 	"github.com/rs/zerolog/log"
@@ -216,6 +217,8 @@ type repositories interface {
 		*github.Protection, *github.Response, error)
 	GetRulesForBranch(context.Context, string, string, string, *github.ListOptions) (
 		*github.BranchRules, *github.Response, error)
+	GetRuleset(context.Context, string, string, int64, bool) (
+		*github.RepositoryRuleset, *github.Response, error)
 	UpdateBranchProtection(context.Context, string, string, string,
 		*github.ProtectionRequest) (*github.Protection, *github.Response, error)
 	GetSignaturesProtectedBranch(ctx context.Context, owner, repo, branch string) (
@@ -304,6 +307,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	text := ""
 	needsAdminGuidance := false
 	ds := make(map[string]details)
+branchLoop:
 	for _, b := range allBranches {
 		p, rsp, err := rep.GetBranchProtection(ctx, owner, repo, b)
 		var d details
@@ -329,6 +333,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 					"If this is not feasible, then disable Branch Protection policy enforcement for this " +
 					"repository in Allstar configuration."
 				ds[b] = details{}
+				break branchLoop
 			default:
 				return nil, fmt.Errorf("getting protection for branch %s in %s/%s: %w", b, owner, repo, err)
 			}
@@ -363,7 +368,7 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		if !branchPass {
 			pass = false
 			text += branchText
-			needsAdminGuidance = needsAdminGuidance || (mc.EnforceOnAdmins && d.ViaRuleset)
+			needsAdminGuidance = needsAdminGuidance || (mc.EnforceOnAdmins && !d.EnforceOnAdmins && d.ViaRuleset)
 		}
 
 		ds[b] = d
@@ -384,7 +389,7 @@ func getRulesetDetails(ctx context.Context, rep repositories, owner, repo, branc
 	opt := &github.ListOptions{PerPage: 100}
 	var d details
 	for {
-		rules, rsp, err := rep.GetRulesForBranch(ctx, owner, repo, branch, opt)
+		rules, rsp, err := rep.GetRulesForBranch(ctx, owner, repo, url.PathEscape(branch), opt)
 		if err != nil {
 			if opt.Page == 0 && rsp != nil {
 				switch rsp.StatusCode {
@@ -403,6 +408,9 @@ func getRulesetDetails(ctx context.Context, rep repositories, owner, repo, branc
 			return details{}, fmt.Errorf("getting rules for branch %s in %s/%s: %w", branch, owner, repo, err)
 		}
 		if rules != nil {
+			if err := ensureRulesetsHaveNoAlwaysBypass(ctx, rep, owner, repo, rules); err != nil {
+				return details{}, err
+			}
 			d = mergeDetails(d, getRulesetPageDetails(rules))
 		}
 		if rsp == nil || rsp.NextPage == 0 {
@@ -410,6 +418,48 @@ func getRulesetDetails(ctx context.Context, rep repositories, owner, repo, branc
 		}
 		opt.Page = rsp.NextPage
 	}
+}
+
+// ensureRulesetsHaveNoAlwaysBypass fails closed: a ruleset with an Always
+// bypass cannot establish that its protections apply to all repository writers.
+func ensureRulesetsHaveNoAlwaysBypass(ctx context.Context, rep repositories, owner, repo string, rules *github.BranchRules) error {
+	for id := range rulesetIDs(rules) {
+		ruleset, _, err := rep.GetRuleset(ctx, owner, repo, id, true)
+		if err != nil {
+			return fmt.Errorf("getting ruleset %d for %s/%s: %w", id, owner, repo, err)
+		}
+		for _, actor := range ruleset.BypassActors {
+			if actor.BypassMode != nil && *actor.BypassMode == github.BypassModeAlways {
+				return fmt.Errorf("ruleset %d has an always bypass actor", id)
+			}
+		}
+	}
+	return nil
+}
+
+func rulesetIDs(rules *github.BranchRules) map[int64]struct{} {
+	ids := make(map[int64]struct{})
+	for _, rule := range rules.PullRequest {
+		if rule.RulesetID != 0 {
+			ids[rule.RulesetID] = struct{}{}
+		}
+	}
+	for _, rule := range rules.RequiredStatusChecks {
+		if rule.RulesetID != 0 {
+			ids[rule.RulesetID] = struct{}{}
+		}
+	}
+	for _, rule := range rules.NonFastForward {
+		if rule.RulesetID != 0 {
+			ids[rule.RulesetID] = struct{}{}
+		}
+	}
+	for _, rule := range rules.RequiredSignatures {
+		if rule.RulesetID != 0 {
+			ids[rule.RulesetID] = struct{}{}
+		}
+	}
+	return ids
 }
 
 func getRulesetPageDetails(rules *github.BranchRules) details {
