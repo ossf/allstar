@@ -17,7 +17,10 @@ package branch
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"sort"
 	"testing"
 
@@ -37,6 +40,12 @@ var listBranches func(context.Context, string, string,
 
 var getBranchProtection func(context.Context, string, string, string) (
 	*github.Protection, *github.Response, error)
+
+var getRulesForBranch func(context.Context, string, string, string, *github.ListOptions) (
+	*github.BranchRules, *github.Response, error)
+
+var getRuleset func(context.Context, string, string, int64, bool) (
+	*github.RepositoryRuleset, *github.Response, error)
 
 var updateBranchProtection func(context.Context, string, string, string,
 	*github.ProtectionRequest) (*github.Protection, *github.Response, error)
@@ -65,6 +74,18 @@ func (m mockRepos) GetBranchProtection(ctx context.Context, o string, r string,
 	b string,
 ) (*github.Protection, *github.Response, error) {
 	return getBranchProtection(ctx, o, r, b)
+}
+
+func (m mockRepos) GetRulesForBranch(ctx context.Context, o string, r string,
+	b string, opt *github.ListOptions,
+) (*github.BranchRules, *github.Response, error) {
+	return getRulesForBranch(ctx, o, r, b, opt)
+}
+
+func (m mockRepos) GetRuleset(ctx context.Context, o, r string, id int64, includesParents bool) (
+	*github.RepositoryRuleset, *github.Response, error,
+) {
+	return getRuleset(ctx, o, r, id, includesParents)
 }
 
 func (m mockRepos) UpdateBranchProtection(ctx context.Context, owner, repo,
@@ -313,13 +334,14 @@ func TestGetSignatureProtectionEnabled(t *testing.T) {
 	}
 }
 
-//nolint:paralleltest // Replaces package-level branch protection and configuration mocks.
+//nolint:paralleltest,gocognit // Replaces package-level branch protection and configuration mocks.
 func TestCheck(t *testing.T) {
 	tests := []struct {
 		Name          string
 		Org           OrgConfig
 		Repo          RepoConfig
 		Prot          map[string]github.Protection
+		Rules         map[string]github.BranchRules
 		SigProtection map[string]github.SignaturesProtectedBranch
 		cofigEnabled  bool
 		Exp           policydef.Result
@@ -989,6 +1011,180 @@ func TestCheck(t *testing.T) {
 			},
 		},
 		{
+			Name: "NoProtectionButRulesetSatisfiesPolicy",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   1,
+				BlockForce:      true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{},
+			Rules: map[string]github.BranchRules{
+				"main": {
+					PullRequest: []*github.PullRequestBranchRule{
+						{
+							Parameters: github.PullRequestRuleParameters{
+								RequiredApprovingReviewCount: 1,
+							},
+						},
+					},
+					NonFastForward: []*github.BranchRuleMetadata{
+						{RulesetID: 1},
+					},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": {
+					Enabled: github.Ptr(false),
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       true,
+				NotifyText: "",
+				Details: map[string]details{
+					"main": {
+						PRReviews:  true,
+						NumReviews: 1,
+						BlockForce: true,
+						ViaRuleset: true,
+					},
+				},
+			},
+		},
+		{
+			Name: "RulesetProtectedButEnforceOnAdminsIncludesGuidance",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   1,
+				BlockForce:      true,
+				EnforceOnAdmins: true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{},
+			Rules: map[string]github.BranchRules{
+				"main": {
+					PullRequest: []*github.PullRequestBranchRule{
+						{
+							Parameters: github.PullRequestRuleParameters{
+								RequiredApprovingReviewCount: 1,
+							},
+						},
+					},
+					NonFastForward: []*github.BranchRuleMetadata{
+						{RulesetID: 1},
+					},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": {
+					Enabled: github.Ptr(false),
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled: true,
+				Pass:    false,
+				NotifyText: "Enforce status checks on admins not configured for branch main\n" +
+					enforceOnAdminsRulesetGuidance,
+				Details: map[string]details{
+					"main": {
+						PRReviews:  true,
+						NumReviews: 1,
+						BlockForce: true,
+						ViaRuleset: true,
+					},
+				},
+			},
+		},
+		{
+			Name: "NoProtectionAndRulesetInsufficientForPolicy",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   2,
+				BlockForce:      true,
+			},
+			Repo: RepoConfig{},
+			Prot: map[string]github.Protection{},
+			Rules: map[string]github.BranchRules{
+				"main": {
+					PullRequest: []*github.PullRequestBranchRule{
+						{
+							Parameters: github.PullRequestRuleParameters{
+								RequiredApprovingReviewCount: 1,
+							},
+						},
+					},
+				},
+			},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": {
+					Enabled: github.Ptr(false),
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "PR Approvals below threshold 1 : 2 for branch main\nBlock force push not configured for branch main\n",
+				Details: map[string]details{
+					"main": {
+						PRReviews:  true,
+						NumReviews: 1,
+						BlockForce: false,
+						ViaRuleset: true,
+					},
+				},
+			},
+		},
+		{
+			Name: "NoProtectionAndNoRuleset",
+			Org: OrgConfig{
+				OptConfig: config.OrgOptConfig{
+					OptOutStrategy: true,
+				},
+				EnforceDefault:  true,
+				RequireApproval: true,
+				ApprovalCount:   1,
+				BlockForce:      true,
+			},
+			Repo:  RepoConfig{},
+			Prot:  map[string]github.Protection{},
+			Rules: map[string]github.BranchRules{},
+			SigProtection: map[string]github.SignaturesProtectedBranch{
+				"main": {
+					Enabled: github.Ptr(false),
+				},
+			},
+			cofigEnabled: true,
+			Exp: policydef.Result{
+				Enabled:    true,
+				Pass:       false,
+				NotifyText: "No protection found for branch main\n",
+				Details: map[string]details{
+					"main": {
+						PRReviews:    false,
+						NumReviews:   0,
+						DismissStale: false,
+						BlockForce:   false,
+					},
+				},
+			},
+		},
+		{
 			Name: "SignedCommitsRequiredNotEnabled",
 			Org: OrgConfig{
 				OptConfig: config.OrgOptConfig{
@@ -1318,6 +1514,24 @@ func TestCheck(t *testing.T) {
 					}, errors.New("404")
 				}
 			}
+			getRulesForBranch = func(ctx context.Context, o string, r string,
+				b string, opt *github.ListOptions,
+			) (*github.BranchRules, *github.Response, error) {
+				rules, ok := test.Rules[b]
+				if ok {
+					return &rules, nil, nil
+				}
+				return nil, &github.Response{
+					Response: &http.Response{
+						StatusCode: http.StatusNotFound,
+					},
+				}, errors.New("404")
+			}
+			getRuleset = func(context.Context, string, string, int64, bool) (
+				*github.RepositoryRuleset, *github.Response, error,
+			) {
+				return &github.RepositoryRuleset{}, nil, nil
+			}
 			getSignaturesProtectedBranch = func(ctx context.Context, o string, r string, b string) (
 				*github.SignaturesProtectedBranch, *github.Response, error,
 			) {
@@ -1365,6 +1579,133 @@ func TestCheck(t *testing.T) {
 			t.Errorf("Unexpected results. (-want +got):\n%s", diff)
 		}
 	})
+}
+
+//nolint:gocognit // Exercises three HTTP pagination/error flows against a real go-github client.
+func TestGetRulesetDetailsPagination(t *testing.T) {
+	t.Parallel()
+
+	for _, tt := range []struct {
+		name                 string
+		lastPage404          bool
+		firstPageRateLimited bool
+	}{
+		{name: "combines rules across pages"},
+		{name: "returns an error when a later page fails", lastPage404: true},
+		{name: "does not swallow a first-page rate limit", firstPageRateLimited: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				var body string
+				switch page := r.URL.Query().Get("page"); page {
+				case "":
+					if tt.firstPageRateLimited {
+						w.Header().Set("X-RateLimit-Remaining", "0")
+						w.WriteHeader(http.StatusForbidden)
+						return
+					}
+					w.Header().Set("Link", fmt.Sprintf("<http://%s%s?page=2>; rel=\"next\"", r.Host, r.URL.Path))
+					body = `[{"type":"pull_request","parameters":{"required_approving_review_count":2}},{"type":"required_status_checks","parameters":{"required_status_checks":[{"context":"build","integration_id":42}]}}]`
+				case "2":
+					if tt.lastPage404 {
+						http.NotFound(w, r)
+						return
+					}
+					body = `[{"type":"pull_request","parameters":{"required_approving_review_count":1,"dismiss_stale_reviews_on_push":true}},{"type":"required_status_checks","parameters":{"strict_required_status_checks_policy":true,"required_status_checks":[{"context":"lint"}]}},{"type":"required_signatures"},{"type":"non_fast_forward"}]`
+				default:
+					t.Errorf("unexpected page: %q", page)
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				if _, err := fmt.Fprint(w, body); err != nil {
+					t.Errorf("write rules response: %v", err)
+				}
+			}))
+			defer server.Close()
+			client := github.NewClient(server.Client())
+			base, err := url.Parse(server.URL + "/")
+			if err != nil {
+				t.Fatal(err)
+			}
+			client.BaseURL = base
+
+			got, err := getRulesetDetails(t.Context(), client.Repositories, "owner", "repo", "main")
+			if tt.firstPageRateLimited {
+				var limitErr *github.RateLimitError
+				if !errors.As(err, &limitErr) {
+					t.Fatalf("want a rate-limit error from page 1, got %v", err)
+				}
+				return
+			}
+			if tt.lastPage404 {
+				var responseErr *github.ErrorResponse
+				if !errors.As(err, &responseErr) || responseErr.Response.StatusCode != http.StatusNotFound {
+					t.Fatalf("want a 404 error from page 2, got %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			want := details{
+				PRReviews:             true,
+				NumReviews:            2,
+				DismissStale:          true,
+				BlockForce:            true,
+				RequireUpToDateBranch: true,
+				RequireStatusChecks: []StatusCheck{
+					{Context: "build", AppID: github.Ptr(int64(42))},
+					{Context: "lint"},
+				},
+				RequireSignedCommits: true,
+				ViaRuleset:           true,
+			}
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("unexpected ruleset details (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestGetRulesetDetailsEscapesBranch(t *testing.T) {
+	t.Parallel()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got, want := r.URL.EscapedPath(), "/repos/owner/repo/rules/branches/release%2F%2342"; got != want {
+			t.Errorf("request path = %q, want %q", got, want)
+		}
+		if _, err := fmt.Fprint(w, `[]`); err != nil {
+			t.Errorf("write rules response: %v", err)
+		}
+	}))
+	defer server.Close()
+	client := github.NewClient(server.Client())
+	base, err := url.Parse(server.URL + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.BaseURL = base
+
+	if _, err := getRulesetDetails(t.Context(), client.Repositories, "owner", "repo", "release/#42"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+//nolint:paralleltest // Replaces the package-level ruleset mock.
+func TestRulesetAlwaysBypassFailsClosed(t *testing.T) {
+	mode := github.BypassModeAlways
+	getRuleset = func(context.Context, string, string, int64, bool) (
+		*github.RepositoryRuleset, *github.Response, error,
+	) {
+		return &github.RepositoryRuleset{BypassActors: []*github.BypassActor{{BypassMode: &mode}}}, nil, nil
+	}
+	rules := &github.BranchRules{
+		NonFastForward: []*github.BranchRuleMetadata{{RulesetID: 1}},
+	}
+	if err := ensureRulesetsHaveNoAlwaysBypass(t.Context(), mockRepos{}, "owner", "repo", rules); err == nil {
+		t.Fatal("expected an always bypass actor to prevent ruleset compliance")
+	}
 }
 
 //nolint:paralleltest // Replaces package-level branch protection and configuration mocks.
