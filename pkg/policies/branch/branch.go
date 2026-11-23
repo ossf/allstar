@@ -17,8 +17,10 @@ package branch
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/google/go-github/v84/github"
 	"github.com/rs/zerolog/log"
@@ -176,7 +178,18 @@ type details struct {
 	RequireStatusChecks     []StatusCheck
 	RequireSignedCommits    bool
 	RequireCodeOwnerReviews bool
+
+	// ViaRuleset reports whether a ruleset provides policy-relevant protection.
+	ViaRuleset bool
 }
+
+const enforceOnAdminsRulesetGuidance = "\nAllstar cannot verify admin enforcement from rulesets. To enforce the " +
+	"applicable rulesets for administrators, remove admin bypass actors from their bypass lists " +
+	"(Settings > Rules > Rulesets). Pull-request-only bypass still lets these actors bypass rules on pull requests.\n" +
+	"To pass Allstar's enforceOnAdmins check, configure the required protections in classic branch protection " +
+	"and enable \"Include administrators\".\n"
+
+var errRulesetAlwaysBypass = errors.New("ruleset has an always bypass actor")
 
 var (
 	configFetchConfig = config.FetchConfig
@@ -204,6 +217,10 @@ type repositories interface {
 		[]*github.Branch, *github.Response, error)
 	GetBranchProtection(context.Context, string, string, string) (
 		*github.Protection, *github.Response, error)
+	GetRulesForBranch(context.Context, string, string, string, *github.ListOptions) (
+		*github.BranchRules, *github.Response, error)
+	GetRuleset(context.Context, string, string, int64, bool) (
+		*github.RepositoryRuleset, *github.Response, error)
 	UpdateBranchProtection(context.Context, string, string, string,
 		*github.ProtectionRequest) (*github.Protection, *github.Response, error)
 	GetSignaturesProtectedBranch(ctx context.Context, owner, repo, branch string) (
@@ -226,6 +243,7 @@ func (b Branch) Check(ctx context.Context, c *github.Client, owner,
 	return check(ctx, c.Repositories, c, owner, repo)
 }
 
+//nolint:gocognit,nestif // Evaluates every configured protection dimension and its ruleset equivalent together.
 func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	repo string,
 ) (*policydef.Result, error) {
@@ -289,18 +307,23 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 	}
 	pass := true
 	text := ""
+	needsAdminGuidance := false
 	ds := make(map[string]details)
+branchLoop:
 	for _, b := range allBranches {
 		p, rsp, err := rep.GetBranchProtection(ctx, owner, repo, b)
+		var d details
+		protected := true
 		if err != nil {
-			if rsp != nil && rsp.StatusCode == http.StatusNotFound {
-				// Branch not protected
-				pass = false
-				text += fmt.Sprintf("No protection found for branch %v\n", b)
-				ds[b] = details{}
-				continue
+			statusCode := http.StatusInternalServerError
+			if rsp != nil {
+				statusCode = rsp.StatusCode
 			}
-			if rsp != nil && rsp.StatusCode == http.StatusForbidden {
+			switch statusCode {
+			case http.StatusNotFound:
+				// Rulesets may provide equivalent coverage when classic protection is absent.
+				protected = false
+			case http.StatusForbidden:
 				// Protection not available
 				pass = false
 				text += "Branch Protection enforcement is configured in Allstar, however Branch Protection is not " +
@@ -312,19 +335,48 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 					"If this is not feasible, then disable Branch Protection policy enforcement for this " +
 					"repository in Allstar configuration."
 				ds[b] = details{}
-				break
+				break branchLoop
+			default:
+				return nil, fmt.Errorf("getting protection for branch %s in %s/%s: %w", b, owner, repo, err)
 			}
-			return nil, fmt.Errorf("getting protection for branch %s in %s/%s: %w", b, owner, repo, err)
 		}
 
-		d, branchText, branchPass, err := checkBranchProtection(ctx, rep, owner, repo, b, p, mc)
-		if err != nil {
-			return nil, err
+		var branchPass bool
+		var branchText string
+		if protected {
+			d, branchText, branchPass, err = checkBranchProtection(ctx, rep, owner, repo, b, p, mc)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			branchPass = false
+			branchText = fmt.Sprintf("No protection found for branch %v\n", b)
 		}
-		text += branchText
-		pass = pass && branchPass
+
+		if !branchPass {
+			rulesetDetails, err := getRulesetDetails(ctx, rep, owner, repo, b)
+			if err != nil {
+				return nil, err
+			}
+			if rulesetDetails.ViaRuleset {
+				if mc.EnforceOnAdmins && protected {
+					d.ViaRuleset = true
+				} else {
+					d = mergeDetails(d, rulesetDetails)
+					branchPass, branchText = evaluateBranchDetails(b, d, mc, true)
+				}
+			}
+		}
+		if !branchPass {
+			pass = false
+			text += branchText
+			needsAdminGuidance = needsAdminGuidance || (mc.EnforceOnAdmins && !d.EnforceOnAdmins && d.ViaRuleset)
+		}
 
 		ds[b] = d
+	}
+	if needsAdminGuidance {
+		text += enforceOnAdminsRulesetGuidance
 	}
 
 	return &policydef.Result{
@@ -333,6 +385,208 @@ func check(ctx context.Context, rep repositories, c *github.Client, owner,
 		NotifyText: text,
 		Details:    ds,
 	}, nil
+}
+
+func getRulesetDetails(ctx context.Context, rep repositories, owner, repo, branch string) (details, error) {
+	opt := &github.ListOptions{PerPage: 100}
+	var d details
+	for {
+		rules, rsp, err := rep.GetRulesForBranch(ctx, owner, repo, url.PathEscape(branch), opt)
+		if err != nil {
+			if opt.Page == 0 && rsp != nil {
+				switch rsp.StatusCode {
+				case http.StatusNotFound:
+					return details{}, nil
+				case http.StatusForbidden:
+					var primary *github.RateLimitError
+					var secondary *github.AbuseRateLimitError
+					if !errors.As(err, &primary) && !errors.As(err, &secondary) {
+						log.Warn().Str("org", owner).Str("repo", repo).Str("area", polName).
+							Str("branch", branch).Msg("Branch rulesets are not available on this repository.")
+						return details{}, nil
+					}
+				}
+			}
+			return details{}, fmt.Errorf("getting rules for branch %s in %s/%s: %w", branch, owner, repo, err)
+		}
+		if rules != nil {
+			if err := ensureRulesetsHaveNoAlwaysBypass(ctx, rep, owner, repo, rules); err != nil {
+				return details{}, err
+			}
+			d = mergeDetails(d, getRulesetPageDetails(rules))
+		}
+		if rsp == nil || rsp.NextPage == 0 {
+			return d, nil
+		}
+		opt.Page = rsp.NextPage
+	}
+}
+
+// ensureRulesetsHaveNoAlwaysBypass fails closed: a ruleset with an Always
+// bypass cannot establish that its protections apply to all repository writers.
+func ensureRulesetsHaveNoAlwaysBypass(ctx context.Context, rep repositories,
+	owner, repo string, rules *github.BranchRules,
+) error {
+	for id := range rulesetIDs(rules) {
+		ruleset, _, err := rep.GetRuleset(ctx, owner, repo, id, true)
+		if err != nil {
+			return fmt.Errorf("getting ruleset %d for %s/%s: %w", id, owner, repo, err)
+		}
+		for _, actor := range ruleset.BypassActors {
+			if actor.BypassMode != nil && *actor.BypassMode == github.BypassModeAlways {
+				return fmt.Errorf("ruleset %d: %w", id, errRulesetAlwaysBypass)
+			}
+		}
+	}
+	return nil
+}
+
+func rulesetIDs(rules *github.BranchRules) map[int64]struct{} {
+	ids := make(map[int64]struct{})
+	for _, rule := range rules.PullRequest {
+		if rule.RulesetID != 0 {
+			ids[rule.RulesetID] = struct{}{}
+		}
+	}
+	for _, rule := range rules.RequiredStatusChecks {
+		if rule.RulesetID != 0 {
+			ids[rule.RulesetID] = struct{}{}
+		}
+	}
+	for _, rule := range rules.NonFastForward {
+		if rule.RulesetID != 0 {
+			ids[rule.RulesetID] = struct{}{}
+		}
+	}
+	for _, rule := range rules.RequiredSignatures {
+		if rule.RulesetID != 0 {
+			ids[rule.RulesetID] = struct{}{}
+		}
+	}
+	return ids
+}
+
+func getRulesetPageDetails(rules *github.BranchRules) details {
+	var d details
+	if len(rules.PullRequest) > 0 {
+		d.ViaRuleset = true
+		d.PRReviews = true
+		for _, rule := range rules.PullRequest {
+			params := rule.Parameters
+			d.DismissStale = d.DismissStale || params.DismissStaleReviewsOnPush
+			d.RequireCodeOwnerReviews = d.RequireCodeOwnerReviews || params.RequireCodeOwnerReview
+			if params.RequiredApprovingReviewCount > d.NumReviews {
+				d.NumReviews = params.RequiredApprovingReviewCount
+			}
+		}
+	}
+	if len(rules.RequiredStatusChecks) > 0 {
+		d.ViaRuleset = true
+		for _, rule := range rules.RequiredStatusChecks {
+			params := rule.Parameters
+			d.RequireUpToDateBranch = d.RequireUpToDateBranch || params.StrictRequiredStatusChecksPolicy
+			for _, check := range params.RequiredStatusChecks {
+				d.RequireStatusChecks = append(d.RequireStatusChecks,
+					StatusCheck{Context: check.Context, AppID: check.IntegrationID})
+			}
+		}
+	}
+	if len(rules.NonFastForward) > 0 {
+		d.ViaRuleset = true
+		d.BlockForce = true
+	}
+	if len(rules.RequiredSignatures) > 0 {
+		d.ViaRuleset = true
+		d.RequireSignedCommits = true
+	}
+	return d
+}
+
+func mergeDetails(a, b details) details {
+	a.PRReviews = a.PRReviews || b.PRReviews
+	if b.NumReviews > a.NumReviews {
+		a.NumReviews = b.NumReviews
+	}
+	a.DismissStale = a.DismissStale || b.DismissStale
+	a.BlockForce = a.BlockForce || b.BlockForce
+	a.EnforceOnAdmins = a.EnforceOnAdmins || b.EnforceOnAdmins
+	a.RequireUpToDateBranch = a.RequireUpToDateBranch || b.RequireUpToDateBranch
+	a.RequireStatusChecks = append(a.RequireStatusChecks, b.RequireStatusChecks...)
+	a.RequireSignedCommits = a.RequireSignedCommits || b.RequireSignedCommits
+	a.RequireCodeOwnerReviews = a.RequireCodeOwnerReviews || b.RequireCodeOwnerReviews
+	a.ViaRuleset = a.ViaRuleset || b.ViaRuleset
+	return a
+}
+
+//nolint:gocognit,nestif // Each independent policy setting contributes its own actionable failure text.
+func evaluateBranchDetails(branch string, d details, mc *mergedConfig, protected bool) (bool, string) {
+	if !protected {
+		return false, fmt.Sprintf("No protection found for branch %v\n", branch)
+	}
+	pass := true
+	text := ""
+	if d.PRReviews {
+		if mc.DismissStale && !d.DismissStale {
+			text += fmt.Sprintf("Dismiss stale reviews not configured for branch %v\n", branch)
+			pass = false
+		}
+		if d.NumReviews < mc.ApprovalCount {
+			text += fmt.Sprintf("PR Approvals below threshold %v : %v for branch %v\n", d.NumReviews, mc.ApprovalCount, branch)
+			pass = false
+		}
+		if mc.RequireCodeOwnerReviews && !d.RequireCodeOwnerReviews {
+			text += fmt.Sprintf("Require Code Owner Reviews not configured for branch %v\n", branch)
+			pass = false
+		}
+	} else if mc.RequireApproval || mc.RequireCodeOwnerReviews {
+		text += fmt.Sprintf("PR Approvals not configured for branch %v\n", branch)
+		pass = false
+	}
+	if mc.BlockForce && !d.BlockForce {
+		text += fmt.Sprintf("Block force push not configured for branch %v\n", branch)
+		pass = false
+	}
+	if mc.EnforceOnAdmins && !d.EnforceOnAdmins {
+		text += fmt.Sprintf("Enforce status checks on admins not configured for branch %v\n", branch)
+		pass = false
+	}
+	if len(mc.RequireStatusChecks) > 0 {
+		if len(d.RequireStatusChecks) == 0 {
+			text += fmt.Sprintf("Status checks required by policy, but none found for branch %v\n", branch)
+			pass = false
+		} else {
+			if mc.RequireUpToDateBranch && !d.RequireUpToDateBranch {
+				text += fmt.Sprintf("Require up to date branch not configured for branch %v\n", branch)
+				pass = false
+			}
+			lt := makeSCLookupTable(toRequiredStatusChecks(d.RequireStatusChecks))
+			for _, c := range mc.RequireStatusChecks {
+				sch := statusCheckHash{context: c.Context}
+				appIDText := "(any app)"
+				if c.AppID != nil {
+					sch.appID = *c.AppID
+					appIDText = fmt.Sprintf("(AppID: %v)", *c.AppID)
+				}
+				if _, ok := lt[sch]; !ok {
+					text += fmt.Sprintf("Status check %s %s not found for branch %v\n", c.Context, appIDText, branch)
+					pass = false
+				}
+			}
+		}
+	}
+	if mc.RequireSignedCommits && !d.RequireSignedCommits {
+		text += fmt.Sprintf("Signed commits required, but not enabled for branch: %v\n", branch)
+		pass = false
+	}
+	return pass, text
+}
+
+func toRequiredStatusChecks(checks []StatusCheck) []*github.RequiredStatusCheck {
+	rsc := make([]*github.RequiredStatusCheck, len(checks))
+	for i, check := range checks {
+		rsc[i] = &github.RequiredStatusCheck{Context: check.Context, AppID: check.AppID}
+	}
+	return rsc
 }
 
 // Fix implementing policydef.Policy.Fix().
