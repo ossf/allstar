@@ -473,6 +473,86 @@ This policy checks the GitHub Actions workflow configuration files
 they are in line with rules (eg. require, deny) defined in the
 organization-level config for the policy.
 
+`actions.yaml` is only read at the org level (in the `.allstar` repo, or
+`allstar/actions.yaml` in the `.github` repo). There is no `optConfig` and no
+repo-level override: the policy is enabled for every repo as soon as the file
+defines at least one group, and disabled when it has no `groups`. Repos are
+targeted with the `repos` selectors described below. The `fix` action is not
+implemented for this policy.
+
+Example:
+
+```yaml
+action: issue
+groups:
+  - name: All repos
+    rules:
+      - name: Only use actions from GitHub and our org
+        method: allow
+        actions:
+          - name: actions/*
+          - name: github/*
+          - name: my-org/*
+      - name: Deny everything else
+        method: deny
+        priority: low
+  - name: Go repos must run golangci-lint
+    repos:
+      - language: ["Go"]
+        exclude:
+          - name: "*-archive"
+    rules:
+      - name: Require golangci-lint
+        method: require
+        actions:
+          - name: golangci/golangci-lint-action
+            version: ">= 6.0.0"
+        mustPass: true
+```
+
+Fields:
+
+- `action`: what to do when a repo fails, same as other policies: `log`
+  (default) or `issue`.
+- `groups`: a list of rule groups. A group applies to a repo if any of its
+  `repos` selectors matches, or always if `repos` is omitted. The rules of all
+  matching groups are combined.
+  - `repos[].name`: glob matched against the repo name (without the org).
+  - `repos[].language`: list of languages. Matches if one of them is the repo's
+    top language, or has more than 3000 bytes in the repo according to the
+    GitHub languages API. Case-insensitive.
+  - `repos[].exclude`: nested selectors. A repo matching any of them is not
+    selected (up to 3 levels deep).
+- `rules[].method`: one of `require`, `allow`, `deny`.
+- `rules[].priority`: one of `critical`, `high`, `medium`, `low`. Unknown or
+  empty values are treated as `medium`.
+- `rules[].actions`: list of action selectors. If omitted, the rule matches
+  every action.
+  - `name`: glob matched against the action name, the part of `uses:` before
+    the `@`, for example `actions/checkout`. `*` also matches `/`.
+  - `version`: either the exact ref from `uses:` (for example a tag or commit
+    SHA), or a semver constraint such as `>= 4.0.0` or `^3`. For a constraint,
+    a commit SHA in the workflow is resolved through the action repo's tags.
+    Empty matches any version.
+- `rules[].mustPass` (`require` only): the required action must be in a
+  workflow whose latest `push` run on the default branch head commit succeeded.
+- `rules[].requireAll` (`require` only): every listed action is required,
+  instead of any one of them.
+
+How rules are evaluated:
+
+- Rules are sorted by priority, `critical` first. Within a priority,
+  `allow`/`require` rules come before `deny` rules.
+- Each action used in a workflow step is checked against the sorted rules. The
+  first rule that matches decides: `allow`/`require` lets it through, `deny`
+  fails the policy. An action that matches no rule is allowed, so a `deny` rule
+  without `actions` at the lowest priority turns the `allow` rules into an
+  allowlist.
+- Each `require` rule is then checked separately: at least one of its actions
+  (all of them with `requireAll`) must be used in the repo's workflows.
+- Only the first 50 files in `.github/workflows` are read. Steps whose `uses:`
+  has no `@`, such as local actions (`./.github/actions/foo`), are skipped.
+
 ### Repository Administrators
 
 This policy's config file is named `admin.yaml`, and the [config definitions
